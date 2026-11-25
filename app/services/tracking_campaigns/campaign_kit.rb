@@ -58,7 +58,8 @@ module TrackingCampaigns::CampaignKit
   # La ficha, sus ligas, las respuestas fijas y las etiquetas (TrackingCampaigns::Motor2Brief#brief).
   def sanitize(kind, raw)
     { 'facts' => sanitize_facts(kind, raw['facts']), 'links' => sanitize_links(raw['links']),
-      'replies' => sanitize_replies(raw['replies']), 'labels' => raw['labels'].is_a?(Hash) ? sanitize_labels(raw['labels']) : nil }
+      'replies' => sanitize_replies(raw['replies']), 'labels' => raw['labels'].is_a?(Hash) ? sanitize_labels(raw['labels']) : nil,
+      'reminders' => (TrackingCampaigns::EventReminders.sanitize(raw['reminders']) if kind == 'invite') }
   end
 
   # Lo que guarda la campaña: los campos de su tipo; lo vacío se queda vacío (gana lo de fábrica al usarlo).

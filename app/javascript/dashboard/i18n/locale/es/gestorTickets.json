@@ -3092,7 +3092,196 @@
       "LIST": "Volver a la lista"
     }
   },
+  "QUOTE_FORMATS": {
+    "TITLE": "Formatos de cotización",
+    "DESCRIPTION": "Cómo se ve la cotización en la liga del cliente y en el PDF. Puedes tener varios y escoger uno en cada cotización.",
+    "DEFAULT": "por omisión",
+    "NEW": "Nuevo",
+    "NEW_NAME": "Formato {n}",
+    "DUPLICATE": "Duplicar",
+    "NAME": "Nombre del formato",
+    "IS_DEFAULT": "Es el formato por omisión (Dali y los agentes también lo usan)",
+    "USED_BY": "Lo usan {count} cotizaciones.",
+    "SAVE": "Guardar formato",
+    "SAVED": "Guardado",
+    "DELETED": "Formato borrado",
+    "ERROR": "No se pudo guardar",
+    "UNSAVED": "Cambios sin guardar",
+    "DISCARD": "Hay cambios sin guardar. ¿Descartarlos?",
+    "DELETE_CONFIRM": "¿Borrar el formato «{name}»? Sus cotizaciones usarán el de por omisión.",
+    "UPLOAD": "Subir",
+    "REMOVE": "Quitar",
+    "UP": "Subir",
+    "DOWN": "Bajar",
+    "OPTIONS": "opciones",
+    "CLOSE": "cerrar",
+    "PREVIEW": "Vista previa",
+    "PREVIEW_HINT": "Con tu cotización más reciente (o una de ejemplo)",
+    "UPDATING": "Actualizando…",
+    "NO_PDF": "Este servidor todavía no genera PDF: el cliente usará «Imprimir». Hay que instalar wkhtmltopdf.",
+    "VARIABLES": "Puedes usar: {list}",
+    "BRAND": {
+      "TITLE": "Marca",
+      "COLOR": "Color principal",
+      "FONT": "Tipografía",
+      "PAPER": "Hoja",
+      "LETTER": "Carta",
+      "A4": "A4",
+      "LOGO_POSITION": "Logo",
+      "LOGO_SIZE": "Tamaño del logo",
+      "POSITIONS": {
+        "left": "A la izquierda",
+        "center": "Al centro",
+        "right": "A la derecha"
+      },
+      "SIZES": {
+        "small": "Chico",
+        "medium": "Mediano",
+        "large": "Grande"
+      },
+      "FORMAT_LOGO": "Logo de este formato (opcional)",
+      "FORMAT_LOGO_HINT": "Si no subes uno, usa el logo de la empresa. PNG, JPG o WEBP de hasta 2 MB."
+    },
+    "BLOCKS": {
+      "TITLE": "Bloques",
+      "HINT": "Prende los que quieres ver y acomódalos con las flechas. Clic en el nombre para sus opciones.",
+      "header": {
+        "TITLE": "Encabezado",
+        "HINT": "Logo, datos de la empresa, folio, fecha, vigencia y vendedor. Marca qué datos de la empresa se ven.",
+        "OVERRIDE": "Cambiar datos solo en este formato (vacío = los de la empresa)"
+      },
+      "client": {
+        "TITLE": "Cliente",
+        "HINT": "Qué datos del cliente se ven."
+      },
+      "intro": {
+        "TITLE": "Texto de entrada",
+        "HINT": "Un párrafo antes de las partidas.",
+        "PLACEHOLDER": "Estimado {{cliente}}, le presentamos nuestra propuesta…"
+      },
+      "items": {
+        "TITLE": "Partidas",
+        "HINT": "Concepto, cantidad, precio e importe siempre van. Elige las demás columnas.",
+        "PRICES_WITH_TAX": "Mostrar precios con IVA incluido"
+      },
+      "totals": {
+        "TITLE": "Totales",
+        "HINT": "Subtotal, descuento, impuestos, retenciones y total.",
+        "tax_breakdown": "IVA desglosado por tasa",
+        "withholdings": "Retenciones una por una",
+        "amount_in_words": "Total con letra"
+      },
+      "terms": {
+        "TITLE": "Condiciones",
+        "HINT": "Las de por omisión de este formato; si la cotización trae las suyas, salen esas.",
+        "PLACEHOLDER": "Forma de pago, tiempo de entrega, garantía…"
+      },
+      "bank": {
+        "TITLE": "Datos para pago",
+        "HINT": "Banco, cuenta, CLABE…",
+        "PLACEHOLDER": "Banco: …\nCuenta: …\nCLABE: …"
+      },
+      "signatures": {
+        "TITLE": "Firmas",
+        "HINT": "Línea de firma del vendedor y de aceptación del cliente (con su firma si la aceptó en línea).",
+        "seller": "Firma del vendedor",
+        "client": "Firma de aceptación del cliente"
+      },
+      "footer": {
+        "TITLE": "Pie de página",
+        "HINT": "Texto al final del documento.",
+        "PLACEHOLDER": "Gracias por su preferencia · www.tuempresa.com"
+      }
+    },
+    "COMPANY": {
+      "TITLE": "Datos de la empresa",
+      "HINT": "Se usan en todos los formatos (cada formato puede cambiarlos).",
+      "legal_name": "Razón social",
+      "tax_id": "RFC",
+      "address": "Dirección",
+      "phone": "Teléfono",
+      "email": "Correo",
+      "website": "Sitio web",
+      "LOGO": "Logo de la empresa",
+      "SAVE": "Guardar datos de la empresa"
+    },
+    "CLIENT": {
+      "name": "Nombre",
+      "organization": "Empresa",
+      "tax_id": "RFC",
+      "email": "Correo",
+      "phone": "Teléfono"
+    },
+    "COLUMNS": {
+      "sku": "Clave",
+      "image": "Foto del producto",
+      "unit": "Unidad",
+      "discount": "Descuento",
+      "tax": "IVA"
+    }
+  },
   "CATALOG": {
+    "TABS": {
+      "ITEMS": "Productos",
+      "PARAMETERS": "Parámetros"
+    },
+    "PARAMS": {
+      "HINT": "Las listas que se eligen al dar de alta un producto. Lo que está en uso no se borra: se desactiva y ya no se ofrece.",
+      "ADD": "Agregar",
+      "SAVE": "Guardar",
+      "CANCEL": "Cancelar",
+      "EDIT": "Editar",
+      "DELETE": "Borrar",
+      "DEACTIVATE": "Desactivar",
+      "ACTIVATE": "Activar",
+      "INACTIVE": "Inactiva",
+      "ITEMS": "Sin productos | 1 producto | {count} productos",
+      "IN_USE": "En uso: desactívalo en lugar de borrarlo",
+      "ERROR": "No se pudo guardar",
+      "DELETE_CONFIRM": "¿Borrar «{name}»?",
+      "CATEGORIES": {
+        "TITLE": "Categorías",
+        "HINT": "Con subcategorías de un nivel (Refacciones › Frenos). Al cambiar el nombre, los productos se actualizan solos.",
+        "NAME": "Nombre de la categoría",
+        "ADD_CHILD": "Subcategoría",
+        "CHILD_NAME": "Nombre de la subcategoría",
+        "EMPTY": "Todavía no hay categorías."
+      },
+      "TAXES": {
+        "TITLE": "Impuestos",
+        "HINT": "El marcado es el de por omisión: lo usan los productos sin impuesto propio y las partidas que no son del catálogo.",
+        "NAME": "Nombre",
+        "PERCENT": "%",
+        "EXEMPT": "Exento",
+        "DEFAULT": "Por omisión",
+        "MAKE_DEFAULT": "Marcar como el de por omisión"
+      },
+      "WITHHOLDINGS": {
+        "TITLE": "Retenciones",
+        "HINT": "Ret. IVA, Ret. ISR… Cada producto lleva las suyas; la cotización las resta del total solo si el cliente es persona moral (RFC de 12)."
+      },
+      "UNITS": {
+        "TITLE": "Unidades de medida",
+        "HINT": "La abreviatura es la que sale en cotizaciones y órdenes. La clave SAT es opcional (para facturar).",
+        "NAME": "Nombre",
+        "ABBREVIATION": "Abreviatura",
+        "SAT_CODE": "Clave SAT"
+      }
+    },
+    "FORM_EXTRA": {
+      "CATEGORY_NONE": "Sin categoría",
+      "UNIT_NONE": "Sin unidad",
+      "TAX": "Impuesto",
+      "TAX_DEFAULT": "Por omisión ({name})",
+      "PRICE_INCLUDES_TAX": "El precio ya incluye el impuesto",
+      "PRICE_INCLUDES_TAX_HINT": "Al cotizar se separa el impuesto para que el total sea este precio.",
+      "SAT_CODE": "Clave SAT de producto o servicio",
+      "SAT_CODE_HINT": "Opcional. Para cuando se facture.",
+      "WITHHOLDINGS": "Retenciones",
+      "WITHHOLDINGS_HINT": "Se restan en la cotización solo si el cliente es persona moral.",
+      "MANAGE": "Editar las listas en «Parámetros»"
+    },
+    "QUOTE_TAX_MOVED": "El impuesto por omisión se cambia en Productos y servicios › Parámetros: {name}",
     "TITLE": "Catálogo de productos y servicios",
     "DESCRIPTION": "Lo que vende tu empresa y las refacciones que usa el técnico. Lo usan las cotizaciones y las órdenes de trabajo.",
     "NEW": "Producto o servicio",
@@ -3148,7 +3337,7 @@
     "ERROR": "No se pudo guardar",
     "IMPORT_DONE": "Importado: {created} nuevos, {updated} actualizados",
     "IMPORT_ERRORS": "{count} filas con error (fila {line}: {error})",
-    "IMPORT_HELP": "CSV con columnas: clave, nombre, tipo, categoria, unidad, precio, moneda, costo, descripcion, activo",
+    "IMPORT_HELP": "CSV con columnas: clave, nombre, tipo, categoria (Categoría › Subcategoría), unidad, precio, moneda, costo, descripcion, activo, impuesto, precio_con_impuesto (si/no), clave_sat, retenciones (Ret. IVA 10.67 %; Ret. ISR 10 %)",
     "PICKER": {
       "PLACEHOLDER": "Buscar en el catálogo…",
       "EMPTY": "Sin resultados",
@@ -3228,6 +3417,14 @@
       "SUBTOTAL": "Subtotal",
       "DISCOUNT_TOTAL": "Descuento",
       "TAX_TOTAL": "Impuestos",
+      "FORMAT": "Formato",
+      "FORMAT_DEFAULT": "Por omisión ({name})",
+      "WITHHOLDINGS": "Retenciones",
+      "WITHHOLDING_ADD": "+ Agregar retención",
+      "WITHHOLDING_REMOVE": "Quitar retención",
+      "WITHHOLDING_TOTAL": "Retenciones",
+      "APPLY_WITHHOLDINGS": "Aplicar retenciones",
+      "APPLY_WITHHOLDINGS_HINT": "Solo a clientes persona moral: se marca sola si el RFC de su organización tiene 12 caracteres.",
       "TOTAL": "Total",
       "TERMS": "Condiciones",
       "TERMS_PLACEHOLDER": "Forma de pago, tiempo de entrega, garantía…",

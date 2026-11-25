@@ -12,7 +12,7 @@ module Motor2::Skills::CampaignNotes
     return LATER_NOTE if asks_time?
     return COURTESY_NOTE if @turn.last_customer.to_s.strip.match?(COURTESY)
 
-    link_note
+    link_note || question_note
   end
 
   private
@@ -74,6 +74,14 @@ module Motor2::Skills::CampaignNotes
   def concrete_question?
     text = @turn.last_customer.to_s
     text.include?('?') && !text.match?(ASKS_INFO)
+  end
+
+  # Una pregunta concreta (hora, costo, lugar…) se contesta con la ficha; la liga no es la respuesta.
+  QUESTION_NOTE = 'Hizo una pregunta concreta: contéstala primero con los datos de la ficha (hora, lugar, costo…), en corto. ' \
+                  'No contestes solo con la liga: mándala solo si la pide o si ya respondiste y le sirve para seguir.'
+
+  def question_note
+    QUESTION_NOTE if concrete_question?
   end
 
   # «Ahorita lo hago», «mañana lo pago»: todavía no lo hizo.

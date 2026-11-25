@@ -12,6 +12,8 @@ export default {
   props: {
     payload: { type: Function, required: true },
     disabled: { type: Boolean, default: false },
+    // Invitar: al abrir «Revisar» corren solos (una vez).
+    autoRun: { type: Boolean, default: false },
   },
   data() {
     return {
@@ -30,8 +32,9 @@ export default {
       return Object.values(this.results).filter(r => r.ok).length;
     },
   },
-  mounted() {
-    this.load();
+  async mounted() {
+    await this.load();
+    if (this.autoRun && !this.disabled && this.cases.length) this.runAll();
   },
   methods: {
     t(key, params) {
@@ -91,7 +94,7 @@ export default {
     <div class="flex flex-wrap items-center gap-2">
       <woot-button
         size="small"
-        icon="play"
+        icon="play-circle"
         :is-loading="running"
         :disabled="disabled || loading || !cases.length"
         @click="runAll"

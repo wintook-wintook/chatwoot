@@ -321,3 +321,10 @@ receivables_outreach_job:
   cron: '5 * * * *'
   class: 'Receivables::OutreachJob'
   queue: scheduled_jobs
+
+# Campaña con IA · Invitar — recordatorios a los que confirmaron (un día antes y una hora antes del evento).
+tracking_campaigns_event_reminder_job:
+  cron: "*/10 * * * *"
+  class: "TrackingCampaigns::EventReminderJob"
+  queue: scheduled_jobs
+  description: "Remind confirmed contacts one day and one hour before the campaign event"

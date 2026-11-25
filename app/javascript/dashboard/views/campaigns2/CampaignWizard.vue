@@ -4,6 +4,11 @@
   sabe la IA: datos, preguntas, ligas, archivos) · Audiencia · Mensajes (lo que se manda) · Respuestas y resultados
   (respuestas fijas y etiquetas del contacto) · Cómo atiende · Cuándo · Revisar y lanzar (con «Casos»). A la derecha,
   siempre: cómo se ve el mensaje (teléfono o correo) y «Probar».
+  Invitar va en 5 pasos (INVITE_STEPS), en el orden en que piensa quien invita: El evento (con sus datos, cómo
+  confirma y lo que solo sabe la empresa: InviteEvent) · Invitados (canal y a quién) · Mensajes (con recordatorios a
+  los que confirmaron: EventReminders) · Respuestas (compactas; «Cómo atiende» en opciones avanzadas) · Revisar y
+  lanzar (nombre, cuándo —termina al empezar el evento— y los Casos corren solos). La vista de «así le llega» solo
+  en Mensajes y Revisar.
   Ruta: tracking-dashboard/campaigns2/new | campaigns2/:campaignId/edit.
 -->
 <script>
@@ -22,10 +27,14 @@ import CampaignCases from './CampaignCases.vue';
 import CampaignAttend from './CampaignAttend.vue';
 import WhatsappFlow from './WhatsappFlow.vue';
 import ConversationPreview from './ConversationPreview.vue';
+import InviteEvent from './InviteEvent.vue';
+import EventReminders from './EventReminders.vue';
 import { fillTemplate, sampleValues } from './campaignFlow';
 
 // En «Revisar»: probar la campaña completa, no solo al vendedor.
 const TEST_TABS = ['cases', 'simulate', 'chat', 'real'];
+// Invitar: los Casos corren solos y un solo chat; simular y la prueba real, en «Más pruebas».
+const INVITE_TEST_TABS = ['cases', 'chat', 'more'];
 
 const STEPS = [
   'goal',
@@ -37,6 +46,8 @@ const STEPS = [
   'when',
   'review',
 ];
+// Invitar: en el orden en que piensa quien invita (evento → invitados → mensajes → respuestas → lanzar).
+const INVITE_STEPS = ['event', 'audience', 'messages', 'replies', 'review'];
 const KINDS = ['offer', 'invite', 'reactivate', 'renew', 'survey'];
 const FILTER_TYPE_CONTACT = 'contact';
 const ATTENDEE_STATUSES = [
@@ -75,6 +86,8 @@ const blankForm = () => ({
     relay: 'agent',
     relay_user_id: '',
     relay_team_id: '',
+    // Invitar: recordatorios a los que confirmaron (EventReminders).
+    reminders: {},
   },
   touches: {
     attempts: 2,
@@ -120,6 +133,8 @@ export default {
     CampaignAttend,
     WhatsappFlow,
     ConversationPreview,
+    InviteEvent,
+    EventReminders,
   },
   data() {
     return {
@@ -144,7 +159,8 @@ export default {
       loadFailed: false, // editando, no se pudo traer la campaña: no se guarda (crearía otra)
       touchTab: 1,
       testTab: 'cases',
-      testTabs: TEST_TABS,
+      moreTest: 'simulate',
+      showAdvanced: false,
       sendingTest: false,
       // Lista fría de correos (solo correo)
       listFile: null,
@@ -166,8 +182,22 @@ export default {
     inboxTemplates() {
       return (this.inbox?.templates || []).map(tpl => tpl.name);
     },
+    isInvite() {
+      return this.kind === 'invite';
+    },
     steps() {
-      return STEPS;
+      return this.isInvite ? INVITE_STEPS : STEPS;
+    },
+    testTabs() {
+      return this.isInvite ? INVITE_TEST_TABS : TEST_TABS;
+    },
+    // Invitar: «así le llega» y probar solo donde sirven.
+    showSide() {
+      return !this.isInvite || ['messages', 'review'].includes(this.step);
+    },
+    // Audiencia «asistentes de un evento»: su propio evento (puede ser otro, p. ej. la expo pasada).
+    audienceEventId() {
+      return this.form.audience.source.event_id || this.form.brief.event_id;
     },
     kinds() {
       return KINDS;
@@ -176,7 +206,15 @@ export default {
       return ATTENDEE_STATUSES;
     },
     stepLabels() {
-      return Object.fromEntries(STEPS.map(s => [s, this.t(`STEPS.${s}`)]));
+      const base = this.isInvite ? 'INVITE.STEPS' : 'STEPS';
+      return Object.fromEntries(
+        this.steps.map(s => [s, this.t(`${base}.${s}`)])
+      );
+    },
+    stepHint() {
+      return this.t(
+        this.isInvite ? `INVITE.HINTS.${this.step}` : `HINTS.${this.step}`
+      );
     },
     segments() {
       return this.$store.getters['customViews/getCustomViewsByFilterType'](
@@ -247,12 +285,12 @@ export default {
           },
         ];
       }
-      if (src.type === 'event' && this.form.brief.event_id) {
+      if (src.type === 'event' && this.audienceEventId) {
         return [
           {
             attribute_key: 'event',
             filter_operator: 'equal_to',
-            values: [`${this.form.brief.event_id}:${this.form.event_status}`],
+            values: [`${this.audienceEventId}:${this.form.event_status}`],
             query_operator: null,
           },
         ];
@@ -329,9 +367,7 @@ export default {
         f.start === 'later' && f.scheduled_for
           ? this.t('REVIEW.STARTS_AT', { at: fmt(f.scheduled_for) })
           : this.t('REVIEW.STARTS_NOW'),
-        f.ends_at
-          ? this.t('REVIEW.ENDS_AT', { at: fmt(f.ends_at) })
-          : this.t('REVIEW.NO_END'),
+        this.reviewEnd(fmt),
         this.t('REVIEW.PACE', {
           n: this.attempts,
           every: f.touches.every_value,
@@ -348,6 +384,16 @@ export default {
         this.t('REVIEW.ONE_A_DAY'),
       ];
       return lines;
+    },
+    // Invitar sin fecha de fin: termina cuando empieza el evento.
+    reviewEnd() {
+      return fmt => {
+        if (this.form.ends_at)
+          return this.t('REVIEW.ENDS_AT', { at: fmt(this.form.ends_at) });
+        if (this.isInvite && this.event && this.event.starts_at)
+          return this.t('REVIEW.ENDS_AT', { at: fmt(this.event.starts_at) });
+        return this.t('REVIEW.NO_END');
+      };
     },
     readyCount() {
       return this.preview?.counts?.ready ?? null;
@@ -369,6 +415,8 @@ export default {
       if (kind === 'invite' && this.sourceType === 'segment') {
         this.form.audience.source = { type: 'event' };
       }
+      // Invitar: el evento tiene fecha fija, la regla de «no escribirle si otra campaña…» no aplica por omisión.
+      if (kind === 'invite') this.form.brief.rest_days = 0;
       if (!this.relayChoices.includes(this.form.brief.relay)) {
         [this.form.brief.relay] = this.relayChoices;
       }
@@ -379,6 +427,15 @@ export default {
     },
     'form.brief.offer_goal'() {
       if (!this.loading) this.resetLabels();
+    },
+    // Si el paso ya no existe en este tipo (Invitar tiene otros pasos), al primero.
+    steps(list) {
+      if (!list.includes(this.step)) [this.step] = list;
+    },
+    // Invitar: lo que la ficha sabe del evento sale del evento.
+    'form.brief.event_id'() {
+      if (this.loading || !this.isInvite || !this.event) return;
+      this.form.brief.offer_what = this.event.name;
     },
   },
   async mounted() {
@@ -427,12 +484,44 @@ export default {
       if (step === 'review') this.saveAndCheck();
     },
     next() {
-      const i = STEPS.indexOf(this.step);
-      if (i < STEPS.length - 1) this.go(STEPS[i + 1]);
+      const i = this.steps.indexOf(this.step);
+      if (i < this.steps.length - 1) this.go(this.steps[i + 1]);
     },
     back() {
-      const i = STEPS.indexOf(this.step);
-      if (i > 0) this.go(STEPS[i - 1]);
+      const i = this.steps.indexOf(this.step);
+      if (i > 0) this.go(this.steps[i - 1]);
+    },
+    // Invitar: cuándo y dónde (y de qué trata) para la IA, tomados del evento.
+    eventFacts() {
+      const e = this.event;
+      if (!this.isInvite || !e) return {};
+      const when = e.starts_at
+        ? new Date(e.starts_at).toLocaleString('es-MX', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : '';
+      const place = [e.location, e.meeting_url].filter(Boolean).join(' · ');
+      return {
+        when,
+        place,
+        ...(this.form.brief.facts.agenda || !e.description
+          ? {}
+          : { agenda: e.description }),
+      };
+    },
+    setInviteSource(type) {
+      this.setSource(type);
+      if (type === 'event') {
+        this.form.audience.source = {
+          type,
+          event_id: this.form.brief.event_id,
+        };
+        this.loadPreview();
+      }
     },
     // Las etiquetas de fábrica del tipo y objetivo (se pueden cambiar en «Respuestas y resultados»).
     resetLabels() {
@@ -539,6 +628,11 @@ export default {
             o => o.objection.trim() && o.answer.trim()
           ),
           links: (f.brief.links || []).filter(l => (l.url || '').trim()),
+          facts: { ...f.brief.facts, ...this.eventFacts() },
+          offer_what:
+            this.isInvite && this.event
+              ? f.brief.offer_what || this.event.name
+              : f.brief.offer_what,
         },
         touches: f.touches,
         audience: {
@@ -792,9 +886,43 @@ export default {
       <div
         class="grid flex-1 min-h-0 grid-cols-1 gap-6 pt-3 overflow-y-auto md:grid-cols-5 md:overflow-hidden"
       >
-        <!-- Izquierda: el paso -->
-        <div class="flex flex-col gap-3 pr-1 md:col-span-3 md:overflow-y-auto">
-          <p class="m-0 text-xs text-slate-500">{{ t(`HINTS.${step}`) }}</p>
+        <!-- Izquierda: el paso (Invitar: a lo ancho donde no hace falta la vista previa) -->
+        <div
+          class="flex flex-col gap-3 pr-1 md:overflow-y-auto"
+          :class="showSide ? 'md:col-span-3' : 'md:col-span-5 max-w-4xl'"
+        >
+          <p class="m-0 text-xs text-slate-500">{{ stepHint }}</p>
+
+          <!-- Invitar · 1 · El evento: tipo, evento, cómo confirma y lo que solo sabe la empresa -->
+          <template v-if="step === 'event'">
+            <div class="flex flex-wrap items-center gap-2 text-sm">
+              <span class="text-slate-500">{{ t('INVITE.KIND') }}</span>
+              <button
+                v-for="k in kinds"
+                :key="k"
+                type="button"
+                class="px-3 py-1 text-xs border rounded-full"
+                :class="
+                  kind === k
+                    ? 'border-woot-500 text-woot-700 bg-woot-25 dark:bg-woot-900/20'
+                    : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
+                "
+                @click="form.brief.kind = k"
+              >
+                {{ t(`KINDS.${k}.TITLE`) }}
+              </button>
+            </div>
+            <InviteEvent
+              :brief.sync="form.brief"
+              :events="options.events"
+              :event="event"
+              :kit="kit"
+              :goals="goals"
+              :campaign-id="campaignId"
+              :save="save"
+              :attempts="attempts"
+            />
+          </template>
 
           <!-- 1 · Objetivo: tipo, qué cuenta como logrado, nombre corto y canal -->
           <template v-if="step === 'goal'">
@@ -928,8 +1056,31 @@ export default {
             :attempts="attempts"
           />
 
-          <!-- 3 · Audiencia -->
+          <!-- 3 · Audiencia (Invitar: «Invitados», con el canal arriba) -->
           <template v-if="step === 'audience'">
+            <label v-if="isInvite" class="block">
+              <span class="field-label">{{ t('MESSAGES.CHANNEL') }}</span>
+              <select v-model="form.inbox_id" @change="loadPreview">
+                <option value="">{{ t('MESSAGES.CHANNEL_PICK') }}</option>
+                <option v-for="i in options.inboxes" :key="i.id" :value="i.id">
+                  {{ i.name }} ·
+                  {{
+                    t(
+                      `MESSAGES.TYPES.${i.channel_type.replace(
+                        'Channel::',
+                        ''
+                      )}`
+                    )
+                  }}
+                </option>
+              </select>
+              <span class="block text-xs text-slate-500">
+                {{ t('MESSAGES.CHANNEL_HINT') }}
+              </span>
+            </label>
+            <span v-if="isInvite" class="field-label">
+              {{ t('INVITE.WHO') }}
+            </span>
             <div class="flex flex-wrap gap-2">
               <button
                 v-for="type in [
@@ -947,7 +1098,7 @@ export default {
                     ? 'border-woot-500 text-woot-700 bg-woot-25 dark:bg-woot-900/20'
                     : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
                 "
-                @click="setSource(type)"
+                @click="isInvite ? setInviteSource(type) : setSource(type)"
               >
                 {{ t(`AUDIENCE.${type}`) }}
               </button>
@@ -988,8 +1139,17 @@ export default {
               class="grid grid-cols-1 gap-2 sm:grid-cols-2"
             >
               <label class="block">
-                <span class="field-label">{{ t('OFFER.EVENT') }}</span>
-                <select v-model="form.brief.event_id" @change="loadPreview">
+                <span class="field-label">{{ t('AUDIENCE.EVENT_OF') }}</span>
+                <select
+                  :value="audienceEventId"
+                  @change="
+                    form.audience.source = {
+                      ...form.audience.source,
+                      event_id: $event.target.value,
+                    };
+                    loadPreview();
+                  "
+                >
                   <option value="">{{ t('OFFER.EVENT_PICK') }}</option>
                   <option v-for="e in audienceEvents" :key="e.id" :value="e.id">
                     {{ e.name }}
@@ -1301,6 +1461,13 @@ export default {
             <p v-if="!inbox" class="m-0 text-xs text-slate-500">
               {{ t('MESSAGES.PICK_CHANNEL_FIRST') }}
             </p>
+            <!-- Invitar: recordatorios a los que confirmaron -->
+            <EventReminders
+              v-if="isInvite"
+              :brief.sync="form.brief"
+              :is-whatsapp="isWhatsapp"
+              :templates="inboxTemplates"
+            />
           </template>
 
           <!-- 5 · Respuestas y resultados -->
@@ -1309,7 +1476,58 @@ export default {
             :brief.sync="form.brief"
             :kind="kind"
             :kit="kit"
+            :compact="isInvite"
           />
+          <!-- Invitar: a quién pasa si pide una persona y «Cómo atiende» en opciones avanzadas -->
+          <template v-if="step === 'replies' && isInvite">
+            <section
+              class="grid grid-cols-1 gap-2 p-3 border rounded-md sm:grid-cols-2 border-slate-100 dark:border-slate-700"
+            >
+              <p class="m-0 text-sm font-semibold sm:col-span-2">
+                {{ t('INVITE.PERSON_TITLE') }}
+              </p>
+              <label class="block">
+                <span class="field-label">{{ t('OFFER.RELAY_USER') }}</span>
+                <select v-model="form.brief.relay_user_id">
+                  <option value="">{{ t('OFFER.NOBODY') }}</option>
+                  <option v-for="u in options.users" :key="u.id" :value="u.id">
+                    {{ u.name }}
+                  </option>
+                </select>
+              </label>
+              <label class="block">
+                <span class="field-label">{{ t('OFFER.RELAY_TEAM') }}</span>
+                <select v-model="form.brief.relay_team_id">
+                  <option value="">{{ t('OFFER.NO_TEAM') }}</option>
+                  <option
+                    v-for="team in options.teams"
+                    :key="team.id"
+                    :value="team.id"
+                  >
+                    {{ team.name }}
+                  </option>
+                </select>
+              </label>
+            </section>
+            <button
+              type="button"
+              class="self-start text-sm text-woot-600 hover:underline"
+              @click="showAdvanced = !showAdvanced"
+            >
+              {{
+                showAdvanced ? t('INVITE.HIDE_ADVANCED') : t('INVITE.ADVANCED')
+              }}
+            </button>
+            <CampaignAttend
+              v-if="showAdvanced && form.attend"
+              v-model="form.attend"
+              :sources="options.sources || []"
+              :calendar-users="options.calendar_users || []"
+              :templates="inboxTemplates"
+              :is-email="isEmail"
+              :appointments="false"
+            />
+          </template>
 
           <!-- 6 · Cómo atiende (la campaña arma su agente) -->
           <template v-if="step === 'attend'">
@@ -1467,6 +1685,105 @@ export default {
 
           <!-- 6 · Revisar y lanzar -->
           <template v-if="step === 'review'">
+            <!-- Invitar: nombre y cuándo aquí (no hay paso «Cuándo») -->
+            <section
+              v-if="isInvite"
+              class="flex flex-col gap-2 p-3 border rounded-md border-slate-100 dark:border-slate-700"
+            >
+              <label class="block">
+                <span class="field-label">{{ t('NAME') }}</span>
+                <input
+                  v-model="form.name"
+                  type="text"
+                  maxlength="120"
+                  class="!mb-0"
+                  :placeholder="defaultName() || t('NAME_PLACEHOLDER')"
+                />
+              </label>
+              <fieldset class="flex flex-wrap items-center gap-3">
+                <legend class="field-label">{{ t('WHEN.START') }}</legend>
+                <label class="flex items-center gap-2 text-sm">
+                  <input
+                    v-model="form.start"
+                    type="radio"
+                    class="!m-0"
+                    value="now"
+                  />
+                  {{ t('WHEN.NOW') }}
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                  <input
+                    v-model="form.start"
+                    type="radio"
+                    class="!m-0"
+                    value="later"
+                  />
+                  {{ t('WHEN.LATER') }}
+                </label>
+                <input
+                  v-if="form.start === 'later'"
+                  v-model="form.scheduled_for"
+                  type="datetime-local"
+                  class="!mb-0 !w-64"
+                />
+              </fieldset>
+              <p
+                v-if="!form.ends_at && event"
+                class="m-0 text-xs text-slate-500"
+              >
+                {{ t('INVITE.ENDS_AT_EVENT') }}
+              </p>
+              <button
+                type="button"
+                class="self-start text-xs text-woot-600 hover:underline"
+                @click="showAdvanced = !showAdvanced"
+              >
+                {{
+                  showAdvanced
+                    ? t('INVITE.HIDE_ADVANCED')
+                    : t('INVITE.ADVANCED')
+                }}
+              </button>
+              <div v-if="showAdvanced" class="flex flex-col gap-2">
+                <label class="flex flex-wrap items-center gap-2 text-sm">
+                  {{ t('WHEN.ENDS') }}
+                  <input
+                    v-model="form.ends_at"
+                    type="datetime-local"
+                    class="!mb-0 !w-64"
+                  />
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                  <input
+                    v-model="form.respect_working_hours"
+                    type="checkbox"
+                    class="!m-0"
+                  />
+                  {{ t('WHEN.WORKING_HOURS') }}
+                </label>
+                <label class="flex flex-wrap items-center gap-2 text-sm">
+                  {{ t('WHEN.DAILY_CAP') }}
+                  <input
+                    v-model.number="form.daily_cap"
+                    type="number"
+                    min="1"
+                    class="!mb-0 !w-24"
+                    :placeholder="t('WHEN.NO_CAP')"
+                  />
+                </label>
+                <label class="flex flex-wrap items-center gap-2 text-sm">
+                  {{ t('OFFER.REST_DAYS') }}
+                  <input
+                    v-model.number="form.brief.rest_days"
+                    type="number"
+                    min="0"
+                    max="90"
+                    class="!mb-0 !w-20"
+                  />
+                  {{ t('OFFER.DAYS') }}
+                </label>
+              </div>
+            </section>
             <div
               class="flex flex-col gap-1 p-3 rounded-md bg-slate-25 dark:bg-slate-800"
             >
@@ -1531,6 +1848,7 @@ export default {
 
         <!-- Derecha: cómo se ve y Probar -->
         <div
+          v-if="showSide"
           class="flex flex-col min-h-0 gap-3 md:col-span-2 md:overflow-y-auto"
         >
           <p class="m-0 text-xs font-medium text-slate-600 dark:text-slate-300">
@@ -1587,7 +1905,41 @@ export default {
               v-if="testTab === 'cases'"
               :payload="chatPayload"
               :disabled="!hasChannel"
+              :auto-run="isInvite"
             />
+            <!-- Invitar: simular y la prueba real, juntas en «Más pruebas» -->
+            <template v-else-if="testTab === 'more'">
+              <div class="flex gap-2 text-xs">
+                <button
+                  v-for="key in ['simulate', 'real']"
+                  :key="key"
+                  type="button"
+                  class="px-2 py-1 border rounded-full"
+                  :class="
+                    moreTest === key
+                      ? 'border-woot-500 text-woot-700'
+                      : 'border-slate-200 text-slate-600 dark:border-slate-600 dark:text-slate-300'
+                  "
+                  @click="moreTest = key"
+                >
+                  {{ t(`TEST_TABS.${key}`) }}
+                </button>
+              </div>
+              <CampaignSimulator
+                v-if="moreTest === 'simulate'"
+                :campaign-id="campaignId"
+                :save="save"
+                :payload="chatPayload"
+                :disabled="!hasChannel"
+              />
+              <CampaignTestRun
+                v-else
+                :campaign-id="campaignId"
+                :save="save"
+                :is-whatsapp="isWhatsapp"
+                :disabled="!hasChannel"
+              />
+            </template>
             <CampaignSimulator
               v-else-if="testTab === 'simulate'"
               :campaign-id="campaignId"
@@ -1620,7 +1972,7 @@ export default {
           {{ t('SAVE_DRAFT') }}
         </woot-button>
         <woot-button
-          v-if="step !== 'goal'"
+          v-if="step !== steps[0]"
           variant="smooth"
           color-scheme="secondary"
           @click="back"

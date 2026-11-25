@@ -121,6 +121,7 @@
       "REMOVE_ITEM": "Quitar",
       "NET": "Subtotal sin IVA",
       "TAX": "IVA",
+      "WITHHELD": "Retenciones",
       "TOTAL": "Total",
       "QUOTE_DRAFT": "Se crea en borrador; la puedes revisar antes de mandarla.",
       "reply": "Responder",

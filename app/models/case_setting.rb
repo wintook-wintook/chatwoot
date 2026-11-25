@@ -6,6 +6,7 @@
 #
 #  id                         :bigint           not null, primary key
 #  business_summary_user_ids  :bigint           default([]), not null, is an Array
+#  company_profile            :jsonb            not null
 #  default_currency           :string(3)        default("MXN"), not null
 #  default_tax_percent        :decimal(5, 2)    default(0.0), not null
 #  itil_enabled               :boolean          default(FALSE), not null
@@ -33,6 +34,8 @@
 # tabla sigue en la base (se elimina en un segundo PR) pero ya no se lee ni escribe.
 class CaseSetting < ApplicationRecord
   belongs_to :account
+  # Cotizaciones › Formatos: el logo de la empresa (company_profile tiene razón social, RFC, dirección…)
+  has_one_attached :company_logo
 
   # Plan-Clase-Comercial F3 — moneda con la que nace una oportunidad.
   validates :default_currency, format: { with: /\A[A-Z]{3}\z/ }

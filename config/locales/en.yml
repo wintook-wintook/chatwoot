@@ -376,6 +376,38 @@ en:
       someone: "Someone on the team"
   contact_trackings:
     opt_out_footer: "Don't want more emails? Unsubscribe here: %{url}"
+  quote_formats:
+    copy: 'copy'
+    errors:
+      last: 'At least one format must remain.'
+      logo: 'The logo must be a PNG, JPG or WEBP up to 2 MB.'
+      not_found: 'Format not found'
+    default_name: 'Main format'
+    client: 'Customer'
+    bank: 'Payment details'
+    withholdings: 'Withholdings'
+    amount_in_words: 'Amount in words'
+    client_signature: 'Name and signature of acceptance'
+    accepted_on: 'Accepted on %{date}'
+    pdf_unavailable: 'The PDF is not available right now; use Print.'
+    company:
+      legal_name: 'Legal name'
+      tax_id: 'Tax ID'
+      address: 'Address'
+      phone: 'Phone'
+      email: 'Email'
+      website: 'Web'
+    client_fields:
+      name: 'Name'
+      organization: 'Company'
+      tax_id: 'Tax ID'
+      email: 'Email'
+      phone: 'Phone'
+    columns:
+      sku: 'Code'
+      unit: 'Unit'
+      tax: 'Tax'
+      price_with_tax: 'Price incl. tax'
   public_quotes:
     title: 'Quote'
     for: 'For %{name}'
@@ -434,6 +466,10 @@ en:
       opportunity_required: 'Your company requires every quote to have an opportunity'
       no_sales_type: 'First create an opportunity type in Settings › Cases and stages'
       no_conversation: 'The customer has no conversations; copy the link and send it another way'
+  catalog_parameters:
+    not_found: 'Not found in the list.'
+    in_use: 'It is in use: deactivate it so it is no longer offered.'
+    default_tax: 'It is the default tax: mark another one before deleting it.'
   catalog_items:
     not_found: 'Product or service not found'
     import:

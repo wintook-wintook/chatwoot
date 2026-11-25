@@ -9,7 +9,7 @@
     "LOAD_ERROR": "No se pudo cargar la campaña.",
     "NAME": "Nombre de la campaña",
     "NAME_PLACEHOLDER": "Ej. Promo de aire acondicionado — marzo",
-    "NEEDS_SELLER_AND_CHANNEL": "Elige el canal (paso Oferta y canal) para guardarla.",
+    "NEEDS_SELLER_AND_CHANNEL": "Elige el canal para guardarla.",
     "SAVE_ERROR": "No se pudo guardar la campaña.",
     "SAVED": "Campaña guardada.",
     "LAUNCHED": "¡Campaña en marcha!",
@@ -155,7 +155,7 @@
       },
       "CONTINUOUS_HINT": "Campaña continua: entra cada contacto que agregue una automatización con la acción «Agregar a campaña».",
       "FROM_CAMPAIGN": "{n} contactos de otra campaña.",
-      "NEEDS_CHANNEL": "Elige el canal (paso Oferta y canal) para ver a cuántos les llega.",
+      "NEEDS_CHANNEL": "Elige el canal para ver a cuántos les llega.",
       "COUNTING": "Contando…",
       "PICK_FIRST": "Elige la audiencia para ver a cuántos les llega.",
       "BUCKETS": {
@@ -164,7 +164,8 @@
         "unreachable": "Sin teléfono o correo válido",
         "excluded": "Quitados por ti"
       },
-      "list": "Subir una lista de correos"
+      "list": "Subir una lista de correos",
+      "EVENT_OF": "Asistentes de este evento"
     },
     "MESSAGES": {
       "CHANNEL": "Canal",
@@ -184,7 +185,7 @@
       "NO_TEMPLATES": "Esta bandeja no tiene plantillas aprobadas. Créalas en Ajustes › Bandejas › Plantillas (o con «Crear con Dali»).",
       "NO_TEMPLATE_PREVIEW": "Elige la plantilla del primer toque para ver cómo llega.",
       "PICK_CHANNEL_FIRST": "Elige el canal para escribir los mensajes.",
-      "CHANNEL_IS": "Canal: {name} (se elige en «Oferta y canal»)."
+      "CHANNEL_IS": "Canal: {name}."
     },
     "EMAIL": {
       "SUBJECT": "Asunto",
@@ -263,7 +264,7 @@
     },
     "PREVIEW": {
       "TITLE": "Así le llega",
-      "PICK_CHANNEL": "Elige el canal en el paso Mensajes para ver cómo llega."
+      "PICK_CHANNEL": "Elige el canal para ver cómo llega."
     },
     "CHAT": {
       "TITLE": "Probar: tú eres el contacto",
@@ -429,7 +430,7 @@
       "CLEANUP": "Borrar los que nunca contesten a los (días)",
       "COLUMNS": "CSV con encabezados: correo (o email) obligatorio; nombre, empresa y teléfono opcionales. Hasta 5,000 renglones.",
       "UPLOAD": "Subir y limpiar",
-      "NEEDS_SELLER": "Primero elige el canal (paso Oferta y canal).",
+      "NEEDS_SELLER": "Primero elige el canal.",
       "ERROR": "No se pudo subir la lista.",
       "RESULT": "De {rows} renglones: {valid} listos ({created} nuevos en cuarentena y {existing} que ya eran tus contactos).",
       "LOADED": "Lista «{name}»: {n} contactos.",
@@ -445,7 +446,8 @@
       "simulate": "Simular la campaña",
       "chat": "Chatear",
       "real": "Prueba real",
-      "cases": "Casos"
+      "cases": "Casos",
+      "more": "Más pruebas"
     },
     "SIM": {
       "INTRO": "Ve la campaña completa como la recibiría un contacto: cada toque con su texto y cuándo sale, y qué pasa según conteste. No se manda nada.",
@@ -772,7 +774,9 @@
       "LABEL": "Etiqueta del contacto",
       "NO_LABEL": "sin etiqueta",
       "EXCLUDES": "Quien tenga «{label}» ya no entra a las siguientes campañas de {kind}.",
-      "GLOBAL_OPT_OUT": "«Baja», «stop» o «darme de baja» lo da de baja de todo (ya no le llega ninguna campaña)."
+      "GLOBAL_OPT_OUT": "«Baja», «stop» o «darme de baja» lo da de baja de todo (ya no le llega ninguna campaña).",
+      "CUSTOMIZE": "Personalizar",
+      "USE_DEFAULT": "Usar el de fábrica"
     },
     "CASES": {
       "HINT": "Pruebas que se arman solas con lo que tiene la campaña. La IA contesta como con un contacto, sin mandar ni guardar nada.",
@@ -784,6 +788,64 @@
       "RUN": "Correr",
       "TOOLS": "hizo: {names}",
       "SAYS": "«{message}»"
+    },
+    "INVITE": {
+      "KIND": "Tipo:",
+      "WHO": "A quién invitas",
+      "PERSON_TITLE": "Si pide hablar con una persona, pasa a",
+      "ADVANCED": "Opciones avanzadas",
+      "HIDE_ADVANCED": "Ocultar opciones avanzadas",
+      "ENDS_AT_EVENT": "Termina sola cuando empieza el evento.",
+      "EVENT_TITLE": "¿A qué evento invitas?",
+      "CREATE_EVENT": "Crear un evento ↗",
+      "PICK_EVENT": "Elige el evento",
+      "NO_EVENTS": "No hay eventos de hoy en adelante. Créalo en Eventos y vuelve aquí.",
+      "WHEN": "Cuándo",
+      "WHERE": "Dónde",
+      "LINK": "Liga",
+      "CAPACITY": "Cupo",
+      "FROM_EVENT_HINT": "La IA ya sabe esto (sale del evento). Si algo cambia, cámbialo en Eventos.",
+      "CONFIRM_TITLE": "¿Cómo confirma?",
+      "GOALS": {
+        "confirm": "Aquí en la plática",
+        "external": "Se registra por su cuenta (Zoom, formulario)"
+      },
+      "GOALS_ABOUT": {
+        "confirm": "Dice que sí va y queda «confirmó» en la lista del evento.",
+        "external": "Le mandamos la liga de registro y lo damos por registrado cuando escribe la palabra clave."
+      },
+      "REGISTRATION_URL": "Liga de registro",
+      "REGISTRATION_PLACEHOLDER": "https://zoom.us/meeting/register/…",
+      "REGISTRATION_NAME": "Registro",
+      "KEYWORD": "Palabra clave",
+      "KEYWORD_HINT": "Cuando escribe esta palabra (ej. REGISTRADO), queda como logrado.",
+      "KNOWLEDGE_TITLE": "Lo que solo tú sabes del evento",
+      "STEPS": {
+        "event": "El evento",
+        "audience": "Invitados",
+        "messages": "Mensajes",
+        "replies": "Cuando contesta",
+        "review": "Revisar y lanzar"
+      },
+      "HINTS": {
+        "event": "El evento al que invitas, cómo confirma y lo que la IA debe saber.",
+        "audience": "Por qué canal y a quién le llega la invitación.",
+        "messages": "La invitación, la información completa, los toques a quien no contesta y los recordatorios a quien confirma.",
+        "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
+        "review": "Nombre, cuándo sale, la revisión y las pruebas (los Casos corren solos)."
+      }
+    },
+    "REMINDERS": {
+      "TITLE": "Recordatorios a los que confirmaron",
+      "HINT": "Solo les llegan a los que dijeron que sí van (o se registraron).",
+      "KINDS": {
+        "day_before": "Un día antes",
+        "hour_before": "Una hora antes, con la liga"
+      },
+      "VARIABLES": "Puedes usar {{nombre}} {{evento}} {{cuando}} {{lugar}} {{liga}}. Vacío = el texto en gris.",
+      "TEMPLATE": "Plantilla para los recordatorios",
+      "NO_TEMPLATE": "Sin plantilla",
+      "TEMPLATE_HINT": "WhatsApp solo deja escribir libre 24 h después de su último mensaje; pasado eso, el recordatorio sale con esta plantilla."
     }
   }
 }

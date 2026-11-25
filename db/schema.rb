@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_27_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_28_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -761,6 +761,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_27_100000) do
     t.boolean "quotes_require_opportunity", default: false, null: false
     t.decimal "default_tax_percent", precision: 5, scale: 2, default: "0.0", null: false
     t.jsonb "organization_rules", default: {"customer_on_won"=>true, "customer_on_contract"=>true, "prospect_on_quote_sent"=>false, "prospect_on_opportunity"=>true, "customer_on_quote_accepted"=>false}, null: false
+    t.jsonb "company_profile", default: {}, null: false
     t.index ["account_id"], name: "index_case_settings_on_account_id", unique: true
   end
 
@@ -1102,6 +1103,17 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_27_100000) do
     t.index ["catalog_item_id"], name: "index_case_work_order_items_on_catalog_item_id"
   end
 
+  create_table "catalog_categories", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "parent_id"
+    t.string "name", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_catalog_categories_on_account_id"
+    t.index ["parent_id"], name: "index_catalog_categories_on_parent_id"
+  end
+
   create_table "catalog_items", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "name", null: false
@@ -1116,9 +1128,29 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_27_100000) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "catalog_category_id"
+    t.bigint "catalog_unit_id"
+    t.bigint "tax_rate_id"
+    t.boolean "price_includes_tax", default: false, null: false
+    t.string "sat_code"
+    t.bigint "withholding_rate_ids", default: [], null: false, array: true
     t.index ["account_id", "active", "kind"], name: "index_catalog_items_on_account_id_and_active_and_kind"
     t.index ["account_id", "sku"], name: "index_catalog_items_on_account_id_and_sku", unique: true, where: "(sku IS NOT NULL)"
     t.index ["account_id"], name: "index_catalog_items_on_account_id"
+    t.index ["catalog_category_id"], name: "index_catalog_items_on_catalog_category_id"
+    t.index ["catalog_unit_id"], name: "index_catalog_items_on_catalog_unit_id"
+    t.index ["tax_rate_id"], name: "index_catalog_items_on_tax_rate_id"
+  end
+
+  create_table "catalog_units", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.string "abbreviation", null: false
+    t.string "sat_code"
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_catalog_units_on_account_id"
   end
 
   create_table "categories", force: :cascade do |t|
@@ -2370,6 +2402,16 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_27_100000) do
     t.index ["user_id"], name: "index_published_prompts_on_user_id"
   end
 
+  create_table "quote_formats", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.boolean "is_default", default: false, null: false
+    t.jsonb "settings", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_quote_formats_on_account_id"
+  end
+
   create_table "quote_items", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "quote_id", null: false
@@ -2385,6 +2427,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_27_100000) do
     t.integer "position", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "tax_rate_id"
+    t.jsonb "withholdings", default: [], null: false
     t.index ["account_id"], name: "index_quote_items_on_account_id"
     t.index ["catalog_item_id"], name: "index_quote_items_on_catalog_item_id"
     t.index ["quote_id"], name: "index_quote_items_on_quote_id"
@@ -2420,6 +2464,9 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_27_100000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "organization_id"
+    t.boolean "apply_withholdings", default: false, null: false
+    t.decimal "withholding_total", precision: 14, scale: 2, default: "0.0", null: false
+    t.bigint "quote_format_id"
     t.index ["account_id", "number", "version"], name: "index_quotes_on_account_id_and_number_and_version", unique: true
     t.index ["account_id", "status"], name: "index_quotes_on_account_id_and_status"
     t.index ["account_id"], name: "index_quotes_on_account_id"
@@ -2431,6 +2478,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_27_100000) do
     t.index ["outcome_reason_id"], name: "index_quotes_on_outcome_reason_id"
     t.index ["parent_quote_id"], name: "index_quotes_on_parent_quote_id"
     t.index ["public_token"], name: "index_quotes_on_public_token", unique: true
+    t.index ["quote_format_id"], name: "index_quotes_on_quote_format_id"
   end
 
   create_table "ready_agent_sessions", force: :cascade do |t|
@@ -2745,6 +2793,19 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_27_100000) do
     t.index ["organization_id"], name: "index_task_reports_on_organization_id"
     t.index ["task_outcome_id"], name: "index_task_reports_on_task_outcome_id"
     t.index ["user_id"], name: "index_task_reports_on_user_id"
+  end
+
+  create_table "tax_rates", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.integer "kind", default: 0, null: false
+    t.decimal "percent", precision: 7, scale: 4, default: "0.0", null: false
+    t.boolean "exempt", default: false, null: false
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_tax_rates_on_account_id"
   end
 
   create_table "team_members", force: :cascade do |t|
@@ -3234,7 +3295,13 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_27_100000) do
   add_foreign_key "case_work_order_items", "accounts"
   add_foreign_key "case_work_order_items", "case_tickets", on_delete: :cascade
   add_foreign_key "case_work_order_items", "catalog_items", on_delete: :nullify
+  add_foreign_key "catalog_categories", "accounts"
+  add_foreign_key "catalog_categories", "catalog_categories", column: "parent_id"
   add_foreign_key "catalog_items", "accounts"
+  add_foreign_key "catalog_items", "catalog_categories"
+  add_foreign_key "catalog_items", "catalog_units"
+  add_foreign_key "catalog_items", "tax_rates"
+  add_foreign_key "catalog_units", "accounts"
   add_foreign_key "client_portal_links", "accounts", on_delete: :cascade
   add_foreign_key "client_portal_links", "contacts", on_delete: :cascade
   add_foreign_key "client_portal_links", "organizations", on_delete: :cascade
@@ -3306,6 +3373,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_27_100000) do
   add_foreign_key "published_prompts", "accounts"
   add_foreign_key "published_prompts", "tracking_templates", on_delete: :nullify
   add_foreign_key "published_prompts", "users", on_delete: :nullify
+  add_foreign_key "quote_formats", "accounts"
   add_foreign_key "quote_items", "accounts"
   add_foreign_key "quote_items", "catalog_items", on_delete: :nullify
   add_foreign_key "quote_items", "quotes", on_delete: :cascade
@@ -3315,6 +3383,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_27_100000) do
   add_foreign_key "quotes", "case_tickets", column: "origin_ticket_id", on_delete: :nullify
   add_foreign_key "quotes", "contacts"
   add_foreign_key "quotes", "organizations", on_delete: :nullify
+  add_foreign_key "quotes", "quote_formats", on_delete: :nullify
   add_foreign_key "quotes", "quotes", column: "parent_quote_id", on_delete: :nullify
   add_foreign_key "quotes", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "ready_agent_sessions", "accounts"
@@ -3355,6 +3424,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_27_100000) do
   add_foreign_key "task_reports", "organizations", on_delete: :nullify
   add_foreign_key "task_reports", "task_outcomes", on_delete: :nullify
   add_foreign_key "task_reports", "users", on_delete: :nullify
+  add_foreign_key "tax_rates", "accounts"
   add_foreign_key "tracking_agent_briefs", "accounts"
   add_foreign_key "tracking_agent_briefs", "tracking_assistant_sessions", on_delete: :nullify
   add_foreign_key "tracking_agent_briefs", "tracking_templates", on_delete: :nullify

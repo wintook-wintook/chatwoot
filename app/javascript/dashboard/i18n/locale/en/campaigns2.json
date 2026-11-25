@@ -9,7 +9,7 @@
     "LOAD_ERROR": "The campaign couldn't be loaded.",
     "NAME": "Campaign name",
     "NAME_PLACEHOLDER": "E.g. Air conditioning promo — March",
-    "NEEDS_SELLER_AND_CHANNEL": "Pick the channel (Offer and channel step) to save it.",
+    "NEEDS_SELLER_AND_CHANNEL": "Pick the channel to save it.",
     "SAVE_ERROR": "The campaign couldn't be saved.",
     "SAVED": "Campaign saved.",
     "LAUNCHED": "Campaign launched!",
@@ -155,7 +155,7 @@
       },
       "CONTINUOUS_HINT": "Continuous campaign: every contact an automation adds with «Add to campaign» enters.",
       "FROM_CAMPAIGN": "{n} contacts from another campaign.",
-      "NEEDS_CHANNEL": "Pick the channel (Offer and channel step) to see how many it reaches.",
+      "NEEDS_CHANNEL": "Pick the channel to see how many it reaches.",
       "COUNTING": "Counting…",
       "PICK_FIRST": "Choose the audience to see how many it reaches.",
       "BUCKETS": {
@@ -164,7 +164,8 @@
         "unreachable": "No valid phone or email",
         "excluded": "Removed by you"
       },
-      "list": "Upload an email list"
+      "list": "Upload an email list",
+      "EVENT_OF": "Attendees of this event"
     },
     "MESSAGES": {
       "CHANNEL": "Channel",
@@ -184,7 +185,7 @@
       "NO_TEMPLATES": "This inbox has no approved templates. Create them in Settings › Inboxes › Templates (or «Create with Dali»).",
       "NO_TEMPLATE_PREVIEW": "Choose the first touch's template to see how it arrives.",
       "PICK_CHANNEL_FIRST": "Choose the channel to write the messages.",
-      "CHANNEL_IS": "Channel: {name} (chosen in «Offer and channel»)."
+      "CHANNEL_IS": "Channel: {name}."
     },
     "EMAIL": {
       "SUBJECT": "Subject",
@@ -263,7 +264,7 @@
     },
     "PREVIEW": {
       "TITLE": "How it arrives",
-      "PICK_CHANNEL": "Choose the channel in the Messages step to see how it arrives."
+      "PICK_CHANNEL": "Pick the channel to see how it arrives."
     },
     "CHAT": {
       "TITLE": "Test: you are the contact",
@@ -429,7 +430,7 @@
       "CLEANUP": "Delete those who never reply after (days)",
       "COLUMNS": "CSV with headers: email required; name, company and phone optional. Up to 5,000 rows.",
       "UPLOAD": "Upload and clean",
-      "NEEDS_SELLER": "Pick the channel first (Offer and channel step).",
+      "NEEDS_SELLER": "Pick the channel first.",
       "ERROR": "The list couldn't be uploaded.",
       "RESULT": "Of {rows} rows: {valid} ready ({created} new in quarantine and {existing} already your contacts).",
       "LOADED": "List «{name}»: {n} contacts.",
@@ -445,7 +446,8 @@
       "simulate": "Simulate",
       "chat": "Chat",
       "real": "Real test",
-      "cases": "Cases"
+      "cases": "Cases",
+      "more": "More tests"
     },
     "SIM": {
       "INTRO": "See the whole campaign as a contact would get it: each touch with its text and when it goes out, and what happens depending on the reply. Nothing is sent.",
@@ -625,8 +627,8 @@
         "WHERE": "Where: {where}",
         "CLOSE": "Shall I confirm your spot?"
       },
-      "SURVEY_HINT": "If they accept, your questions («Offer and channel» step) are asked one per message, in this order:",
-      "SURVEY_EMPTY": "Write the questions in the «Offer and channel» step.",
+      "SURVEY_HINT": "If they accept, your questions («The file» step) are asked one per message, in this order:",
+      "SURVEY_EMPTY": "Write the questions in the «The file» step.",
       "AFTER": {
         "offer": "Then: the seller answers questions and leads to the close; when they want it, it hands off, quotes or books.",
         "reactivate": "Then: answers questions and leads to the close; when they want it, it hands off.",
@@ -737,7 +739,9 @@
       "LABEL": "Contact label",
       "NO_LABEL": "no label",
       "EXCLUDES": "Contacts with «{label}» are left out of the next {kind} campaigns.",
-      "GLOBAL_OPT_OUT": "«Unsubscribe», «stop» opts them out of everything."
+      "GLOBAL_OPT_OUT": "«Unsubscribe», «stop» opts them out of everything.",
+      "CUSTOMIZE": "Customize",
+      "USE_DEFAULT": "Use the default"
     },
     "CASES": {
       "HINT": "Tests built from the campaign. The AI answers as it would to a contact, without sending or saving anything.",
@@ -749,6 +753,64 @@
       "RUN": "Run",
       "TOOLS": "did: {names}",
       "SAYS": "«{message}»"
+    },
+    "INVITE": {
+      "KIND": "Type:",
+      "WHO": "Who you invite",
+      "PERSON_TITLE": "If they ask for a person, hand over to",
+      "ADVANCED": "Advanced options",
+      "HIDE_ADVANCED": "Hide advanced options",
+      "ENDS_AT_EVENT": "It ends on its own when the event starts.",
+      "EVENT_TITLE": "Which event are you inviting to?",
+      "CREATE_EVENT": "Create an event ↗",
+      "PICK_EVENT": "Pick the event",
+      "NO_EVENTS": "No events from today on. Create one in Events and come back.",
+      "WHEN": "When",
+      "WHERE": "Where",
+      "LINK": "Link",
+      "CAPACITY": "Capacity",
+      "FROM_EVENT_HINT": "The AI already knows this (it comes from the event). If something changes, change it in Events.",
+      "CONFIRM_TITLE": "How do they confirm?",
+      "GOALS": {
+        "confirm": "Here in the chat",
+        "external": "They register on their own (Zoom, form)"
+      },
+      "GOALS_ABOUT": {
+        "confirm": "They say yes and are marked «confirmed» in the event list.",
+        "external": "We send the registration link and count them as registered when they write the keyword."
+      },
+      "REGISTRATION_URL": "Registration link",
+      "REGISTRATION_PLACEHOLDER": "https://zoom.us/meeting/register/…",
+      "REGISTRATION_NAME": "Registration",
+      "KEYWORD": "Keyword",
+      "KEYWORD_HINT": "When they write this word (e.g. REGISTERED), it counts as achieved.",
+      "KNOWLEDGE_TITLE": "What only you know about the event",
+      "STEPS": {
+        "event": "The event",
+        "audience": "Guests",
+        "messages": "Messages",
+        "replies": "When they reply",
+        "review": "Review and launch"
+      },
+      "HINTS": {
+        "event": "The event you invite to, how they confirm and what the AI must know.",
+        "audience": "Which channel and who gets the invitation.",
+        "messages": "The invitation, the full information, follow-ups to those who do not reply and reminders to those who confirm.",
+        "replies": "What it replies at each moment and the label the contact gets. They come ready; customize only if you want.",
+        "review": "Name, when it goes out, the review and the tests (Cases run on their own)."
+      }
+    },
+    "REMINDERS": {
+      "TITLE": "Reminders to those who confirmed",
+      "HINT": "Only those who said yes (or registered) get them.",
+      "KINDS": {
+        "day_before": "One day before",
+        "hour_before": "One hour before, with the link"
+      },
+      "VARIABLES": "You can use {{nombre}} {{evento}} {{cuando}} {{lugar}} {{liga}}. Empty = the grey text.",
+      "TEMPLATE": "Template for reminders",
+      "NO_TEMPLATE": "No template",
+      "TEMPLATE_HINT": "WhatsApp only allows free text 24 h after their last message; after that, the reminder goes with this template."
     }
   }
 }

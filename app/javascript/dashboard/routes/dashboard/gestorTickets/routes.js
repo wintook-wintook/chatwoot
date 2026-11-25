@@ -101,6 +101,14 @@ export const routes = [
     component: () =>
       import('../../../views/gestorTickets/quotes/QuotesList.vue'),
   },
+  // Cotizaciones › Formatos (antes de :id para que no lo tome como cotización).
+  {
+    path: frontendURL('accounts/:accountId/tickets/quotes/formats'),
+    name: 'gestorTickets_quote_formats',
+    meta: AGENT,
+    component: () =>
+      import('../../../views/gestorTickets/quotes/QuoteFormats.vue'),
+  },
   {
     path: frontendURL('accounts/:accountId/tickets/quotes/new'),
     name: 'gestorTickets_quote_new',

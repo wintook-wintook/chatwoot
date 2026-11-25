@@ -5,6 +5,7 @@
 #  id                 :bigint           not null, primary key
 #  accepted_by_name   :string
 #  accepted_signature :text
+#  apply_withholdings :boolean          default(FALSE), not null
 #  currency           :string(3)        default("MXN"), not null
 #  decided_at         :datetime
 #  discount_total     :decimal(14, 2)   default(0.0), not null
@@ -22,6 +23,7 @@
 #  valid_until        :date
 #  version            :integer          default(1), not null
 #  viewed_at          :datetime
+#  withholding_total  :decimal(14, 2)   default(0.0), not null
 #  created_at         :datetime         not null
 #  updated_at         :datetime         not null
 #  account_id         :bigint           not null
@@ -32,6 +34,7 @@
 #  origin_ticket_id   :bigint
 #  outcome_reason_id  :bigint
 #  parent_quote_id    :bigint
+#  quote_format_id    :bigint
 #
 # Indexes
 #
@@ -46,6 +49,7 @@
 #  index_quotes_on_outcome_reason_id                  (outcome_reason_id)
 #  index_quotes_on_parent_quote_id                    (parent_quote_id)
 #  index_quotes_on_public_token                       (public_token) UNIQUE
+#  index_quotes_on_quote_format_id                    (quote_format_id)
 #
 # Foreign Keys
 #
@@ -57,6 +61,7 @@
 #  fk_rails_...  (origin_ticket_id => case_tickets.id) ON DELETE => nullify
 #  fk_rails_...  (outcome_reason_id => case_outcome_reasons.id) ON DELETE => nullify
 #  fk_rails_...  (parent_quote_id => quotes.id) ON DELETE => nullify
+#  fk_rails_...  (quote_format_id => quote_formats.id) ON DELETE => nullify
 #
 
 # Plan-Catalogo-Cotizaciones V1 — una cotización. Puede vivir sola (el vendedor
@@ -80,6 +85,7 @@ class Quote < ApplicationRecord
   belongs_to :origin_ticket, class_name: 'CaseTicket', optional: true
   belongs_to :parent_quote, class_name: 'Quote', optional: true
   belongs_to :outcome_reason, class_name: 'CaseOutcomeReason', optional: true
+  belongs_to :quote_format, optional: true # Cotizaciones › Formatos (sin él, el de por omisión)
   has_many :items, -> { order(:position, :id) }, class_name: 'QuoteItem', dependent: :destroy, inverse_of: :quote
 
   has_secure_token :public_token
@@ -87,6 +93,7 @@ class Quote < ApplicationRecord
   enum status: { draft: 0, sent: 1, won: 2, lost: 3, postponed: 4, cancelled: 5 }
 
   before_validation :assign_number, on: :create
+  validate -> { errors.add(:quote_format, :invalid) if quote_format && quote_format.account_id != account_id }
   before_validation -> { self.currency = currency.to_s.upcase.presence || 'MXN' }
   # Plan-Organizaciones O3 — enviada → prospecto; aceptada → cliente (si la regla está encendida).
   after_commit -> { Organizations::StageRules.call(:prospect_on_quote_sent, self) },
@@ -130,13 +137,23 @@ class Quote < ApplicationRecord
   end
 
   # Suma las partidas: subtotal (sin descuento), descuento, impuestos y total.
+  # { 'Ret. IVA 10.67 %' => 106.67, … } — lo retenido por cada retención (vacío si no aplica).
+  def withholding_breakdown
+    return {} unless apply_withholdings? && withholding_total.positive?
+
+    items.each_with_object(Hash.new(0)) do |item, sums|
+      Array(item.withholdings).each { |row| sums[row['name']] += (item.net_amount * row['percent'].to_d / 100).round(2) }
+    end
+  end
+
   def recalculate!
     rows = items.reload
     gross = rows.sum { |item| item.quantity * item.unit_price }
     net = rows.sum(&:net_amount)
     tax = rows.sum(&:tax_amount)
+    withheld = apply_withholdings? ? rows.sum(&:withholding_amount) : 0 # solo persona moral (Quotes::Withholdings)
     update!(subtotal: gross.round(2), discount_total: (gross - net).round(2), tax_total: tax.round(2),
-            total: (net + tax).round(2))
+            withholding_total: withheld.round(2), total: (net + tax - withheld).round(2))
     mirror_amount_on_opportunity
   end
 

@@ -3081,7 +3081,196 @@
       "LIST": "Back to the list"
     }
   },
+  "QUOTE_FORMATS": {
+    "TITLE": "Quote formats",
+    "DESCRIPTION": "How the quote looks on the customer link and in the PDF. You can have several and pick one per quote.",
+    "DEFAULT": "default",
+    "NEW": "New",
+    "NEW_NAME": "Format {n}",
+    "DUPLICATE": "Duplicate",
+    "NAME": "Format name",
+    "IS_DEFAULT": "Default format (Dali and agents use it too)",
+    "USED_BY": "Used by {count} quotes.",
+    "SAVE": "Save format",
+    "SAVED": "Saved",
+    "DELETED": "Format deleted",
+    "ERROR": "Could not save",
+    "UNSAVED": "Unsaved changes",
+    "DISCARD": "There are unsaved changes. Discard them?",
+    "DELETE_CONFIRM": "Delete the format «{name}»? Its quotes will use the default one.",
+    "UPLOAD": "Upload",
+    "REMOVE": "Remove",
+    "UP": "Up",
+    "DOWN": "Down",
+    "OPTIONS": "options",
+    "CLOSE": "close",
+    "PREVIEW": "Preview",
+    "PREVIEW_HINT": "With your latest quote (or a sample)",
+    "UPDATING": "Updating…",
+    "NO_PDF": "This server cannot generate PDFs yet: the customer will use Print. wkhtmltopdf must be installed.",
+    "VARIABLES": "You can use: {list}",
+    "BRAND": {
+      "TITLE": "Brand",
+      "COLOR": "Main color",
+      "FONT": "Font",
+      "PAPER": "Paper",
+      "LETTER": "Letter",
+      "A4": "A4",
+      "LOGO_POSITION": "Logo",
+      "LOGO_SIZE": "Logo size",
+      "POSITIONS": {
+        "left": "Left",
+        "center": "Center",
+        "right": "Right"
+      },
+      "SIZES": {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large"
+      },
+      "FORMAT_LOGO": "Logo for this format (optional)",
+      "FORMAT_LOGO_HINT": "If none, the company logo is used. PNG, JPG or WEBP up to 2 MB."
+    },
+    "BLOCKS": {
+      "TITLE": "Blocks",
+      "HINT": "Turn on the ones you want and order them with the arrows. Click the name for its options.",
+      "header": {
+        "TITLE": "Header",
+        "HINT": "Logo, company data, folio, date, validity and seller. Choose which company data shows.",
+        "OVERRIDE": "Change data only in this format (empty = company data)"
+      },
+      "client": {
+        "TITLE": "Customer",
+        "HINT": "Which customer data shows."
+      },
+      "intro": {
+        "TITLE": "Intro text",
+        "HINT": "A paragraph before the items.",
+        "PLACEHOLDER": "Dear {{cliente}}, here is our proposal…"
+      },
+      "items": {
+        "TITLE": "Items",
+        "HINT": "Description, quantity, price and amount always show. Choose the other columns.",
+        "PRICES_WITH_TAX": "Show prices including tax"
+      },
+      "totals": {
+        "TITLE": "Totals",
+        "HINT": "Subtotal, discount, taxes, withholdings and total.",
+        "tax_breakdown": "Tax broken down by rate",
+        "withholdings": "Withholdings one by one",
+        "amount_in_words": "Total in words"
+      },
+      "terms": {
+        "TITLE": "Terms",
+        "HINT": "This format's default terms; if the quote has its own, those show.",
+        "PLACEHOLDER": "Payment terms, delivery time, warranty…"
+      },
+      "bank": {
+        "TITLE": "Payment details",
+        "HINT": "Bank, account, CLABE…",
+        "PLACEHOLDER": "Bank: …\nAccount: …\nCLABE: …"
+      },
+      "signatures": {
+        "TITLE": "Signatures",
+        "HINT": "Seller signature line and customer acceptance (with their signature if accepted online).",
+        "seller": "Seller signature",
+        "client": "Customer acceptance signature"
+      },
+      "footer": {
+        "TITLE": "Footer",
+        "HINT": "Text at the end of the document.",
+        "PLACEHOLDER": "Thank you · www.yourcompany.com"
+      }
+    },
+    "COMPANY": {
+      "TITLE": "Company data",
+      "HINT": "Used in every format (each format can change it).",
+      "legal_name": "Legal name",
+      "tax_id": "Tax ID",
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email",
+      "website": "Website",
+      "LOGO": "Company logo",
+      "SAVE": "Save company data"
+    },
+    "CLIENT": {
+      "name": "Name",
+      "organization": "Company",
+      "tax_id": "Tax ID",
+      "email": "Email",
+      "phone": "Phone"
+    },
+    "COLUMNS": {
+      "sku": "Code",
+      "image": "Product photo",
+      "unit": "Unit",
+      "discount": "Discount",
+      "tax": "Tax"
+    }
+  },
   "CATALOG": {
+    "TABS": {
+      "ITEMS": "Products",
+      "PARAMETERS": "Settings"
+    },
+    "PARAMS": {
+      "HINT": "The lists you pick from when adding a product. What is in use cannot be deleted: deactivate it and it is no longer offered.",
+      "ADD": "Add",
+      "SAVE": "Save",
+      "CANCEL": "Cancel",
+      "EDIT": "Edit",
+      "DELETE": "Delete",
+      "DEACTIVATE": "Deactivate",
+      "ACTIVATE": "Activate",
+      "INACTIVE": "Inactive",
+      "ITEMS": "No products | 1 product | {count} products",
+      "IN_USE": "In use: deactivate it instead of deleting it",
+      "ERROR": "Could not save",
+      "DELETE_CONFIRM": "Delete «{name}»?",
+      "CATEGORIES": {
+        "TITLE": "Categories",
+        "HINT": "With one level of subcategories (Parts › Brakes). Renaming updates the products.",
+        "NAME": "Category name",
+        "ADD_CHILD": "Subcategory",
+        "CHILD_NAME": "Subcategory name",
+        "EMPTY": "No categories yet."
+      },
+      "TAXES": {
+        "TITLE": "Taxes",
+        "HINT": "The marked one is the default: used by products without their own tax and by lines not from the catalog.",
+        "NAME": "Name",
+        "PERCENT": "%",
+        "EXEMPT": "Exempt",
+        "DEFAULT": "Default",
+        "MAKE_DEFAULT": "Make default"
+      },
+      "WITHHOLDINGS": {
+        "TITLE": "Withholdings",
+        "HINT": "VAT and income tax withholdings. Each product carries its own; the quote subtracts them only for companies (12-character RFC)."
+      },
+      "UNITS": {
+        "TITLE": "Units of measure",
+        "HINT": "The abbreviation shows in quotes and work orders. The SAT code is optional (for invoicing).",
+        "NAME": "Name",
+        "ABBREVIATION": "Abbreviation",
+        "SAT_CODE": "SAT code"
+      }
+    },
+    "FORM_EXTRA": {
+      "CATEGORY_NONE": "No category",
+      "UNIT_NONE": "No unit",
+      "TAX": "Tax",
+      "TAX_DEFAULT": "Default ({name})",
+      "PRICE_INCLUDES_TAX": "Price already includes tax",
+      "PRICE_INCLUDES_TAX_HINT": "When quoting, the tax is separated so the total is this price.",
+      "SAT_CODE": "SAT product or service code",
+      "SAT_CODE_HINT": "Optional. For invoicing.",
+      "WITHHOLDINGS": "Withholdings",
+      "WITHHOLDINGS_HINT": "Subtracted in the quote only if the customer is a company.",
+      "MANAGE": "Edit the lists in «Settings»"
+    },
+    "QUOTE_TAX_MOVED": "The default tax is changed in Products and services › Settings: {name}",
     "TITLE": "Products and services catalog",
     "DESCRIPTION": "What your company sells and the parts technicians use. Used by quotes and work orders.",
     "NEW": "Product or service",
@@ -3137,7 +3326,7 @@
     "ERROR": "Could not save",
     "IMPORT_DONE": "Imported: {created} new, {updated} updated",
     "IMPORT_ERRORS": "{count} rows with errors (row {line}: {error})",
-    "IMPORT_HELP": "CSV with columns: clave, nombre, tipo, categoria, unidad, precio, moneda, costo, descripcion, activo",
+    "IMPORT_HELP": "CSV with columns: clave, nombre, tipo, categoria (Category › Subcategory), unidad, precio, moneda, costo, descripcion, activo, impuesto, precio_con_impuesto (si/no), clave_sat, retenciones (Ret. IVA 10.67 %; Ret. ISR 10 %)",
     "PICKER": {
       "PLACEHOLDER": "Search the catalog…",
       "EMPTY": "No results",
@@ -3217,6 +3406,14 @@
       "SUBTOTAL": "Subtotal",
       "DISCOUNT_TOTAL": "Discount",
       "TAX_TOTAL": "Taxes",
+      "FORMAT": "Format",
+      "FORMAT_DEFAULT": "Default ({name})",
+      "WITHHOLDINGS": "Withholdings",
+      "WITHHOLDING_ADD": "+ Add withholding",
+      "WITHHOLDING_REMOVE": "Remove withholding",
+      "WITHHOLDING_TOTAL": "Withholdings",
+      "APPLY_WITHHOLDINGS": "Apply withholdings",
+      "APPLY_WITHHOLDINGS_HINT": "Only for company customers: checked automatically when the organization RFC has 12 characters.",
       "TOTAL": "Total",
       "TERMS": "Terms",
       "TERMS_PLACEHOLDER": "Payment terms, delivery time, warranty…",

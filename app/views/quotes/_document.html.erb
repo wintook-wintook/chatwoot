@@ -1,0 +1,210 @@
+<%# Cotizaciones › Formatos — el documento de la cotización con su formato (Quotes::Document: doc).
+    Lo usan la liga del cliente, la vista previa del diseñador y el PDF. Solo tablas y CSS sencillo, sin
+    variables CSS ni flex: así sale igual en el navegador y en wkhtmltopdf. %>
+<% color = doc.brand['color'] %>
+<% font = doc.brand['font'] %>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=<%= font %>:400,700&display=swap" />
+<style>
+  .qdoc { font-family: '<%= font %>', 'DejaVu Sans', Arial, Helvetica, sans-serif; color: #1e293b; font-size: 12px; line-height: 1.45; background: #fff; }
+  .qdoc table { width: 100%; border-collapse: collapse; }
+  .qdoc td, .qdoc th { vertical-align: top; }
+  .qdoc .q-block { margin-bottom: 18px; page-break-inside: avoid; }
+  .qdoc .q-muted { color: #64748b; }
+  .qdoc .q-small { font-size: 10.5px; }
+  .qdoc .q-title { font-size: 20px; font-weight: bold; color: <%= color %>; letter-spacing: .5px; margin: 0; }
+  .qdoc .q-company { font-size: 15px; font-weight: bold; margin: 0 0 2px; }
+  .qdoc .q-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: <%= color %>; font-weight: bold; margin: 0 0 4px; }
+  .qdoc .q-box { border: 1px solid #e2e8f0; border-left: 3px solid <%= color %>; padding: 8px 10px; }
+  .qdoc .q-items th { background: <%= color %>; color: #fff; font-weight: bold; text-align: left; padding: 6px 6px; font-size: 11px; }
+  .qdoc .q-items td { padding: 6px 6px; border-bottom: 1px solid #e2e8f0; }
+  .qdoc .q-items tr { page-break-inside: avoid; }
+  .qdoc .q-right { text-align: right !important; white-space: nowrap; }
+  .qdoc .q-totals td { padding: 3px 6px; }
+  .qdoc .q-totals .q-grand td { border-top: 2px solid <%= color %>; font-weight: bold; font-size: 14px; padding-top: 6px; }
+  .qdoc .q-pre { white-space: pre-line; margin: 0; }
+  .qdoc .q-sign { border-top: 1px solid #94a3b8; padding-top: 4px; text-align: center; }
+  .qdoc .q-footer { text-align: center; font-size: 10px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+  .qdoc img.q-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
+</style>
+<div class="qdoc">
+  <% doc.blocks.each do |block| %>
+    <% case block %>
+    <% when 'header' %>
+      <div class="q-block">
+        <% logo = doc.logo_src %>
+        <% if logo && doc.brand['logo_position'] == 'center' %>
+          <div style="text-align: center; margin-bottom: 10px;"><img src="<%= logo %>" alt="" style="height: <%= doc.logo_height %>px;" /></div>
+        <% end %>
+        <table>
+          <tr>
+            <% if logo && doc.brand['logo_position'] == 'left' %>
+              <td style="width: 1%; padding-right: 14px;"><img src="<%= logo %>" alt="" style="height: <%= doc.logo_height %>px;" /></td>
+            <% end %>
+            <td>
+              <p class="q-company"><%= doc.company['legal_name'] %></p>
+              <% doc.company_fields.excluding('legal_name').each do |field| %>
+                <div class="q-small q-muted"><%= t("quote_formats.company.#{field}") %>: <%= doc.company[field] %></div>
+              <% end %>
+            </td>
+            <td style="text-align: right; width: 38%;">
+              <% if logo && doc.brand['logo_position'] == 'right' %>
+                <div style="margin-bottom: 8px;"><img src="<%= logo %>" alt="" style="height: <%= doc.logo_height %>px;" /></div>
+              <% end %>
+              <p class="q-title"><%= t('public_quotes.title').upcase %></p>
+              <div style="font-size: 14px; font-weight: bold;"><%= doc.folio %></div>
+              <div class="q-small q-muted"><%= t('public_quotes.date') %>: <%= doc.date.strftime('%d/%m/%Y') %></div>
+              <% if doc.quote.valid_until %>
+                <div class="q-small q-muted"><%= t('public_quotes.valid_until') %>: <%= doc.quote.valid_until.strftime('%d/%m/%Y') %></div>
+              <% end %>
+              <% if doc.quote.assignee %>
+                <div class="q-small q-muted"><%= t('public_quotes.seller') %>: <%= doc.quote.assignee.name %></div>
+              <% end %>
+            </td>
+          </tr>
+        </table>
+      </div>
+    <% when 'client' %>
+      <% client = doc.client_rows %>
+      <% if client.any? %>
+        <div class="q-block q-box">
+          <p class="q-label"><%= t('quote_formats.client') %></p>
+          <% client.each do |key, value| %>
+            <div><% unless key == 'name' %><span class="q-muted"><%= t("quote_formats.client_fields.#{key}") %>: </span><% end %><%= key == 'name' ? tag.strong(value) : value %></div>
+          <% end %>
+        </div>
+      <% end %>
+    <% when 'intro' %>
+      <% text = doc.text('intro') %>
+      <% if text.present? %><div class="q-block"><p class="q-pre"><%= text %></p></div><% end %>
+    <% when 'items' %>
+      <div class="q-block">
+        <table class="q-items">
+          <thead>
+            <tr>
+              <% if doc.column?('image') %><th style="width: 46px;"></th><% end %>
+              <% if doc.column?('sku') %><th><%= t('quote_formats.columns.sku') %></th><% end %>
+              <th style="width: 40%;"><%= t('public_quotes.columns.description') %></th>
+              <th class="q-right"><%= t('public_quotes.columns.quantity') %></th>
+              <% if doc.column?('unit') %><th><%= t('quote_formats.columns.unit') %></th><% end %>
+              <th class="q-right"><%= doc.prices_with_tax? ? t('quote_formats.columns.price_with_tax') : t('public_quotes.columns.price') %></th>
+              <% if doc.column?('discount') %><th class="q-right"><%= t('public_quotes.columns.discount') %></th><% end %>
+              <% if doc.column?('tax') %><th class="q-right"><%= t('quote_formats.columns.tax') %></th><% end %>
+              <th class="q-right"><%= t('public_quotes.columns.total') %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% doc.rows.each do |row| %>
+              <% item = row[:item] %>
+              <tr>
+                <% if doc.column?('image') %><td><% if row[:image] %><img class="q-thumb" src="<%= row[:image] %>" alt="" /><% end %></td><% end %>
+                <% if doc.column?('sku') %><td class="q-muted"><%= row[:sku] %></td><% end %>
+                <td><%= item.description %></td>
+                <td class="q-right"><%= number_with_precision(item.quantity, precision: 2, strip_insignificant_zeros: true) %></td>
+                <% if doc.column?('unit') %><td><%= item.unit %></td><% end %>
+                <td class="q-right"><%= doc.money(row[:unit_price]) %></td>
+                <% if doc.column?('discount') %>
+                  <td class="q-right"><%= item.discount_percent.positive? ? "#{number_with_precision(item.discount_percent, precision: 2, strip_insignificant_zeros: true)}%" : '—' %></td>
+                <% end %>
+                <% if doc.column?('tax') %>
+                  <td class="q-right"><%= "#{number_with_precision(item.tax_percent, precision: 2, strip_insignificant_zeros: true)}%" %></td>
+                <% end %>
+                <td class="q-right"><%= doc.money(row[:amount]) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% when 'totals' %>
+      <% totals = doc.totals %>
+      <div class="q-block">
+        <table>
+          <tr>
+            <td style="width: 55%; padding-right: 12px;">
+              <% if doc.option?('totals', 'amount_in_words') %>
+                <p class="q-label"><%= t('quote_formats.amount_in_words') %></p>
+                <div class="q-small"><%= doc.amount_in_words %></div>
+              <% end %>
+            </td>
+            <td>
+              <table class="q-totals">
+                <tr><td class="q-muted"><%= t('public_quotes.subtotal') %></td><td class="q-right"><%= doc.money(totals[:subtotal]) %></td></tr>
+                <% if totals[:discount].positive? %>
+                  <tr><td class="q-muted"><%= t('public_quotes.discount') %></td><td class="q-right">−<%= doc.money(totals[:discount]) %></td></tr>
+                <% end %>
+                <% if totals[:tax].positive? %>
+                  <% if doc.option?('totals', 'tax_breakdown') %>
+                    <% totals[:taxes].each do |name, amount| %>
+                      <tr><td class="q-muted"><%= name %></td><td class="q-right"><%= doc.money(amount) %></td></tr>
+                    <% end %>
+                  <% else %>
+                    <tr><td class="q-muted"><%= t('public_quotes.tax') %></td><td class="q-right"><%= doc.money(totals[:tax]) %></td></tr>
+                  <% end %>
+                <% end %>
+                <% if totals[:withheld].positive? %>
+                  <% if doc.option?('totals', 'withholdings') %>
+                    <% totals[:withholdings].each do |name, amount| %>
+                      <tr><td class="q-muted"><%= name %></td><td class="q-right">−<%= doc.money(amount) %></td></tr>
+                    <% end %>
+                  <% else %>
+                    <tr><td class="q-muted"><%= t('quote_formats.withholdings') %></td><td class="q-right">−<%= doc.money(totals[:withheld]) %></td></tr>
+                  <% end %>
+                <% end %>
+                <tr class="q-grand"><td><%= t('public_quotes.total') %></td><td class="q-right"><%= doc.money(totals[:total]) %></td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </div>
+    <% when 'terms' %>
+      <% if doc.terms.present? %>
+        <div class="q-block">
+          <p class="q-label"><%= t('public_quotes.terms') %></p>
+          <p class="q-pre q-small"><%= doc.terms %></p>
+        </div>
+      <% end %>
+    <% when 'bank' %>
+      <% text = doc.text('bank') %>
+      <% if text.present? %>
+        <div class="q-block q-box">
+          <p class="q-label"><%= t('quote_formats.bank') %></p>
+          <p class="q-pre q-small"><%= text %></p>
+        </div>
+      <% end %>
+    <% when 'signatures' %>
+      <% seller = doc.option?('signatures', 'seller') && doc.quote.assignee %>
+      <% client_sign = doc.option?('signatures', 'client') %>
+      <% if seller || client_sign %>
+        <div class="q-block" style="margin-top: 36px;">
+          <table>
+            <tr>
+              <td style="width: 45%; vertical-align: bottom;">
+                <% if seller %>
+                  <div class="q-sign"><%= doc.quote.assignee.name %><br /><span class="q-small q-muted"><%= doc.company['legal_name'] %></span></div>
+                <% end %>
+              </td>
+              <td style="width: 10%;"></td>
+              <td style="width: 45%; vertical-align: bottom;">
+                <% if client_sign %>
+                  <div style="text-align: center;">
+                    <% if doc.quote.accepted_signature.present? %>
+                      <img src="<%= doc.quote.accepted_signature %>" alt="" style="height: 56px;" />
+                    <% end %>
+                  </div>
+                  <div class="q-sign">
+                    <%= doc.quote.accepted_by_name.presence || t('quote_formats.client_signature') %>
+                    <% if doc.quote.won? && doc.quote.decided_at %>
+                      <br /><span class="q-small q-muted"><%= t('quote_formats.accepted_on', date: doc.quote.decided_at.strftime('%d/%m/%Y')) %></span>
+                    <% end %>
+                  </div>
+                <% end %>
+              </td>
+            </tr>
+          </table>
+        </div>
+      <% end %>
+    <% when 'footer' %>
+      <% text = doc.text('footer') %>
+      <% if text.present? %><div class="q-block q-footer"><p class="q-pre"><%= text %></p></div><% end %>
+    <% end %>
+  <% end %>
+</div>

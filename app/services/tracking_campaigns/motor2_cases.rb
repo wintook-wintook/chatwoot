@@ -78,7 +78,7 @@ class TrackingCampaigns::Motor2Cases
   def question_case
     question = Array(function.answer(:campaign_objections)).first&.dig('objection').presence || fact_question
     make('question', 'Hace una pregunta concreta', question,
-         expect: { none: %w[enviar_informacion ya_lo_hizo confirmar_asistencia no_contactar no_esta_vez] })
+         expect: { none: %w[enviar_informacion mandar_liga ya_lo_hizo confirmar_asistencia no_contactar no_esta_vez] })
   end
 
   def fact_question

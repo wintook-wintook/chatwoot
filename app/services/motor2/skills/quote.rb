@@ -104,8 +104,9 @@ class Motor2::Skills::Quote < Motor2::Skills::Base
 
   def item_attrs(item, qty, position)
     { account_id: config.account.id, catalog_item_id: item.id, description: item.name, kind: item.kind, unit: item.unit,
-      quantity: qty, unit_price: item.price, discount_percent: 0, position: position,
-      tax_percent: CaseSetting.for_account(config.account).default_tax_percent }
+      quantity: qty, unit_price: item.quote_unit_price, discount_percent: 0, position: position,
+      tax_percent: item.quote_tax_percent, tax_rate_id: item.effective_tax_rate&.id, # Productos y servicios › Parámetros
+      withholdings: item.quote_withholdings }
   end
 
   def note_for_agent

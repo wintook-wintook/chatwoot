@@ -22,7 +22,8 @@ class Quotes::Builder
   def new_version(quote)
     Quote.transaction do
       copy = @account.quotes.create!(
-        quote.attributes.slice(*%w[contact_id assignee_id opportunity_id origin_ticket_id currency terms notes number])
+        quote.attributes.slice(*%w[contact_id assignee_id opportunity_id origin_ticket_id currency terms notes number
+                                   apply_withholdings quote_format_id])
              .merge(version: next_version(quote), parent_quote: quote, valid_until: VALID_DAYS.days.from_now.to_date)
       )
       quote.items.each do |item|
@@ -52,6 +53,8 @@ class Quotes::Builder
     quote.assignee = @account.users.find_by(id: attrs[:assignee_id]) || @actor
     quote.currency = quote.currency.presence || @settings.default_currency
     quote.valid_until ||= VALID_DAYS.days.from_now.to_date
+    # Retenciones: solo si el cliente es persona moral, salvo que lo digan.
+    quote.apply_withholdings = Quotes::Withholdings.for_contact(quote.contact, quote.organization_id) unless attrs.key?(:apply_withholdings)
   end
 
   def needs_opportunity?(quote, requested)

@@ -3,6 +3,7 @@
   Un solo catálogo para las cotizaciones (Ventas) y los materiales de las
   órdenes (Servicio). Lo edita Ventas con «Todo»; el resto solo lo consulta.
   El costo solo se muestra con «Ver montos». No se borra: se desactiva.
+  Pestaña «Parámetros»: categorías, impuestos y unidades (CatalogParameters).
 -->
 <script>
 import { mapGetters } from 'vuex';
@@ -10,6 +11,7 @@ import { useAlert } from 'dashboard/composables';
 import CatalogItemsAPI from 'dashboard/api/catalogItems';
 import Spinner from 'shared/components/Spinner.vue';
 import CatalogItemForm from './CatalogItemForm.vue';
+import CatalogParameters from './CatalogParameters.vue';
 import { formatMoney } from 'dashboard/helper/caseCommercial';
 import { canDo, getUserAccess } from 'dashboard/helper/accessHelper';
 
@@ -17,7 +19,7 @@ const KINDS = ['service', 'product', 'part'];
 
 export default {
   name: 'CatalogView',
-  components: { Spinner, CatalogItemForm },
+  components: { Spinner, CatalogItemForm, CatalogParameters },
   data() {
     return {
       items: [],
@@ -26,8 +28,9 @@ export default {
       perPage: 50,
       canEdit: false,
       loading: true,
-      categories: [],
-      filters: { q: '', kind: '', category: '', active: 'true' },
+      tab: this.$route.query.tab === 'parameters' ? 'parameters' : 'items',
+      params: { categories: [], taxes: [], units: [], can_edit: false },
+      filters: { q: '', kind: '', category_id: '', active: 'true' },
       showForm: false,
       editing: null,
       timer: null,
@@ -50,19 +53,29 @@ export default {
     defaultCurrency() {
       return (this.caseSettings && this.caseSettings.default_currency) || 'MXN';
     },
+    // Para el filtro: cada categoría y, debajo, sus subcategorías.
+    categoryOptions() {
+      return this.params.categories.flatMap(category => [
+        { id: category.id, label: category.name },
+        ...category.children.map(child => ({
+          id: child.id,
+          label: `\u00a0\u00a0· ${child.name}`,
+        })),
+      ]);
+    },
     pages() {
       return Math.max(1, Math.ceil(this.count / this.perPage));
     },
   },
   watch: {
     'filters.kind': 'reload',
-    'filters.category': 'reload',
+    'filters.category_id': 'reload',
     'filters.active': 'reload',
   },
   mounted() {
     this.$store.dispatch('caseTickets/fetchSettings');
     this.fetch();
-    this.fetchCategories();
+    this.fetchParams();
   },
   methods: {
     reload() {
@@ -90,13 +103,18 @@ export default {
         this.loading = false;
       }
     },
-    async fetchCategories() {
+    async fetchParams() {
       try {
-        const { data } = await CatalogItemsAPI.categories();
-        this.categories = data.categories || [];
+        const { data } = await CatalogItemsAPI.parameters();
+        this.params = data;
       } catch {
-        this.categories = [];
+        // sin listas: el producto se guarda sin categoría, unidad ni impuesto propio
       }
+    },
+    // Al cambiar una lista, los productos pueden traer otro texto de categoría o unidad.
+    onParams(data) {
+      this.params = data;
+      this.fetch();
     },
     money(value, currency) {
       return value === null || value === undefined
@@ -115,7 +133,7 @@ export default {
     onSaved() {
       this.showForm = false;
       this.fetch();
-      this.fetchCategories();
+      this.fetchParams();
     },
     goTo(page) {
       this.page = page;
@@ -153,7 +171,7 @@ export default {
           );
         }
         this.reload();
-        this.fetchCategories();
+        this.fetchParams();
       } catch (error) {
         useAlert(error?.response?.data?.error || this.$t('CATALOG.ERROR'));
       }
@@ -177,7 +195,7 @@ export default {
           {{ $t('CATALOG.DESCRIPTION') }}
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div v-if="tab === 'items'" class="flex items-center gap-2">
         <label
           v-if="canEdit"
           v-tooltip="$t('CATALOG.IMPORT_HELP')"
@@ -206,7 +224,28 @@ export default {
       </div>
     </header>
 
-    <div class="flex flex-wrap items-center gap-2 px-6 pb-3">
+    <woot-tabs
+      class="px-6 mb-3"
+      :index="tab === 'parameters' ? 1 : 0"
+      @change="i => (tab = i === 1 ? 'parameters' : 'items')"
+    >
+      <woot-tabs-item
+        v-for="(key, i) in ['items', 'parameters']"
+        :key="key"
+        :index="i"
+        :name="$t(`CATALOG.TABS.${key.toUpperCase()}`)"
+        :show-badge="false"
+      />
+    </woot-tabs>
+
+    <div v-if="tab === 'parameters'" class="flex-1 px-6 pb-6 overflow-auto">
+      <CatalogParameters :params="params" @update:params="onParams" />
+    </div>
+
+    <div
+      v-if="tab === 'items'"
+      class="flex flex-wrap items-center gap-2 px-6 pb-3"
+    >
       <input
         v-model="filters.q"
         type="search"
@@ -220,14 +259,14 @@ export default {
           {{ $t(`CATALOG.KINDS.${kind}`) }}
         </option>
       </select>
-      <select v-model="filters.category" class="!mb-0 w-48">
+      <select v-model="filters.category_id" class="!mb-0 w-48">
         <option value="">{{ $t('CATALOG.ALL_CATEGORIES') }}</option>
         <option
-          v-for="category in categories"
-          :key="category"
-          :value="category"
+          v-for="option in categoryOptions"
+          :key="option.id"
+          :value="option.id"
         >
-          {{ category }}
+          {{ option.label }}
         </option>
       </select>
       <select v-model="filters.active" class="!mb-0 w-36">
@@ -237,7 +276,7 @@ export default {
       </select>
     </div>
 
-    <div class="flex-1 px-6 pb-4 overflow-auto">
+    <div v-if="tab === 'items'" class="flex-1 px-6 pb-4 overflow-auto">
       <Spinner v-if="loading" />
       <p
         v-else-if="!items.length"
@@ -340,7 +379,7 @@ export default {
     <CatalogItemForm
       :show="showForm"
       :item="editing"
-      :categories="categories"
+      :params="params"
       :default-currency="defaultCurrency"
       :show-cost="showCost"
       @close="showForm = false"

@@ -2,8 +2,8 @@
 key: cotizaciones
 title: Cotizaciones
 areas: [sales]
-keywords: [cotizacion, cotizaciones, retomar cotizacion, cotizar, nueva cotizacion, partida, partidas, producto, descuento, iva, impuesto, vigencia, vigente hasta, enviar cotizacion, enlace, copiar enlace, ver como cliente, pdf, firma, aceptar, rechazar, nueva version, borrar borrador, reabrir cotizacion, enviada, vencida, ganada, perdida, pospuesta, cancelada, reemplazada, trabajo adicional, condiciones, notas internas, monto en juego, cotizar con dali, pedirle a dali una cotizacion]
-pages: [quotes, opportunities, case, contact, catalog, commercial_settings]
+keywords: [cotizacion, cotizaciones, retomar cotizacion, cotizar, nueva cotizacion, partida, partidas, producto, descuento, iva, impuesto, vigencia, vigente hasta, retencion, retenciones, retencion de iva, retencion de isr, persona moral, formato, formatos, diseño de cotizacion, logo, plantilla de cotizacion, pdf de la cotizacion, datos de la empresa, razon social, total con letra, datos bancarios, enviar cotizacion, enlace, copiar enlace, ver como cliente, pdf, firma, aceptar, rechazar, nueva version, borrar borrador, reabrir cotizacion, enviada, vencida, ganada, perdida, pospuesta, cancelada, reemplazada, trabajo adicional, condiciones, notas internas, monto en juego, cotizar con dali, pedirle a dali una cotizacion]
+pages: [quotes, quote_formats, opportunities, case, contact, catalog, commercial_settings]
 sources:
   - app/javascript/dashboard/views/gestorTickets/quotes/*.vue
   - app/javascript/dashboard/views/gestorTickets/catalog/CatalogPicker.vue
@@ -12,7 +12,10 @@ sources:
   - app/controllers/api/v1/accounts/quotes_controller.rb
   - app/services/quotes/*.rb
   - app/models/quote.rb
-reviewed: 2026-11-14
+  - app/models/quote_format.rb
+  - app/views/quotes/_document.html.erb
+  - app/controllers/api/v1/accounts/quote_formats_controller.rb
+reviewed: 2026-11-25
 ---
 ## Para qué sirve
 Una cotización es la propuesta con precios que le mandas al cliente. Puede ir sola o ligada a una oportunidad; el cliente la ve por un enlace, la acepta o la rechaza, y su resultado se refleja en la oportunidad.
@@ -29,7 +32,7 @@ Una cotización es la propuesta con precios que le mandas al cliente. Puede ir s
 2. En Cliente elige la «Organización (opcional)» y el Contacto. Luego el Responsable, «Vigente hasta» y la Moneda (código de 3 letras, como MXN). Si no pones vigencia, queda a 15 días; si dejas el responsable en «—», quedas tú; si no pones moneda, toma la del primer producto o la de tu empresa.
 3. En Oportunidad elige una abierta del cliente, «— Sin oportunidad —» o «+ Crear oportunidad nueva». Si tu empresa pide que toda cotización tenga oportunidad, no sale «— Sin oportunidad —».
 4. Agrega partidas: escribe en «Buscar en el catálogo…» y elige el producto, o usa «Usar «…» sin catálogo» para un concepto libre.
-5. En cada partida ajusta Concepto, Cant., Unidad, Precio, Desc. % e Imp. %. El Importe y los totales (Subtotal, Descuento, Impuestos, Total) se calculan solos. La ✕ quita una partida.
+5. En cada partida ajusta Concepto, Cant., Unidad, Precio, Desc. % e Imp. (se elige de la lista de impuestos y llega con el del producto). El Importe y los totales (Subtotal, Descuento, Impuestos, Retenciones, Total) se calculan solos. La ✕ quita una partida.
 6. Si quieres, escribe Condiciones (las ve el cliente: forma de pago, tiempo de entrega, garantía…) y Notas internas (solo tu equipo).
 7. Pulsa «Guardar». Nace como Borrador y recibe su folio (COT-0001). Sin cliente sale «Elige el cliente» y sin partidas «Agrega al menos una partida».
 
@@ -57,6 +60,16 @@ También puedes preguntarle «¿qué cotizaciones tiene abiertas Mario?». Lo de
 2. Elige el Motivo (sale solo si el catálogo tiene motivos para ese resultado; puedes dejar «Sin motivo») y un Comentario; en Pospuesta, la fecha en «Retomar el» (propone dentro de 14 días).
 3. Pulsa «Guardar». Una perdida o cancelada se puede «Reabrir»: vuelve a Enviada. Una pospuesta tiene «Retomar (vuelve a Enviada)»; si la oportunidad estaba pospuesta, también se retoma.
 
+### Diseñar el formato (cómo se ve)
+1. Entra a Ajustes › Formatos de cotización. A la izquierda se arma el formato y a la derecha se ve la vista previa con tu cotización más reciente (o una de ejemplo), al momento.
+2. «Marca»: color principal, tipografía, hoja (Carta o A4), posición y tamaño del logo, y si quieres un logo solo para ese formato.
+3. «Bloques»: prende los que quieres ver (Encabezado, Cliente, Texto de entrada, Partidas, Totales, Condiciones, Datos para pago, Firmas, Pie de página) y acomódalos con las flechas. Clic en el nombre abre sus opciones: qué datos de la empresa y del cliente salen, qué columnas llevan las partidas (clave, foto, unidad, descuento, IVA) y si los precios van con IVA, IVA desglosado, retenciones una por una, total con letra, firmas del vendedor y del cliente, y los textos.
+4. En los textos puedes usar {{cliente}}, {{empresa_cliente}}, {{folio}}, {{vendedor}}, {{vigencia}} y {{empresa}}.
+5. «Datos de la empresa» (razón social, RFC, dirección, teléfono, correo, web y logo) se capturan una vez y salen en todos los formatos; en el bloque Encabezado de un formato se pueden cambiar solo para ese (por ejemplo, otra razón social).
+6. Pulsa «Guardar formato». «Nuevo» y «Duplicar» crean otro; la casilla «Es el formato por omisión» marca el que se usa si la cotización no escoge (también Dali y los agentes). El bote lo borra (debe quedar uno; sus cotizaciones pasan al de por omisión).
+7. En cada cotización, el campo «Formato» escoge cuál usar (sale si hay más de uno). Las condiciones del formato salen si la cotización no trae las suyas.
+8. El cliente ve su liga con ese formato, y «Descargar PDF» baja el PDF; al mandarla por su conversación el PDF va adjunto.
+
 ### Cambiar una cotización ya enviada
 1. Solo se editan las cotizaciones en Borrador o Enviada. Las demás dicen «Esta cotización ya no se edita. Para cambiarla, haz una nueva versión.».
 2. Para otra propuesta: «Más» › «Nueva versión». Se crea la v2 con las mismas partidas y 15 días de vigencia; si la anterior seguía abierta (borrador, enviada o pospuesta), queda cancelada como «Reemplazada por la versión 2».
@@ -69,7 +82,9 @@ También puedes preguntarle «¿qué cotizaciones tiene abiertas Mario?». Lo de
 - ¿Qué es «Vencida»? Una enviada cuya vigencia ya pasó.
 - ¿Qué cuenta «Monto en juego»? El total de los borradores y las enviadas, por moneda. «Aceptación (90 días)» y «Respuesta del cliente» se calculan con las ganadas y perdidas de los últimos 90 días.
 - Si la cotización salió de una orden de trabajo, al ganarse sus partidas pasan a la orden; si salió de un proyecto, se crea una orden dentro del proyecto.
-- El impuesto por defecto de las partidas y si toda cotización debe tener oportunidad se configuran en Ajustes › Casos y etapas › Parámetros de ventas (administrador).
+- ¿De dónde sale el Imp. %? Una partida del catálogo trae el impuesto de su producto; si el producto no tiene uno propio, o la partida no es del catálogo, usa el impuesto por omisión. Los impuestos y cuál es el de por omisión se cambian en Catálogos › Productos y servicios › pestaña «Parámetros». Si el producto tiene marcado «El precio ya incluye el impuesto», la partida llega con el precio sin impuesto, para que el total sea el precio publicado.
+- ¿Y las retenciones? Arriba de las partidas está «Aplicar retenciones»: se marca sola si el cliente es persona moral (el RFC de su organización tiene 12 caracteres) y se puede cambiar. Marcada, cada partida muestra sus retenciones (las de su producto) con una ✕ para quitarlas y «+ Agregar retención»; el total resta las retenciones y la liga del cliente las muestra una por una. Las retenciones se dan de alta en Catálogos › Productos y servicios › «Parámetros».
+- Si toda cotización debe tener oportunidad se configura en Ajustes › Casos y etapas › Parámetros de ventas (administrador).
 - Los productos salen de Catálogos › Productos y servicios. Ver la guía Catálogo de productos y servicios.
 
 ## Quién puede

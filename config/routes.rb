@@ -148,8 +148,23 @@ Rails.application.routes.draw do
             end
           end
           # Plan-Catalogo-Cotizaciones V1 — Ventas › Cotizaciones
+          # Cotizaciones › Formatos (y los datos de la empresa para el encabezado)
+          resources :quote_formats, only: [:index, :create, :update, :destroy] do
+            collection do
+              patch :company
+              post :company_logo
+              delete :company_logo, action: :remove_company_logo
+              post :preview
+            end
+            member do
+              post :duplicate
+              post :logo
+              delete :logo, action: :remove_logo
+            end
+          end
           resources :quotes, only: [:index, :show, :create, :update, :destroy] do
             get :summary, on: :collection
+            get :withholdings_default, on: :collection # retenciones: ¿el cliente es persona moral?
             member do
               post :transition
               post :new_version
@@ -157,6 +172,11 @@ Rails.application.routes.draw do
               post :deliver
             end
           end
+          # Productos y servicios › Parámetros: categorías, impuestos y unidades
+          get 'catalog_parameters', to: 'catalog_parameters#index'
+          post 'catalog_parameters/:list', to: 'catalog_parameters#create'
+          patch 'catalog_parameters/:list/:id', to: 'catalog_parameters#update'
+          delete 'catalog_parameters/:list/:id', to: 'catalog_parameters#destroy'
           # Plan-Catalogo-Cotizaciones C1 — Ventas › Catálogo
           resources :catalog_items, only: [:index, :create, :update] do
             collection do
@@ -1309,6 +1329,7 @@ Rails.application.routes.draw do
   # Plan-Catalogo-Cotizaciones V1 — la cotización que ve el cliente (enlace sin usuario).
   get  'cotizacion/:token',          to: 'public/quotes#show', as: :public_quote
   get  'reporte/:token',             to: 'public/service_reports#show', as: :public_service_report # Plan-Trabajo-Campo R1
+  get  'cotizacion/:token/pdf',      to: 'public/quotes#pdf', as: :public_quote_pdf # Cotizaciones › Formatos
   post 'cotizacion/:token/aceptar',  to: 'public/quotes#accept', as: :public_quote_accept
   post 'cotizacion/:token/rechazar', to: 'public/quotes#reject', as: :public_quote_reject
   # prospeccion V4 — baja desde el enlace de un correo del Agente IA (GET confirma, POST da de baja)

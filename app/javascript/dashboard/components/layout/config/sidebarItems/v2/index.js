@@ -123,6 +123,7 @@ const MOVED_CASE_SETTINGS = [...SERVICE_TOOLS, ...CATALOG_CASE_SETTINGS];
 // El puntaje de tareas («Mi día») es una regla, no una lista: se queda en
 // Ajustes, como opción propia (ordena tareas, no es configuración de casos).
 const TASK_SCORING = 'gestorTickets_task_settings';
+const QUOTE_FORMATS = 'gestorTickets_quote_formats';
 // El Centro de ayuda (`accounts/:id/portals...`) trae su propio menú interno.
 const HELP_CENTER_PATH = /\/accounts\/\d+\/portals(\/|$)/;
 
@@ -802,6 +803,7 @@ const ajustes = accountId => {
       ...CASE_SETTINGS_ROUTES.filter(
         name => !MOVED_CASE_SETTINGS.includes(name)
       ),
+      QUOTE_FORMATS,
     ],
     menuItems: [
       ...base.menuItems.filter(
@@ -810,6 +812,14 @@ const ajustes = accountId => {
       ...caseSettingsItems(accountId, [TASK_SCORING], {
         [TASK_SCORING]: 'TASK_SCORING',
       }),
+      // Cotizaciones › Formatos: cómo se ve la cotización (liga del cliente y PDF).
+      {
+        icon: 'document',
+        label: 'QUOTE_FORMATS',
+        featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+        toState: frontendURL(`accounts/${accountId}/tickets/quotes/formats`),
+        toStateName: QUOTE_FORMATS,
+      },
       ...(caseGroup
         ? [
             {
