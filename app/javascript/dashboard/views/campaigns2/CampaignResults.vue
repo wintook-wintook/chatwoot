@@ -26,6 +26,7 @@ const OUTCOME_KEYS = [
 const EXIT_GROUPS = [
   'not_interested',
   'no_reply',
+  'auto_replied',
   'in_progress',
   'failed',
   'bounced',
@@ -136,6 +137,8 @@ export default {
         'opted_out',
       ];
       if (!this.isWhatsapp) keys.push('bounced');
+      // Solo llegó la respuesta automática de su WhatsApp (no cuenta como que contestó).
+      if (this.isWhatsapp) keys.push('auto_replied');
       return [...keys, 'failed'];
     },
     touchRows() {

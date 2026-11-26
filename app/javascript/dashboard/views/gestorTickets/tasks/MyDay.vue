@@ -19,6 +19,7 @@ import { formatMinutes, localDay } from 'dashboard/helper/caseTaskPriority';
 import MyDayTaskRow from './MyDayTaskRow.vue';
 import MyDayAiPlan from './MyDayAiPlan.vue';
 import MyDayNotices from './MyDayNotices.vue';
+import MyDayClientTasks from './MyDayClientTasks.vue';
 import TaskReportsList from './TaskReportsList.vue';
 import { format } from 'date-fns';
 import { mapGetters } from 'vuex';
@@ -34,6 +35,7 @@ export default {
     MyDayTaskRow,
     MyDayAiPlan,
     MyDayNotices,
+    MyDayClientTasks,
     TaskReportsList,
   },
   props: {
@@ -271,6 +273,11 @@ export default {
       </div>
       <!-- «Tienes avisos importantes»: avisos sin leer de la campanita, por peso. -->
       <MyDayNotices v-if="!readonly" />
+      <!-- Tareas con el cliente: lo que le toca al cliente en mis casos (no está en mis tareas). -->
+      <MyDayClientTasks
+        :user-id="viewingUser ? viewingUser.id : null"
+        :readonly="readonly"
+      />
       <!-- Carga del día: lo vencido + lo que vence hoy. -->
       <div
         class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600 dark:text-slate-300"

@@ -15,6 +15,10 @@ class Motor2::Reply
   end
 
   def call
+    # Campaña: la respuesta automática de su WhatsApp Business no cuenta como que contestó (los toques siguen y la
+    # IA no le contesta a la máquina).
+    return if Motor2::AutoReply.new(@tracking, @message).call
+
     ProspectLists.promote!(@conversation.contact) # contestó: deja la cuarentena de la lista fría (aunque sea para darse de baja)
     return opt_out! if opt_out_requested?
     return if TrackingCampaigns::HandoffAttention.seller_owns?(@conversation)

@@ -219,7 +219,8 @@ class Cases::TasksInboxQuery::TaskScope
 
   # Aplica los filtros de la bandeja (todos opcionales salvo el default de asignado).
   def filtered
-    scope = filter_assignee(base_scope)
+    scope = filter_audience(base_scope)
+    scope = filter_assignee(scope)
     scope = filter_requester(scope)
     scope = filter_status(scope)
     scope = filter_due(scope)
@@ -249,16 +250,31 @@ class Cases::TasksInboxQuery::TaskScope
     CaseTask.where(account_id: account.id)
   end
 
+  # Tareas con el cliente — audience: 'client' (las que hace el cliente) · 'ours' (las nuestras, visibles o internas).
+  def filter_audience(scope)
+    case params[:audience]
+    when 'client' then scope.for_client
+    when 'ours' then scope.where.not(audience: :client)
+    else scope
+    end
+  end
+
   # assignee_id: ausente → mis tareas · 'all' → todos los agentes (sin filtro) ·
   # 'unassigned' → huérfanas · id → ese agente.
+  # Las del cliente no llevan responsable: «mías» o «de X» son las de los casos donde es responsable.
   def filter_assignee(scope)
     raw = params[:assignee_id].presence
-
     return scope if raw == 'all'
+    return client_assignee(scope, raw) if params[:audience] == 'client'
     return scope.where(assignee_id: nil) if raw == 'unassigned'
     return scope.where(assignee_id: current_user.id) if raw.nil?
 
     scope.where(assignee_id: raw)
+  end
+
+  def client_assignee(scope, raw)
+    owner = raw == 'unassigned' ? nil : (raw || current_user.id)
+    scope.joins(:case_ticket).where(case_tickets: { assignee_id: owner })
   end
 
   # requester_id: quién dio de alta la tarea. Ausente → sin filtro.
@@ -404,8 +420,10 @@ class Cases::TasksInboxQuery::MeetingScope
   end
 
   # assignee_id → organizer_id: mismo criterio que tareas (ausente → yo,
-  # 'all' → todos, 'unassigned' → sin organizador).
+  # 'all' → todos, 'unassigned' → sin organizador). Las del cliente son tareas: sin reuniones.
   def filter_assignee(scope)
+    return scope.none if params[:audience] == 'client'
+
     raw = params[:assignee_id].presence
 
     return scope if raw == 'all'

@@ -817,6 +817,11 @@
           "TASK": "Not scheduled",
           "MEETING": "Scheduled"
         },
+        "AUDIENCE": {
+          "ANY": "Who does it: all",
+          "OURS": "Ours",
+          "CLIENT": "The client"
+        },
         "DUE": {
           "ANY": "Any date",
           "OVERDUE": "Overdue",
@@ -871,6 +876,35 @@
       "MILESTONE_LABEL": "This is a project milestone",
       "MILESTONE_HINT": "It counts toward the project progress.",
       "MY_DAY": {
+        "CLIENT": {
+          "TITLE": "Waiting on the client ({n})",
+          "OVERDUE_BADGE": "{n} overdue",
+          "DONE_BADGE": "{n} to review",
+          "HINT": "What the client has to do in your cases. It is not in your tasks because they do it in their portal: you follow it here.",
+          "GROUPS": {
+            "overdue": "Overdue ({n})",
+            "soon": "Due this week ({n})",
+            "done": "Done: review ({n})",
+            "waiting": "Waiting ({n})"
+          },
+          "DONE_BY": "Done by {who} on {date}",
+          "THE_CLIENT": "the client",
+          "OVERDUE_DAYS": "Overdue {n} day(s)",
+          "DUE": "Due {date}",
+          "IN_PROGRESS": "in progress",
+          "REMIND": "Remind",
+          "REMINDED_SHORT": "Reminded",
+          "REMINDED": "We sent the reminder with their portal link.",
+          "OPEN": "Open",
+          "REVIEW": "Review",
+          "MORE": "And {n} more: open them from Tasks › Client.",
+          "NOT_SENT": {
+            "no_conversation": "No conversation: send them the portal link another way.",
+            "window_closed": "24 h passed since their last message: WhatsApp does not allow free text. Send a template or reach them another way.",
+            "no_owner": "The case has no contact or organization: there is no portal to send.",
+            "error": "It could not be sent; try again."
+          }
+        },
         "DAY_OF": "Day of:",
         "DAY_OF_ME": "Me",
         "VIEWING": "You're viewing {name}'s day: view only, they set their own order.",

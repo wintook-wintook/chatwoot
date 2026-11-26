@@ -382,7 +382,8 @@
         "opted_out": "Se dieron de baja",
         "failed": "Falló el envío",
         "in_progress": "Aún con toques por salir",
-        "bounced": "Rebotó el correo"
+        "bounced": "Rebotó el correo",
+        "auto_replied": "Solo su respuesta automática"
       },
       "SKIPPED": {
         "campaign_closed": "Omitidos: campaña cerrada",
@@ -433,7 +434,8 @@
         "bounced": "Rebotó el correo",
         "achieved": "Lo lograron",
         "not_now": "No esta vez",
-        "future_yes": "Aceptan la próxima"
+        "future_yes": "Aceptan la próxima",
+        "auto_replied": "Solo su respuesta automática"
       },
       "CLOSE": "Cerrar",
       "LIST_TITLE": "Lista «{name}»",

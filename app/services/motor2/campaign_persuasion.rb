@@ -10,9 +10,10 @@
 module Motor2::CampaignPersuasion
   module_function
 
-  ALWAYS = 'Si escribió algo hace poco, retómalo primero en una frase. Usa lo que sabes de ESTE contacto (su nombre, ' \
-           'su empresa, lo que compró o lo que le vence) si ayuda. No repitas lo que ya se le mandó ni presiones; ' \
-           'termina con UNA sola pregunta fácil de contestar.'
+  ALWAYS = 'Si escribió algo hace poco, retómalo primero en una frase (si fue la respuesta automática de su WhatsApp: ' \
+           'saludo, horario, «en breve te atendemos», ignórala y escribe como si no hubiera contestado). Usa lo que ' \
+           'sabes de ESTE contacto (su nombre, su empresa, lo que compró o lo que le vence) si ayuda. No repitas lo que ' \
+           'ya se le mandó ni presiones; termina con UNA sola pregunta fácil de contestar.'
 
   LAST_URGENCY = 'Es el ÚLTIMO mensaje: si hay una urgencia REAL en LA FICHA (la fecha del evento, el cupo, la vigencia) ' \
                  'dila; nunca inventes urgencia. Dale una salida fácil («¿te lo aparto o lo dejamos para otra ocasión?»)'

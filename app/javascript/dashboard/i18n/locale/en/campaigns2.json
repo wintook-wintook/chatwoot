@@ -382,7 +382,8 @@
         "opted_out": "Unsubscribed",
         "failed": "Send failed",
         "in_progress": "Still has touches pending",
-        "bounced": "Email bounced"
+        "bounced": "Email bounced",
+        "auto_replied": "Only their auto-reply"
       },
       "SKIPPED": {
         "campaign_closed": "Skipped: campaign closed",
@@ -433,7 +434,8 @@
         "bounced": "Email bounced",
         "achieved": "Done",
         "not_now": "Not this time",
-        "future_yes": "Next time OK"
+        "future_yes": "Next time OK",
+        "auto_replied": "Only their auto-reply"
       },
       "CLOSE": "Close",
       "LIST_TITLE": "List «{name}»",

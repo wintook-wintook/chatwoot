@@ -57,12 +57,13 @@ module TrackingCampaigns::EventReminders
 
   def confirmed(campaign, kind) = not_reminded(campaign, kind).where('outcome LIKE ?', 'Logrado:%')
 
-  # Recibieron la invitación, nunca escribieron y no tienen salida (baja, rebote, no esta vez, persona…).
+  # Recibieron la invitación, nunca escribieron y no tienen salida (baja, rebote, no esta vez, persona…). Su respuesta
+  # automática de WhatsApp no cuenta como que escribieron (Motor2::AutoReply).
   def not_answered(campaign, kind)
     not_reminded(campaign, kind).where(outcome: nil, prospect_exit: nil)
                                 .where('contact_trackings.attempt_count > 0 OR contact_trackings.last_attempt_at IS NOT NULL')
-                                .where.not('EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = contact_trackings.conversation_id ' \
-                                           'AND m.message_type = 0 AND m.created_at > contact_trackings.created_at)')
+                                .where.not("EXISTS (SELECT 1 FROM messages m WHERE #{TrackingCampaigns::Motor2Results::INCOMING_SQL} " \
+                                           "AND #{TrackingCampaigns::Motor2Results::AUTO_SQL} IS DISTINCT FROM 'true')")
   end
 
   def not_reminded(campaign, kind)

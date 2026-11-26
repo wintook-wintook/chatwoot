@@ -489,7 +489,9 @@
     "INTERNAL_CHAT_NEW": "New chat",
     "MAINTENANCE": "Maintenance",
     "INTERNAL_CHAT": "Internal chat",
-    "COLLECTIONS": "Collections"
+    "COLLECTIONS": "Collections",
+    "SHOW_MENU": "Show the menu",
+    "HIDE_MENU": "Hide the menu"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Billing",
