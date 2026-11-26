@@ -5,7 +5,7 @@ areas: [settings]
 keywords: [reglas de automatizacion, regla, nueva regla, asignar automatico, asignacion automatica, condiciones, acciones, si entonces, continuar si coincide, posicion, escalar automatico, notificar usuario, agregar etiqueta, inteligencia artificial, ia en casos, clasificacion automatica, respuesta sugerida, resumen y causa raiz, deteccion de repetidos, plan de mi dia, analisis de conversaciones, openai, parametros de ventas, moneda por defecto, impuesto, cotizaciones requieren oportunidad, prospectos y clientes automaticos, ajustes del modulo, reabrir automatico, ventana de reapertura, configuracion de folio, plantilla del folio, consecutivo, reinicio del consecutivo, prefijo, resumen del negocio acceso]
 pages: [case_rules, case_ai, commercial_settings, business_summary_access, case_module_settings, case_folio, settings, cases]
 sources: [app/javascript/dashboard/views/gestorTickets/TicketRules.vue, app/services/cases/rule_engine_service.rb, app/services/cases/rule_side_actions.rb, app/javascript/dashboard/views/gestorTickets/AiConfig.vue, app/models/case_ai_config.rb, app/javascript/dashboard/views/gestorTickets/CommercialConfig.vue, app/javascript/dashboard/views/gestorTickets/commercial/CommercialSettings.vue, app/javascript/dashboard/views/gestorTickets/summary/BusinessSummaryAccess.vue, app/javascript/dashboard/views/gestorTickets/Settings.vue, app/javascript/dashboard/views/gestorTickets/FolioConfig.vue, app/controllers/api/v1/accounts/case_settings_controller.rb]
-reviewed: 2026-11-14
+reviewed: 2026-11-25
 ---
 ## Para qué sirve
 En Ajustes › Casos y etapas el administrador define cómo se comportan los casos de toda la cuenta: quién los recibe, qué hace la IA, cómo se numeran y cuándo se reabren.

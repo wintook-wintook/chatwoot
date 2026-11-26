@@ -19,7 +19,7 @@ sources:
   - app/builders/v2/reports/cases/business_summary_builder.rb
   - app/policies/report_policy.rb
   - app/models/case_setting.rb
-reviewed: 2026-11-14
+reviewed: 2026-11-25
 ---
 ## Para qué sirve
 Informes junta en un solo menú la foto del negocio, los dashboards de cada área y el detalle de cómo se atienden las conversaciones.

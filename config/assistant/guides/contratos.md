@@ -2,7 +2,7 @@
 key: contratos
 title: Contratos (servicios recurrentes)
 areas: [clients, sales]
-keywords: [contrato, estado del contrato, al corriente, terminado, suspendido, fin del plazo, equipo ligado, datos propios, monto, ver montos, contratos, nuevo contrato, servicio recurrente, iguala, monitoreo, licencia, poliza, membresia, renovar, renovacion automatica, se renueva solo, plazo, proximo cobro, registrar pago, pago vencido, por renovar, suspender, cancelar contrato, reactivar, precio especial, tipo de contrato, importar contratos, csv]
+keywords: [recordar vencimiento, recordatorio de pago, avisar que vence, contrato, estado del contrato, al corriente, terminado, suspendido, fin del plazo, equipo ligado, datos propios, monto, ver montos, contratos, nuevo contrato, servicio recurrente, iguala, monitoreo, licencia, poliza, membresia, renovar, renovacion automatica, se renueva solo, plazo, proximo cobro, registrar pago, pago vencido, por renovar, suspender, cancelar contrato, reactivar, precio especial, tipo de contrato, importar contratos, csv]
 pages: [contracts, contact, organization, catalog, contract_types, commercial_settings]
 sources:
   - app/javascript/dashboard/views/contracts/*.vue
@@ -13,7 +13,7 @@ sources:
   - app/controllers/api/v1/accounts/contract_types_controller.rb
   - app/models/contract.rb
   - app/services/contracts/csv_import.rb
-reviewed: 2026-11-14
+reviewed: 2026-11-25
 ---
 ## Para qué sirve
 Un contrato es lo que un cliente paga o renueva cada cierto tiempo: monitoreos, igualas, licencias, pólizas, membresías… Lleva cuánto se cobra, cada cuánto, el próximo cobro y el plazo.
@@ -51,6 +51,9 @@ Un contrato es lo que un cliente paga o renueva cada cierto tiempo: monitoreos, 
 2. Columnas: id, contacto, tipo, concepto, clave_catalogo, cantidad, precio, moneda, cada, periodo (día, semana, mes o año), inicio, proximo_cobro, plazo_meses, renovacion_automatica, responsable, notas y organizacion (RFC o nombre; vacía, toma la del contacto). Los datos propios del tipo van en columnas extra con su nombre. Fechas AAAA-MM-DD o DD/MM/AAAA.
 3. Súbela con «Importar». El cliente se busca por correo o teléfono y el tipo por su nombre; si no existe, esa fila se reporta con su número y no se crea.
 4. Con la columna «id» se actualiza ese contrato en vez de crear otro.
+
+### Recordarle al cliente que le vence
+Con una campaña con IA de tipo «Recordar o renovar» (Campañas › Agregar campaña): eliges de qué tipo de contrato (o todos) y cuántos días antes de que venza se le escribe (por omisión 7, 1 y el día). Toma la fecha del «Próximo cobro» de cada contrato; la campaña queda prendida y cada mañana entran los que ya les toca. La IA sabe qué le vence, cuándo y cuánto. Si dice que ya pagó, le queda una tarea al «Responsable» del contrato para verificarlo; el pago se registra aquí. Ver [[campanas_eventos]].
 
 ## Dudas frecuentes
 - ¿Qué significan los estados? «Al corriente»; «Por renovar» (el plazo termina en 30 días o menos); «Pago vencido» (ya pasó el próximo cobro); «Terminado» (se acabó el plazo y no se renueva solo); «Suspendido»; «Cancelado».

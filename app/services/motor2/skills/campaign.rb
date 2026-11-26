@@ -72,6 +72,7 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
 
   # La liga que mandó con mandar_liga va sí o sí, exacta (si la IA la cambió o no la puso, se agrega al final).
   def polish(reply)
+    attach_rule('confirm') if function.invite? && keyword_said? # se registró: van sus archivos aunque la IA no use ya_lo_hizo
     return reply if @link_url.blank? || reply.blank? || reply.include?(@link_url)
 
     "#{reply.rstrip}\n\n#{@link_url}"
@@ -153,7 +154,10 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
     { ok: true, nota: 'Listo: se le manda la información tal cual. Escribe solo [SIN_MENSAJE].' }
   end
 
-  def info_text = Motor2::CampaignTouch.fill(function.content, contact, @turn.tracking&.tracking_campaign)
+  def info_text
+    text = Motor2::CampaignTouch.fill(function.content, contact, @turn.tracking&.tracking_campaign)
+    with_registration(text)
+  end
 
   # ---------- lo logró ----------
 
@@ -197,7 +201,7 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
   def achieved!(note)
     @turn.decide('achieved', note.presence || 'Lo hizo')
     trace.event(:campana, 'Lo logró')
-    attach_rule('confirm')
+    attach_rule(function.invite? ? 'confirm' : 'interest')
     fixed('achieved')
   end
 
@@ -249,8 +253,6 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
   end
 
   # Los archivos del agente con esa regla van con el mensaje de este turno.
-  def attach_rule(rule)
-    names = Motor2::Skills::Files.with_rule(config, rule, config.attachments)
-    names.first(Motor2::Skills::Files::MAX_PER_MESSAGE).each { |name| @turn.attach(name) }
-  end
+  # Una sola vez por contacto: lo que ya se le mandó no se repite (Motor2::Skills::Files.attach_unsent).
+  def attach_rule(rule) = Motor2::Skills::Files.attach_unsent(@turn, config, state, rule)
 end

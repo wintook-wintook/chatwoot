@@ -53,6 +53,7 @@ export default {
       insights: null,
       insightsLoading: false,
       busy: false,
+      confirmFinish: false,
     };
   },
   computed: {
@@ -255,6 +256,24 @@ export default {
         this.busy = false;
       }
     },
+    // Terminar a mano: Terminada sin vuelta; lo que faltaba por salir se cancela; los Resultados se quedan.
+    async finish() {
+      this.confirmFinish = false;
+      this.busy = true;
+      try {
+        const { data } = await TrackingCampaignsAPI.finish(this.id);
+        useAlert(
+          this.$t('TRACKING_CAMPAIGNS_VIEW.FINISH_SUCCESS', {
+            count: data.cancelled,
+          })
+        );
+        await this.load();
+      } catch (e) {
+        useAlert(e.response?.data?.error || this.t('ACTION_ERROR'));
+      } finally {
+        this.busy = false;
+      }
+    },
     async loadInsights() {
       this.insightsLoading = true;
       try {
@@ -325,6 +344,18 @@ export default {
           @click="pauseOrResume"
         >
           {{ campaign.status === 'paused' ? t('RESUME') : t('PAUSE') }}
+        </woot-button>
+        <woot-button
+          v-if="
+            ['saved', 'running', 'draft', 'paused'].includes(campaign.status)
+          "
+          variant="smooth"
+          color-scheme="alert"
+          icon="dismiss-circle"
+          :is-loading="busy"
+          @click="confirmFinish = true"
+        >
+          {{ t('FINISH') }}
         </woot-button>
         <woot-button
           variant="smooth"
@@ -714,5 +745,15 @@ export default {
         </table>
       </section>
     </template>
+    <woot-delete-modal
+      :show="confirmFinish"
+      :on-close="() => (confirmFinish = false)"
+      :on-confirm="finish"
+      :title="$t('TRACKING_CAMPAIGNS_VIEW.FINISH')"
+      :message="$t('TRACKING_CAMPAIGNS_VIEW.FINISH_CONFIRM')"
+      :message-value="campaign ? ` «${campaign.name}»?` : ''"
+      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.FINISH_YES')"
+      :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
+    />
   </div>
 </template>

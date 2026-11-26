@@ -10,7 +10,7 @@ sources:
   - app/javascript/dashboard/components/assistant/**/*.vue
   - app/javascript/dashboard/helper/daliPush.js
   - app/controllers/api/v1/accounts/assistant_controller.rb
-reviewed: 2026-11-14
+reviewed: 2026-11-25
 ---
 ## Para qué sirve
 Usar a Dali desde el celular a pantalla completa, como una app con su propio ícono: escribirle o dictarle, ver qué tienes hoy, contestar a tus clientes, cotizar y agendar, con los mismos permisos que en la plataforma.

@@ -163,6 +163,22 @@ RSpec.describe 'Motor2 campaign send rules' do # rubocop:disable RSpec/DescribeC
       expect(later.map { |t| t.dig(:function, :name) }).to include('reenviar_informacion')
     end
 
+    it 'Invitar: la liga de registro sale al final de la información aunque no esté en el texto' do
+      links = [{ 'name' => 'Registro', 'url' => 'https://ejemplo.com/registro', 'use' => 'package' },
+               { 'name' => 'Temario', 'url' => 'https://ejemplo.com/temario', 'use' => 'request' }]
+      trk = tracking(wa_campaign('kind' => 'invite', 'offer_goal' => 'external', 'goal_keyword' => 'REGISTRADO', 'links' => links))
+      conversation = create(:conversation, account: account, inbox: wa, contact: contact)
+      after = []
+      turn = instance_double(Motor2::Runner, config: Motor2::Config.for(trk), state: Motor2::State.new, trace: Motor2::Trace.new, test?: false,
+                                             tracking: trk, conversation: conversation, silence!: true, last_customer: 'Sí', attempt?: false)
+      allow(turn).to receive(:after_send) { |&block| after << block }
+      allow(turn).to receive(:attach)
+      Motor2::Skills::Campaign.new(turn).call('enviar_informacion', {})
+      expect(Motor2::Delivery).to receive(:send_reply)
+        .with(trk, conversation, "Hola Mario: todo sobre Mantenimiento gratis\n\nRegistro: https://ejemplo.com/registro")
+      after.each(&:call)
+    end
+
     it 'la revisión avisa variables sin origen y un «Mensaje 2» vacío' do
       camp = wa_campaign('content' => '')
       items = TrackingCampaigns::Motor2Check.new(camp).call

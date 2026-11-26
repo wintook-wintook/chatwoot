@@ -446,6 +446,7 @@ Rails.application.routes.draw do
             post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada
             post :pause, on: :member, to: 'tracking_campaigns/pauses#create' # pausar a mano
             post :resume, on: :member, to: 'tracking_campaigns/resumes#create' # proyecto@automatizacion_campanas: reanudar pausada
+            post :finish, on: :member, to: 'tracking_campaigns/finishes#create' # terminar a mano (conserva Resultados)
             post :hand_off, on: :member, to: 'tracking_campaigns/hand_offs#create' # prospeccion V6: entregar un interesado
             patch :handoff_settings, on: :member, to: 'tracking_campaigns/handoff_settings#update' # prospeccion P2: tablero, plazo y escalar
             post :subject_winner, on: :member, to: 'tracking_campaigns/subject_winners#create' # prospeccion P3: quedarse con un asunto

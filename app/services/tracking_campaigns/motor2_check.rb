@@ -17,7 +17,7 @@ class TrackingCampaigns::Motor2Check
                *plan.seller_templates, plan.cost, relay, window, plan.capacity, reminders].compact
   end
 
-  def knowledge = TrackingCampaigns::Motor2KnowledgeCheck.new(@campaign).call
+  def knowledge = TrackingCampaigns::Motor2KnowledgeCheck.new(@campaign).call + TrackingCampaigns::Motor2FileCheck.new(@campaign).call
 
   def ready? = call.none? { |item| item[:level] == 'error' }
 

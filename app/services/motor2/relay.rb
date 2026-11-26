@@ -71,7 +71,14 @@ class Motor2::Relay
   # Los de «cuando muestre interés»: de la oferta de la campaña primero, luego los del vendedor.
   def interest_files
     config = @function.config
-    names = Motor2::Skills::Files.with_rule(config, 'interest', config.attachments).first(Motor2::Skills::Files::MAX_PER_MESSAGE)
+    return if Motor2::Skills::Files.sent_by_email?(@tracking)
+
+    sent = Array(@tracking.reload.motor2_state.to_h['files_sent']) # las que ya le llegaron (p. ej. con la cotización)
+    ids = config.attachments.pluck(:name, :id).to_h
+    names = Motor2::Skills::Files.with_rule(config, 'interest', config.attachments).reject { |name| sent.include?(ids[name]) }
+                                 .first(Motor2::Skills::Files::MAX_PER_MESSAGE)
+    return if names.empty?
+
     ContactTrackings::EventFiles.deliver(@tracking.tracking_template, @conversation, names, Motor2::Delivery.sender(@conversation.account),
                                          scope: config.attachments)
   end

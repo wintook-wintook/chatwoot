@@ -11,7 +11,7 @@ sources:
   - app/controllers/api/v1/accounts/assistant_controller.rb
   - app/javascript/dashboard/routes/dashboard/settings/account/AccountAssistantSettings.vue
   - app/javascript/dashboard/routes/dashboard/settings/profile/DaliOnPhone.vue
-reviewed: 2026-11-14
+reviewed: 2026-11-25
 ---
 ## Para qué sirve
 El asistente (se llama Dali, o el nombre que le puso tu empresa) es el ayudante de quien trabaja en la plataforma: le pides las cosas con tus palabras, escritas o dictadas, y él consulta, registra y te deja listo lo que hay que hacer.
@@ -36,7 +36,7 @@ Su alcance, por área (con un ejemplo de cómo pedirlo):
 - Registrar: notas, tareas, tareas agendadas (llamadas, reuniones, visitas) y mensajes programados al cliente. «Agéndame una llamada con Mario mañana a las 10.»
 - Tareas: cancelarlas con su motivo, pasarlas a la agenda o sacarlas de ella, reportar su avance sin completarlas y contar su historial. «Reporta avance de la T003: llamé al proveedor, 20 minutos», «¿cómo va la T004?»
 - Casos y oportunidades: crear un caso, pasarlo a otra etapa, marcarlo como ganado, perdido o cancelado, posponerlo o retomarlo, y cambiar monto, cierre estimado, probabilidad o el compromiso del cliente. «Marca ganada la oportunidad de Acme.»
-- Cotizaciones (si puedes crear en Ventas): armarlas con los productos y precios del Catálogo (la tarjeta trae cantidad, «Precio sin IVA», subtotal, IVA y total; al confirmar queda en borrador), mandárselas al cliente y ver las que tiene abiertas. «Cotízale a Mario 3 paneles y la instalación.»
+- Cotizaciones (si puedes crear en Ventas): armarlas con los productos y precios del Catálogo (la tarjeta trae cantidad, «Precio sin IVA», subtotal, IVA, las retenciones si el cliente es persona moral y total; cada partida toma el impuesto y las retenciones de su producto; al confirmar queda en borrador), mandárselas al cliente y ver las que tiene abiertas. «Cotízale a Mario 3 paneles y la instalación.»
 - Ventas (si tienes acceso a Ventas): cómo vas contra la meta, ranking de vendedores y clientes, oportunidades que cierran, vencidas o estancadas, y la salud del embudo. Las cifras son sin IVA; con «Solo lo suyo» son solo tus números. «¿Cómo voy este mes?»
 - Seguimiento IA: delegar el seguimiento de un cliente a un agente IA (también con tus plantillas de seguimiento), preguntar cómo va y pausarlo, reanudarlo o cancelarlo. «Dale seguimiento a Mario hasta que confirme la cotización.»
 - Trabajo en campo (si tienes acceso a la Agenda): tus visitas del día, cuál sigue, qué se le hizo la última vez al cliente, avisarle «voy en camino» y dictar el reporte de la visita (ver la guía «Mi ruta en campo»). «Avísale que llego en 20.»

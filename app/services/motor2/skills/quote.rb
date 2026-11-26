@@ -46,6 +46,8 @@ class Motor2::Skills::Quote < Motor2::Skills::Base
     state['quote'] = { 'id' => quote.id, 'folio' => quote.folio }
     trace.event(:cotizacion, "#{quote.folio} (#{mode})")
     @turn.after_send { after(quote) }
+    # En el vendedor de campaña, cotizar ya es interés: las imágenes «cuando muestre interés» van con este mensaje (una vez).
+    Motor2::Skills::Files.attach_unsent(@turn, config, state, 'interest') if function.key == 'campaign_seller'
     qualify!(quote.folio)
     { ok: true, folio: quote.folio, total: quote.total.to_f, nota: note_for_agent }
   end

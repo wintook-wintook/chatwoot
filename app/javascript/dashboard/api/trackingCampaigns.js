@@ -34,6 +34,11 @@ class TrackingCampaignsAPI extends ApiClient {
     return axios.post(`${this.url}/${id}/pause`);
   }
 
+  // Botón «Terminar campaña»: Terminada sin vuelta; cancela lo que faltaba por salir y conserva Resultados.
+  finish(id) {
+    return axios.post(`${this.url}/${id}/finish`);
+  }
+
   // proyecto@automatizacion_campanas — reanuda una campaña pausada (por error de Meta o a mano).
   resume(id) {
     return axios.post(`${this.url}/${id}/resume`);

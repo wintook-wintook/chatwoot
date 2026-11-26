@@ -11,7 +11,7 @@ sources:
   - app/javascript/dashboard/views/gestorTickets/summary/BusinessSummary.vue
   - app/javascript/dashboard/components/layout/config/sidebarItems/v2/index.js
   - app/services/cases/my_summary.rb
-reviewed: 2026-11-17
+reviewed: 2026-11-25
 ---
 ## Para qué sirve
 Inicio es tu punto de partida: te dice qué tienes que hacer hoy, qué te avisaron y cómo va tu semana, sin buscar en cada pantalla.

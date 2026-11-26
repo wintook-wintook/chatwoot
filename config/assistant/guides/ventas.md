@@ -7,7 +7,7 @@ pages: [opportunities, contact_funnel, quotes, budget, pipeline, catalog, contac
 sources:
   - app/javascript/dashboard/components/layout/config/sidebarItems/v2/index.js
   - app/services/quotes/opportunity_sync.rb
-reviewed: 2026-11-14
+reviewed: 2026-11-25
 ---
 ## Para qué sirve
 El área Ventas lleva al cliente desde la primera conversación hasta la venta ganada: el prospecto entra al Embudo de contactos, se convierte en oportunidad, se le manda una cotización y, al ganarse, cuenta para la meta.

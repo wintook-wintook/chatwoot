@@ -35,7 +35,12 @@ export default {
           (this.brief.survey_questions || []).find(q => (q || '').trim()) || ''
         );
       }
-      return fillCampaignText(this.brief.content, this.samples);
+      const text = fillCampaignText(this.brief.content, this.samples);
+      if (this.kind !== 'invite' || !text) return text;
+      // Invitar: la liga de registro sale al final si no está en el texto (Skills::CampaignNotes#with_registration).
+      return (this.brief.links || [])
+        .filter(l => l.use === 'package' && l.url && !text.includes(l.url))
+        .reduce((all, l) => `${all.trimEnd()}\n\n${l.name}: ${l.url}`, text);
     },
   },
   methods: {

@@ -223,6 +223,32 @@ RSpec.describe Motor2::Functions::CampaignSeller do
       expect(conversation.messages.outgoing.where(private: false).last.attachments.count).to eq(1)
     end
 
+    it 'cotizar también es interés: la foto va con la cotización, una sola vez' do
+      account.case_types.create!(name: 'Ventas', case_class: :commercial)
+      account.catalog_items.create!(name: 'Capacitación', price: 1500, kind: :service)
+      quoting = save_agent(settings.merge('quote' => { 'mode' => 'draft' }, 'price_source' => 'catalog'), name: 'Con cotización')
+      image(quoting, 'foto-paquete', { 'about' => 'Foto del paquete', 'interest' => true })
+      campaign_tracking(quoting)
+      stub_model(tool_call('cotizar', { partidas: [{ producto: 'capacitación', cantidad: 2 }] }), answer('Listo, en un momento te la mandan.'),
+                 tool_call('le_interesa', { resumen: 'Quiere la capacitación' }), answer('¡Con gusto! En un momento te contactan.'))
+      reply_to(incoming('mándame la cotización para 2'))
+      expect(conversation.messages.outgoing.where(private: false).last.attachments.count).to eq(1)
+
+      reply_to(incoming('sí, la quiero'))
+      expect(conversation.messages.outgoing.where(private: false).sum { |m| m.attachments.count }).to eq(1)
+    end
+
+    it 'Invitar: con la palabra clave van los archivos de «al confirmar» aunque la IA no use ya_lo_hizo' do
+      event = account.events.create!(name: 'Expo', starts_at: 3.days.from_now)
+      invite = save_agent({ 'purpose' => 'invite', 'event_id' => event.id, 'offer_goal' => 'external', 'goal_keyword' => 'REGISTRADO' },
+                          name: 'Registro')
+      image(invite, 'mapa', { 'about' => 'Mapa para llegar', 'confirm' => true })
+      campaign_tracking(invite)
+      stub_model(answer('¡Listo, ya quedaste registrado!'))
+      reply_to(incoming('REGISTRADO'))
+      expect(conversation.messages.outgoing.where(private: false).last.attachments.count).to eq(1)
+    end
+
     it 'no dice que manda la foto si no la manda' do
       campaign_tracking
       stub_model(answer('Claro, te mando la foto del paquete.'), answer('Claro, el paquete incluye 10 horas.'))
