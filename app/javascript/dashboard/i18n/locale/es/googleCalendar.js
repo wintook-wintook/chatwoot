@@ -151,6 +151,23 @@ export default {
       CLOSE: 'Cerrar',
     },
     COWORKERS: {
+      // fix/calendario_eliminar F4 — color de cada compañero (solo lo ve quien lo escoge).
+      COLOR: {
+        OPEN: 'Configurar color',
+        TITLE: 'Color de {name}',
+        BACKGROUND: 'Fondo',
+        TEXT: 'Letra',
+        TEXT_AUTO: 'Automática',
+        TEXT_WHITE: 'Blanca',
+        TEXT_BLACK: 'Negra',
+        SAMPLE: '{name} · Junta 10:00',
+        DESCRIPTION:
+          'Así se ven sus eventos en tu calendario. Solo tú ves este color; no cambia nada en Google.',
+        PREVIEW: 'Vista previa',
+        RESET: 'Restablecer',
+        CANCEL: 'Cancelar',
+        SAVE: 'Guardar',
+      },
       TITLE: 'Compañeros',
       HINT: 'Palomea a un compañero para ver su agenda. Solo ves lo que te compartió en Google.',
       EMPTY: 'No hay más agentes en esta cuenta.',
@@ -237,6 +254,29 @@ export default {
       SUBMIT: 'Guardar cambios',
       SUCCESS: 'Evento actualizado exitosamente',
       ERROR: 'No se pudo actualizar el evento. Inténtalo de nuevo.',
+      // fix/calendario_eliminar F2
+      CLOSE: 'Cerrar',
+      CANCEL_ITEM: 'Cancelar tarea agendada',
+      CANCEL_ITEM_DONE: 'Tarea agendada cancelada',
+    },
+    // fix/calendario_eliminar F3
+    DELETE_EVENT: {
+      DELETE: 'Eliminar evento',
+      DELETE_TITLE: '¿Eliminar «{title}»?',
+      DELETE_DESC: 'Se borra de tu Google Calendar.',
+      DELETE_CONFIRM: 'Eliminar',
+      DELETE_DONE: 'Evento eliminado',
+      REMOVE: 'Quitar de mi calendario',
+      REMOVE_TITLE: '¿Quitar «{title}» de tu calendario?',
+      REMOVE_DESC:
+        'Te invitaron a este evento: solo se quita de tu calendario. Quien te invitó y los demás lo conservan.',
+      REMOVE_CONFIRM: 'Quitar',
+      REMOVE_DONE: 'Se quitó de tu calendario',
+      ONLY_THIS: 'Solo este',
+      ALL_SERIES: 'Toda la serie',
+      NOTIFY: 'Avisar a los invitados ({count})',
+      BACK: 'Volver',
+      ERROR: 'No se pudo eliminar el evento. Inténtalo de nuevo.',
     },
     CREATE_FROM_CONVERSATION: 'Crear evento de calendario',
     SHARE_AGENDA: {

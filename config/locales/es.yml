@@ -566,6 +566,11 @@ es:
     agent_not_connected: 'Ese compañero no tiene Google Calendar conectado'
     same_google: 'Ese compañero usa tu mismo Google: agéndalo para ti'
     no_permission: 'Tu compañero no te dio permiso de hacer cambios en su calendario. Pídele que te lo dé en «Compartir mi calendario».'
+  google_calendar_delete:
+    linked_to_agenda_item: 'Este evento es una tarea agendada: cancélala para quitarlo del calendario'
+    no_permission: 'No tienes permiso para borrar en ese calendario'
+    google_error: 'Google no pudo borrar el evento. Inténtalo de nuevo.'
+    bot_note: '🗑️ %{name} eliminó la cita desde el calendario. El cliente no fue avisado.'
   agenda_items:
     already_linked: 'Ese evento ya tiene una tarea agendada'
     all_day: 'Un evento de todo el día no tiene hora: se queda solo en Google'

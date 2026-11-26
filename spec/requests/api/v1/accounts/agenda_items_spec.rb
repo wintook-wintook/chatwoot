@@ -142,6 +142,29 @@ RSpec.describe 'Agenda Items API' do
       end.to have_enqueued_job(Cases::MeetingSyncJob)
     end
 
+    # fix/calendario_eliminar F2 — «Cancelar tarea agendada» desde la ventana del calendario.
+    it 'la cancela con motivo, deja el motivo y avisa que no es de una serie' do
+      reason = TaskOutcome.ensure_defaults_for(account, purpose: 'cancel').find { |r| !r.other? }
+      meeting = cita
+
+      patch "#{base}/#{meeting.id}", params: { status: 'cancelled', reason_id: reason.id, scope: 'one' },
+                                     headers: headers, as: :json
+
+      expect(response).to have_http_status(:success)
+      item = response.parsed_body['agenda_item']
+      expect(item).to include('status' => 'cancelled', 'series' => false)
+      expect(meeting.reload.cancel_reason).to include(reason.label)
+    end
+
+    it 'sin motivo no la cancela' do
+      meeting = cita
+
+      patch "#{base}/#{meeting.id}", params: { status: 'cancelled' }, headers: headers, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(meeting.reload.status).to eq('scheduled')
+    end
+
     it 'la liga a un caso y toma el consecutivo del caso' do
       CaseMeeting.create!(account: account, case_ticket: ticket, title: 'Previa', starts_at: 1.day.from_now, ends_at: 25.hours.from_now)
       meeting = cita

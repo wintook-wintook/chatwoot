@@ -297,6 +297,31 @@ const actions = {
     await GoogleCalendarAPI.updateEvent(eventId, { start_time, end_time, summary, description, attendees, calendar_id });
   },
 
+  // fix/calendario_eliminar F3 — se quita de la pantalla al momento; si Google falla, regresa.
+  deleteEvent: async (
+    { commit, state: s },
+    { eventId, calendar_id, scope, notify, seriesId }
+  ) => {
+    const before = s.events;
+    const gone = e =>
+      e.id === eventId ||
+      (scope === 'all' && !!seriesId && e.recurringEventId === seriesId);
+    commit(
+      'SET_CALENDAR_EVENTS',
+      before.filter(e => !gone(e))
+    );
+    try {
+      await GoogleCalendarAPI.deleteEvent(eventId, {
+        calendar_id,
+        scope,
+        notify,
+      });
+    } catch (error) {
+      commit('SET_CALENDAR_EVENTS', before);
+      throw error;
+    }
+  },
+
   shareAgenda: async (_, payload) => {
     await GoogleCalendarAPI.shareAgenda(payload);
   },

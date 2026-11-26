@@ -178,46 +178,61 @@
               >
                 {{ $t('GOOGLE_CALENDAR.COWORKERS.EMPTY') }}
               </p>
-              <label
+              <div
                 v-for="row in coworkerRows"
                 :key="row.agentId"
-                class="flex items-center gap-2 py-0.5"
-                :class="row.selectable ? 'cursor-pointer' : 'cursor-default'"
-                :title="row.help"
+                class="relative flex items-center gap-1"
               >
-                <span
-                  class="w-3 h-3 rounded-sm flex-shrink-0 border-2 transition-all"
-                  :class="{ 'opacity-40': !row.selectable }"
-                  :style="row.squareStyle"
-                />
-                <input
-                  type="checkbox"
-                  class="sr-only"
-                  :checked="row.selected"
-                  :disabled="!row.selectable"
-                  @change="$emit('toggleCoworker', row.agentId)"
-                />
-                <span
-                  class="text-xs truncate flex-1 min-w-0"
-                  :class="
-                    row.selectable
-                      ? 'text-slate-600 dark:text-slate-300'
-                      : 'text-slate-400 dark:text-slate-500'
-                  "
+                <label
+                  class="flex items-center gap-2 py-0.5 flex-1 min-w-0"
+                  :class="row.selectable ? 'cursor-pointer' : 'cursor-default'"
+                  :title="row.help"
                 >
-                  {{ row.name }}
-                </span>
-                <span
-                  v-if="row.busyNow"
-                  class="w-1.5 h-1.5 rounded-full bg-ruby-400 flex-shrink-0"
-                  :title="$t('GOOGLE_CALENDAR.COWORKERS.BUSY_NOW')"
-                />
-                <span
-                  class="text-[10px] text-slate-400 dark:text-slate-500 flex-shrink-0"
+                  <span
+                    class="w-3 h-3 rounded-sm flex-shrink-0 border-2 transition-all"
+                    :class="{ 'opacity-40': !row.selectable }"
+                    :style="row.squareStyle"
+                  />
+                  <input
+                    type="checkbox"
+                    class="sr-only"
+                    :checked="row.selected"
+                    :disabled="!row.selectable"
+                    @change="$emit('toggleCoworker', row.agentId)"
+                  />
+                  <span
+                    class="text-xs truncate flex-1 min-w-0"
+                    :class="
+                      row.selectable
+                        ? 'text-slate-600 dark:text-slate-300'
+                        : 'text-slate-400 dark:text-slate-500'
+                    "
+                  >
+                    {{ row.name }}
+                  </span>
+                  <span
+                    v-if="row.busyNow"
+                    class="w-1.5 h-1.5 rounded-full bg-ruby-400 flex-shrink-0"
+                    :title="$t('GOOGLE_CALENDAR.COWORKERS.BUSY_NOW')"
+                  />
+                  <span
+                    class="text-[10px] text-slate-400 dark:text-slate-500 flex-shrink-0"
+                  >
+                    {{ row.label }}
+                  </span>
+                </label>
+                <!-- fix/calendario_eliminar F4 — color de este compañero (solo yo lo veo) -->
+                <button
+                  v-if="row.selectable"
+                  type="button"
+                  class="flex-shrink-0 p-0.5 leading-none rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+                  :title="$t('GOOGLE_CALENDAR.COWORKERS.COLOR.OPEN')"
+                  data-test="coworker-color-open"
+                  @click="colorMenuFor = row.agentId"
                 >
-                  {{ row.label }}
-                </span>
-              </label>
+                  <fluent-icon icon="settings" size="12" />
+                </button>
+              </div>
             </template>
             <button
               class="flex items-center gap-1 text-xs text-woot-500 hover:text-woot-600 pt-1 transition-colors"
@@ -368,22 +383,35 @@
         </div>
       </div>
     </woot-modal>
+
+    <!-- fix/calendario_eliminar F4 — color de un compañero -->
+    <CoworkerColorModal
+      :show="!!colorRow"
+      :name="colorRow ? colorRow.name : ''"
+      :bg="colorRow ? colorRow.color : undefined"
+      :text="colorRow ? colorRow.textChoice : 'auto'"
+      :custom="!!(colorRow && colorRow.customColor)"
+      @save="saveColor"
+      @reset="resetColor"
+      @close="colorMenuFor = null"
+    />
   </div>
 </template>
 
 <script>
-import { agentColor } from './agentColor';
+import {
+  agentColor,
+  coworkerColorsFrom,
+  COWORKER_COLORS_KEY,
+} from './agentColor';
+import { CALENDAR_COLORS } from './calendarPalette';
+import CoworkerColorModal from './CoworkerColorModal.vue';
 import { format, isToday, isTomorrow, parseISO } from 'date-fns';
 import { timeZoneOptions } from 'dashboard/routes/dashboard/settings/inbox/helpers/businessHour';
 
-// Paleta de colores para calendarios (estilo Google). Se envía el hex al backend.
-const CALENDAR_COLORS = [
-  '#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444',
-  '#8b5cf6', '#ec4899', '#14b8a6', '#64748b', '#f97316',
-];
-
 export default {
   name: 'AgendaWidget',
+  components: { CoworkerColorModal },
   props: {
     events: { type: Array, default: () => [] },
     calendars: { type: Array, default: () => [] },
@@ -415,6 +443,8 @@ export default {
       // Formulario de crear/editar un calendario propio.
       calForm: { summary: '', description: '', timeZone: '', backgroundColor: CALENDAR_COLORS[0] },
       calendarColors: CALENDAR_COLORS,
+      // fix/calendario_eliminar F4 — compañero con la ventana de color abierta.
+      colorMenuFor: null,
     };
   },
   computed: {
@@ -512,6 +542,15 @@ export default {
     calendarColorMap() {
       return Object.fromEntries(this.calendars.map(c => [c.id, c.background_color]));
     },
+    // fix/calendario_eliminar F4 — colores que YO escogí para mis compañeros.
+    coworkerColors() {
+      return coworkerColorsFrom(this.$store.getters.getUISettings);
+    },
+    colorRow() {
+      return (
+        this.coworkerRows.find(r => r.agentId === this.colorMenuFor) || null
+      );
+    },
     coworkersNotice() {
       if (this.coworkersError === 'reconnect')
         return this.$t('GOOGLE_CALENDAR.COWORKERS.RECONNECT');
@@ -529,9 +568,13 @@ export default {
           const visible = ['details', 'free_busy'].includes(c.access);
           const selected =
             visible && this.selectedCoworkerIds.includes(c.agent_id);
-          const color = agentColor(c.agent_id);
+          const color = agentColor(c.agent_id, this.coworkerColors);
+          const custom = this.coworkerColors[c.agent_id];
           return {
             agentId: c.agent_id,
+            color,
+            textChoice: (custom && custom.text) || 'auto',
+            customColor: !!custom,
             name: agent.available_name || agent.name,
             thumbnail: agent.thumbnail,
             selectable: visible,
@@ -547,6 +590,31 @@ export default {
     },
   },
   methods: {
+    // fix/calendario_eliminar F4 — se guarda al escoger, en mis preferencias del sistema.
+    saveCoworkerColors(colors) {
+      this.$store.dispatch('updateUISettings', {
+        uiSettings: {
+          ...this.$store.getters.getUISettings,
+          [COWORKER_COLORS_KEY]: colors,
+        },
+      });
+    },
+    setCoworkerColor(agentId, value) {
+      this.saveCoworkerColors({ ...this.coworkerColors, [agentId]: value });
+    },
+    resetCoworkerColor(agentId) {
+      const rest = { ...this.coworkerColors };
+      delete rest[agentId];
+      this.saveCoworkerColors(rest);
+    },
+    saveColor(value) {
+      this.setCoworkerColor(this.colorMenuFor, value);
+      this.colorMenuFor = null;
+    },
+    resetColor() {
+      this.resetCoworkerColor(this.colorMenuFor);
+      this.colorMenuFor = null;
+    },
     accessLabel(c) {
       const keys = {
         not_connected: 'NOT_CONNECTED',
