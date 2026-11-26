@@ -125,6 +125,12 @@ class ContactTrackings::Assistant::Contract
          el año («del 2020 en adelante», <año>>=?) sin que el cliente escriba la columna.
          Para una columna que es FAMILIA de valores (color: GRIS, GRIS PLATA, GRIS OBS) usa
          <columna>~? : la celda contiene la palabra que dijo el cliente («gris» trae los tres).
+         Para un dato que el cliente puede o no dar, «?opcional»: si lo dijo filtra, si no, no
+         pregunta: {{hoja_buscar: <Hoja> | <tipo>=?; <año>>=?opcional | …}} da todas las de ese
+         tipo y, si dijo año, solo las de ese año en adelante.
+         Si el cliente escribe distinto que la hoja («picop», «troca» por PICK UP), una sección
+         [SINÓNIMOS] con un renglón por valor: «PICK UP = picop, pik up, troca». También acepta
+         el plural de lo declarado («pickups»).
          Como fuente da hasta 20 filas; si hay más, el agente ofrece verlas y a «¿cuáles son
          las otras?» el motor da las siguientes 20 solo (no hace falta una ruta para eso).
       D. «Servicios largos, de noche, en madrugada o en domingo»

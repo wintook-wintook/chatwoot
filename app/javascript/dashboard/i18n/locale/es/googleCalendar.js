@@ -80,6 +80,107 @@ export default {
       FREE: 'Libre',
       NOT_CONNECTED: 'Sin calendario',
     },
+    // fix/calendario_google — calendario de compañeros (Google aplica lo que cada uno comparte).
+    SCHEDULE_FOR: {
+      LABEL: 'Agendar a',
+      ME: 'Mí',
+      HINT: 'Para agendarle a un compañero, pídele «Hacer cambios» en «Compartir mi calendario».',
+      FOR_OTHER_HINT:
+        'Se guarda en el calendario de tu compañero y no en el tuyo. Él queda como responsable.',
+    },
+    SHARE_CALENDAR: {
+      BUTTON: 'Compartir mi calendario',
+      TITLE: 'Compartir mi calendario',
+      DESCRIPTION:
+        'Elige qué ve cada compañero de tu agenda. Se guarda en tu Google Calendar al momento y no le llega correo de aviso.',
+      LEVELS: {
+        NONE: 'Nada',
+        FREE_BUSY: 'Solo libre/ocupado',
+        DETAILS: 'Ver todos los detalles',
+        SCHEDULE: 'Hacer cambios (puede agendarme)',
+      },
+      STATUS: {
+        NOT_CONNECTED: 'Sin Google',
+        SAME_GOOGLE: 'Mismo Google que tú',
+        OWNER_RULE: 'Administra tu calendario (cámbialo en Google)',
+      },
+      LOADING: 'Cargando…',
+      SAVING: 'Guardando…',
+      SAVED: 'Guardado',
+      EMPTY: 'No hay más agentes en esta cuenta.',
+      LOAD_ERROR: 'No se pudo leer con quién compartes tu calendario.',
+      RECONNECT:
+        'Tu conexión con Google venció. Reconecta para compartir tu calendario.',
+      TABS: {
+        COWORKERS: 'Compañeros',
+        OTHERS: 'Otras personas',
+      },
+      ADD: {
+        LABEL: 'Compartir con otra persona',
+        PLACEHOLDER: 'correo@ejemplo.com',
+        BUTTON: 'Compartir',
+        HINT: 'Para alguien que no es agente de esta cuenta. Necesita una cuenta de Google para ver tu calendario.',
+      },
+      REMOVE: 'Dejar de compartir',
+      OTHERS_EMPTY:
+        'Todavía no compartes tu calendario con nadie fuera de la cuenta.',
+      LEVEL_HELP: {
+        FREE_BUSY: 've tus horarios ocupados, sin títulos ni detalles.',
+        DETAILS:
+          've tus eventos con título, lugar y descripción (los privados, solo como ocupado).',
+        SCHEDULE: 'además puede crearte eventos en tu calendario.',
+      },
+      GENERAL: {
+        PUBLIC:
+          'En Google tu calendario también es público ({level}). Eso se cambia en Google Calendar.',
+        DOMAIN:
+          'En Google lo compartes con todo {value} ({level}). Eso se cambia en Google Calendar.',
+        GROUP:
+          'En Google lo compartes con el grupo {value} ({level}). Eso se cambia en Google Calendar.',
+      },
+      ERRORS: {
+        INVALID_EMAIL: 'Escribe un correo válido.',
+        OWN_EMAIL: 'Ese es tu propio correo.',
+        OWNER_RULE:
+          'Esa persona administra tu calendario: cámbialo en Google Calendar.',
+        NOT_CONNECTED: 'Ese compañero no tiene Google conectado.',
+        SAME_GOOGLE: 'Ese compañero usa tu mismo Google.',
+        RECONNECT:
+          'Tu conexión con Google venció. Reconecta para compartir tu calendario.',
+      },
+      CLOSE: 'Cerrar',
+    },
+    COWORKERS: {
+      TITLE: 'Compañeros',
+      HINT: 'Palomea a un compañero para ver su agenda. Solo ves lo que te compartió en Google.',
+      EMPTY: 'No hay más agentes en esta cuenta.',
+      CONNECT_FIRST:
+        'Conecta tu Google Calendar para ver la agenda de tus compañeros.',
+      RECONNECT:
+        'Tu conexión con Google venció. Reconecta para ver a tus compañeros.',
+      NO_EVENTS: 'Sin eventos en estas fechas',
+      BUSY_NOW: 'Ocupado ahora',
+      FREE_NOW: 'Libre ahora',
+      ACCESS: {
+        NOT_CONNECTED: 'Sin Google',
+        NONE: 'No compartido',
+        FREE_BUSY: 'Solo ocupado',
+        DETAILS: 'Ve detalles',
+        CAN_SCHEDULE: 'Puedes agendarle',
+        SAME_GOOGLE: 'Mismo Google que tú',
+        ERROR: 'No disponible',
+      },
+      NONE_HELP: 'Pídele que comparta su calendario de Google con {email}.',
+      BUSY: 'Ocupado',
+      EVENT_MODAL: {
+        TITLE: 'Agenda de {name}',
+        READ_ONLY: 'Solo lectura: es un evento del calendario de tu compañero.',
+        PRIVATE: 'Tu compañero no comparte los detalles de este evento.',
+        WHEN: 'Cuándo',
+        WHERE: 'Lugar',
+        CLOSE: 'Cerrar',
+      },
+    },
     CREATE_EVENT: {
       TITLE: 'Nueva tarea agendada',
       TYPE: {
@@ -139,7 +240,7 @@ export default {
     },
     CREATE_FROM_CONVERSATION: 'Crear evento de calendario',
     SHARE_AGENDA: {
-      TITLE: 'Enviar mi agenda',
+      TITLE: 'Enviar agenda a un contacto',
       DESCRIPTION: 'Elige el período y a quién enviarle la agenda.',
       PERIOD: 'Período',
       TODAY: 'Hoy',

@@ -74,6 +74,106 @@ export default {
       FREE: 'Free',
       NOT_CONNECTED: 'No calendar',
     },
+    SCHEDULE_FOR: {
+      LABEL: 'Schedule for',
+      ME: 'Me',
+      HINT: 'To schedule for a teammate, ask them for "Make changes" in "Share my calendar".',
+      FOR_OTHER_HINT:
+        'It is saved to your teammate calendar, not yours. They become the owner.',
+    },
+    SHARE_CALENDAR: {
+      BUTTON: 'Share my calendar',
+      TITLE: 'Share my calendar',
+      DESCRIPTION:
+        'Choose what each teammate sees of your schedule. It is saved to your Google Calendar right away and no email is sent.',
+      LEVELS: {
+        NONE: 'Nothing',
+        FREE_BUSY: 'Free/busy only',
+        DETAILS: 'See all details',
+        SCHEDULE: 'Make changes (can schedule me)',
+      },
+      STATUS: {
+        NOT_CONNECTED: 'No Google',
+        SAME_GOOGLE: 'Same Google as you',
+        OWNER_RULE: 'Manages your calendar (change it in Google)',
+      },
+      LOADING: 'Loading…',
+      SAVING: 'Saving…',
+      SAVED: 'Saved',
+      EMPTY: 'There are no other agents in this account.',
+      LOAD_ERROR: 'Could not read who you share your calendar with.',
+      RECONNECT:
+        'Your Google connection expired. Reconnect to share your calendar.',
+      TABS: {
+        COWORKERS: 'Teammates',
+        OTHERS: 'Other people',
+      },
+      ADD: {
+        LABEL: 'Share with someone else',
+        PLACEHOLDER: 'email@example.com',
+        BUTTON: 'Share',
+        HINT: 'For someone who is not an agent in this account. They need a Google account to see your calendar.',
+      },
+      REMOVE: 'Stop sharing',
+      OTHERS_EMPTY:
+        'You do not share your calendar with anyone outside the account yet.',
+      LEVEL_HELP: {
+        FREE_BUSY: 'sees your busy times, without titles or details.',
+        DETAILS:
+          'sees your events with title, place and description (private ones only as busy).',
+        SCHEDULE: 'can also create events on your calendar.',
+      },
+      GENERAL: {
+        PUBLIC:
+          'In Google your calendar is also public ({level}). Change it in Google Calendar.',
+        DOMAIN:
+          'In Google you share it with all of {value} ({level}). Change it in Google Calendar.',
+        GROUP:
+          'In Google you share it with the group {value} ({level}). Change it in Google Calendar.',
+      },
+      ERRORS: {
+        INVALID_EMAIL: 'Enter a valid email.',
+        OWN_EMAIL: 'That is your own email.',
+        OWNER_RULE:
+          'That person manages your calendar: change it in Google Calendar.',
+        NOT_CONNECTED: 'That teammate has no Google connected.',
+        SAME_GOOGLE: 'That teammate uses your same Google.',
+        RECONNECT:
+          'Your Google connection expired. Reconnect to share your calendar.',
+      },
+      CLOSE: 'Close',
+    },
+    COWORKERS: {
+      TITLE: 'Teammates',
+      HINT: 'Check a teammate to see their schedule. You only see what they shared with you in Google.',
+      EMPTY: 'There are no other agents in this account.',
+      CONNECT_FIRST:
+        "Connect your Google Calendar to see your teammates' schedules.",
+      RECONNECT:
+        'Your Google connection expired. Reconnect to see your teammates.',
+      NO_EVENTS: 'No events in these dates',
+      BUSY_NOW: 'Busy now',
+      FREE_NOW: 'Free now',
+      ACCESS: {
+        NOT_CONNECTED: 'No Google',
+        NONE: 'Not shared',
+        FREE_BUSY: 'Busy only',
+        DETAILS: 'Sees details',
+        CAN_SCHEDULE: 'You can schedule',
+        SAME_GOOGLE: 'Same Google as you',
+        ERROR: 'Unavailable',
+      },
+      NONE_HELP: 'Ask them to share their Google calendar with {email}.',
+      BUSY: 'Busy',
+      EVENT_MODAL: {
+        TITLE: "{name}'s schedule",
+        READ_ONLY: "Read only: this event is on your teammate's calendar.",
+        PRIVATE: "Your teammate doesn't share the details of this event.",
+        WHEN: 'When',
+        WHERE: 'Where',
+        CLOSE: 'Close',
+      },
+    },
     CREATE_EVENT: {
       TITLE: 'Create Event',
       TYPE: {
@@ -133,7 +233,7 @@ export default {
     },
     CREATE_FROM_CONVERSATION: 'Create Calendar Event',
     SHARE_AGENDA: {
-      TITLE: 'Send my agenda',
+      TITLE: 'Send agenda to a contact',
       DESCRIPTION: 'Choose the period and who to send the agenda to.',
       PERIOD: 'Period',
       TODAY: 'Today',

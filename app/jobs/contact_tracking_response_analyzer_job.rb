@@ -51,6 +51,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return unless message&.incoming?
     return unless message_has_content?(message)
     return if already_replied_by_bot?(message)
+    return unless take_burst(message)
 
     Rails.logger.info "[Coordinator] 🔍 Mensaje ##{message_id}: \"#{message_text_for_ai(message).truncate(80)}\""
 
@@ -62,6 +63,21 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   end
 
   private
+
+  # Mensajes seguidos, si el agente lo pide (ContactTrackings::MessageBurst): si llegó otro
+  # después, ese contesta (false). Si este es el último, su texto pasa a ser el de todos los
+  # que siguen sin respuesta (solo en memoria: el mensaje no se guarda).
+  def take_burst(message)
+    return true if ContactTrackings::MessageBurst.seconds_for(message.conversation_id).zero?
+    return false if ContactTrackings::MessageBurst.newer_incoming?(message)
+
+    juntos = ContactTrackings::MessageBurst.text(message)
+    if juntos
+      Rails.logger.info "[Coordinator] 🧺 Mensajes seguidos → se contestan juntos: #{juntos.truncate(120).inspect}"
+      message.content = juntos
+    end
+    true
+  end
 
   def coordinate(message)
     active_trackings = find_active_trackings(message)
@@ -433,7 +449,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     map = ContactTrackings::RouteMap.parse(tracking.complementary_prompt)
     @branch_cache[key] = if map.present?
                            ContactTrackings::BranchClassifierService.new(
-                             tracking, message, map, recent_context: get_recent_context(message, 4)
+                             tracking, message, map, recent_context: get_recent_context(message, 4, for_branch: true)
                            ).classify
                          end
   rescue StandardError => e
@@ -754,6 +770,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         #{next_contact_line}
         #{tracking.ai_context.present? ? "BASE DE CONOCIMIENTO:\n#{tracking.ai_context.truncate(800)}\n" : ''}
         #{ContactTrackings::ConversationVariables.rule_for(tracking, message.conversation)}
+        #{ContactTrackings::MediaNote.rule(message_text_for_ai(message))}
       SYSTEM
 
       user_prompt = <<~USER.strip
@@ -2398,7 +2415,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     nil
   end
 
-  def get_recent_context(message, limit = 4)
+  # for_branch: para el clasificador de ramas, sin lo de hace horas (ContextLine.recent?).
+  def get_recent_context(message, limit = 4, for_branch: false)
     return '' unless message.conversation_id.present?
 
     messages = Message.where(conversation_id: message.conversation_id)
@@ -2407,6 +2425,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                       .reorder(created_at: :desc)
                       .limit(limit)
                       .reverse
+    messages = messages.select { |msg| ContactTrackings::ContextLine.recent?(msg, message) } if for_branch
 
     return '' if messages.empty?
 
@@ -2456,8 +2475,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     message.attachments.each do |att|
       case att.file_type.to_s
       when 'audio'  then parts << '[mensaje de voz]'
-      when 'image'  then parts << '[imagen adjunta]'
-      when 'video'  then parts << '[video adjunto]'
+      when 'image'  then parts << ContactTrackings::MediaNote::IMAGE
+      when 'video'  then parts << ContactTrackings::MediaNote::VIDEO
       when 'file'
         fname = att.file&.blob&.filename.to_s.presence || 'documento'
         # proyecto@solicitudes, pieza 7: el texto del PDF/Excel/Word, no solo su nombre.

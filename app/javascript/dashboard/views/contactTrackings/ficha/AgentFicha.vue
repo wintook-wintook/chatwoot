@@ -275,6 +275,7 @@ export default {
         retryValue: seguimiento.retry_interval_value || 1,
         retryUnit: seguimiento.retry_interval_unit || 'days',
         attempts: seguimiento.attempts || 3,
+        groupSeconds: seguimiento.group_seconds || 0,
         whatsappTemplates: seguimiento.whatsapp_templates || [],
         emailSignature: seguimiento.email_signature || '',
       };
@@ -412,6 +413,7 @@ export default {
         retry_interval_value: this.follow.retryValue,
         retry_interval_unit: this.follow.retryUnit,
         attempts: this.follow.attempts,
+        group_seconds: this.follow.groupSeconds,
         whatsapp_templates: this.follow.whatsappTemplates,
         email_signature: this.follow.emailSignature,
         welcome: this.welcome.trim(),

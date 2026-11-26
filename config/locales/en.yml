@@ -575,6 +575,12 @@ en:
     progress_note_title: 'Progress: %{title}'
     progress_not_open: 'Progress can only be reported on a pending task'
     minutes_required: 'Enter the time spent'
+  google_calendar_schedule:
+    agent_not_found: 'That agent is not in this account'
+    viewer_not_connected: 'Connect your Google Calendar to schedule for a teammate'
+    agent_not_connected: 'That teammate has no Google Calendar connected'
+    same_google: 'That teammate uses your same Google: schedule it for yourself'
+    no_permission: 'Your teammate has not allowed you to make changes to their calendar. Ask them in "Share my calendar".'
   agenda_items:
     already_linked: 'That event already has a scheduled task'
     all_day: 'An all-day event has no time: it stays in Google only'

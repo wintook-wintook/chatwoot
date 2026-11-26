@@ -332,6 +332,7 @@ class KnowledgeBaseResponseService
 
     @conversation.messages.where(message_type: %i[incoming outgoing])
                  .where('id < ?', @message.id).order(id: :desc).limit(4)
+                 .select { |m| ContactTrackings::ContextLine.recent?(m, @message) }
                  .reverse.map { |m| "#{m.incoming? ? 'Cliente' : 'Asesor'}: #{ContactTrackings::ContextLine.brief(m.content)}" }
                  .join("\n")
   rescue StandardError
@@ -504,9 +505,10 @@ class KnowledgeBaseResponseService
 
   def perform_pgvector(question, source_type, group = nil)
     scope = grouped_items(source_type, group)
+    items = only_item_of_group(scope, group)
     # proyecto@predefinidas_que_contestan: buscar y escoger (nil = apagada o falló la IA →
     # la búsqueda de siempre).
-    items = select_items(scope, question) if selecting?(source_type)
+    items ||= select_items(scope, question) if selecting?(source_type)
     items ||= search_items(scope, threshold: group_threshold(group))
     return false if items.nil?
 
@@ -531,6 +533,20 @@ class KnowledgeBaseResponseService
                  I18n.t("knowledge_sources.names.#{source_type}", locale: @account.locale.presence || I18n.default_locale)
     send_reply("#{with_branch_tag(reply_text)}\n\n_#{source_tag}_")
     true
+  end
+
+  # 25/11/2026: con @buscar_predefinidas(GRUPO) la rama ya eligió el tema. Si el grupo deja UNA
+  # sola predefinida, es esa: el umbral de similitud (GROUP_SIMILARITY_THRESHOLD) dejaba fuera
+  # frases normales («si me gustó», «¿dónde están?») y la rama contestaba con otra cosa o con
+  # nada. Con dos o más, la búsqueda de siempre. Sin grupo o con grupo negado, nada cambia.
+  def only_item_of_group(scope, group)
+    return nil if group.blank? || group.start_with?('!')
+
+    unica = scope.limit(2).to_a
+    return nil unless unica.one?
+
+    Rails.logger.info "[KBase] 🗂️ Grupo #{group}: una sola predefinida → «#{unica.first.title}» sin umbral"
+    unica
   end
 
   def pgvector_context(items, question)
@@ -829,7 +845,8 @@ class KnowledgeBaseResponseService
   end
 
   def run_sheet_lookup(spec)
-    ContactTrackings::SheetLookup.new(@account, spec, conversation: @conversation, variables: lookup_variables).call
+    ContactTrackings::SheetLookup.new(@account, spec, conversation: @conversation, variables: lookup_variables,
+                                                      synonyms: ContactTrackings::SheetSynonyms.parse(@tracking&.complementary_prompt)).call
   end
 
   # offset: cuántas filas ya se le dieron (ver SheetLookup::Pages).
@@ -986,11 +1003,12 @@ class KnowledgeBaseResponseService
       agent_context_block,
       ContactTrackings::AgentAttachments.hint(@tracking&.tracking_template),
       variables_rule,
-      branch_scope_rule.presence
+      branch_scope_rule.presence,
+      ContactTrackings::MediaNote.rule(ContactTrackings::MediaNote.with_marks(question, @message))
     ].compact_blank.join("\n\n")
 
     user_prompt = <<~USER.strip
-      El cliente #{first_name} preguntó: "#{question.truncate(300)}"
+      El cliente #{first_name} preguntó: "#{ContactTrackings::MediaNote.with_marks(question, @message).truncate(300)}"
 
       Información relevante:
       #{context}
@@ -1046,7 +1064,7 @@ class KnowledgeBaseResponseService
   # proyecto@erp_productos — el turno con los datos de una {{consulta:}} con "?".
   def erp_user_prompt(first_name, question, data)
     <<~USER.strip
-      El cliente #{first_name} preguntó: "#{question.truncate(300)}"
+      El cliente #{first_name} preguntó: "#{ContactTrackings::MediaNote.with_marks(question, @message).truncate(300)}"
 
       Datos exactos del sistema (#{data[:rows].size} resultado(s)):
       #{erp_rows_text(data)}
@@ -1090,7 +1108,7 @@ class KnowledgeBaseResponseService
   # (información + instrucciones). Las reglas del agente siguen en el system.
   def canned_prompt_user_prompt(first_name, question, canned_prompt)
     <<~USER.strip
-      El cliente #{first_name} preguntó: "#{question.truncate(300)}"
+      El cliente #{first_name} preguntó: "#{ContactTrackings::MediaNote.with_marks(question, @message).truncate(300)}"
 
       #{canned_prompt.turn_block}
 
