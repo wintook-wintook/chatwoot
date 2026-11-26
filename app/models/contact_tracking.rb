@@ -112,6 +112,12 @@ class ContactTracking < ApplicationRecord
   after_commit :advance_contact_funnel, on: %i[create update],
                                         if: -> { conversation_id.present? && appointment_at.present? && saved_change_to_appointment_at? }
 
+  # «Agente IA» (Plan-Agente-IA-en-Conversaciones): al terminar el agente de IA sin entregarla, la conversación se resuelve
+  # sola si nadie la tiene (Conversations::AiAttendant.finished!).
+  after_update_commit :ai_attendant_finished, if: -> { saved_change_to_status? && %w[completed objective_met cancelled].include?(status) }
+
+  def ai_attendant_finished = Conversations::AiAttendant.finished!(self)
+
   def advance_contact_funnel
     Kanban::FunnelTriggerJob.perform_later(conversation_id, 'appointment_scheduled')
   end

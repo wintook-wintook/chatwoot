@@ -96,6 +96,13 @@ export default {
     assignee() {
       return this.chatMetadata.assignee || {};
     },
+    aiAgent() {
+      return this.chat.ai_agent || null;
+    },
+    aiAgentLabel() {
+      const key = `CONVERSATION.AI_AGENT_FUNCTIONS.${this.aiAgent.function}`;
+      return this.$te(key) ? this.$t(key) : this.aiAgent.name;
+    },
 
     currentContact() {
       // feat/chat_interno (plan v2): en «Interno» se ve la sala o el otro agente, no el
@@ -298,6 +305,20 @@ export default {
             />
             {{ assignee.name }}
           </span>
+          <!-- «Agente IA» que la está atendiendo (aparte del responsable) -->
+          <span
+            v-if="aiAgent"
+            v-tooltip.top="aiAgent.name"
+            class="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium leading-3 rounded-full text-ellipsis overflow-hidden whitespace-nowrap max-w-[9rem]"
+            :class="
+              chat.status === 'resolved'
+                ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                : 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-200'
+            "
+          >
+            <fluent-icon icon="bot" size="10" />
+            {{ aiAgentLabel }}
+          </span>
           <PriorityMark :priority="chat.priority" />
         </div>
       </div>
@@ -316,7 +337,8 @@ export default {
           icon="call"
         />
         <p class="text-green-500 m-0">{{ $t('WEBPHONE.VOICE_CALL') }}</p>
-        <p class="text-green-500 m-0">-</p>{{ $t('WEBPHONE.CALLING') }}
+        <p class="text-green-500 m-0">-</p>
+        {{ $t('WEBPHONE.CALLING') }}
         <p
           v-if="callStatusMessage"
           class="text-slate-800 dark:text-slate-100 m-0 text-center"
@@ -325,25 +347,25 @@ export default {
         </p>
       </div>
       <template v-else>
-      <MessagePreview
-        v-if="lastMessageInChat"
-        :message="lastMessageInChat"
-        class="conversation--message my-0 mx-2 leading-6 h-6 max-w-[96%] w-[16.875rem] text-sm text-slate-700 dark:text-slate-200"
-      />
-      <p
-        v-else
-        class="conversation--message text-slate-700 dark:text-slate-200 text-sm my-0 mx-2 leading-6 h-6 max-w-[96%] w-[16.875rem] overflow-hidden text-ellipsis whitespace-nowrap"
-      >
-        <fluent-icon
-          size="16"
-          class="-mt-0.5 align-middle inline-block text-slate-600 dark:text-slate-300"
-          icon="info"
+        <MessagePreview
+          v-if="lastMessageInChat"
+          :message="lastMessageInChat"
+          class="conversation--message my-0 mx-2 leading-6 h-6 max-w-[96%] w-[16.875rem] text-sm text-slate-700 dark:text-slate-200"
         />
-        <span>
-          {{ $t(`CHAT_LIST.NO_MESSAGES`) }}
-        </span>
-      </p>
-    </template>
+        <p
+          v-else
+          class="conversation--message text-slate-700 dark:text-slate-200 text-sm my-0 mx-2 leading-6 h-6 max-w-[96%] w-[16.875rem] overflow-hidden text-ellipsis whitespace-nowrap"
+        >
+          <fluent-icon
+            size="16"
+            class="-mt-0.5 align-middle inline-block text-slate-600 dark:text-slate-300"
+            icon="info"
+          />
+          <span>
+            {{ $t(`CHAT_LIST.NO_MESSAGES`) }}
+          </span>
+        </p>
+      </template>
 
       <div class="absolute flex flex-col conversation--meta right-4 top-4">
         <span class="ml-auto font-normal leading-4 text-black-600 text-xxs">

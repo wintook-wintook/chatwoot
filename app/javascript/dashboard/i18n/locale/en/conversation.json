@@ -285,6 +285,26 @@
     "SENT_BY": "Sent by:",
     "BOT": "Bot",
     "AI_AGENT": "AI agent",
+    "AI_AGENT_FILTER": {
+      "LABEL": "AI agent",
+      "ALL": "Both",
+      "WITHOUT": "Handled by people",
+      "WITH": "AI agent only"
+    },
+    "AI_AGENT_FUNCTIONS": {
+      "customers": "Customer care",
+      "prospects": "Prospect care",
+      "campaign_seller": "Campaign seller",
+      "follow_up": "AI follow-up",
+      "collections": "Collections",
+      "custom": "Custom agent"
+    },
+    "AI_AGENT_FIELD": {
+      "TITLE": "AI agent",
+      "NONE": "No agent",
+      "ATTENDING": "The AI is handling it",
+      "ATTENDED": "Handled by"
+    },
     "SENT_FROM_WHATSAPP_MOBILE": "WhatsApp Business App",
     "SEND_FAILED": "Couldn't send message! Try again",
     "TRY_AGAIN": "retry",

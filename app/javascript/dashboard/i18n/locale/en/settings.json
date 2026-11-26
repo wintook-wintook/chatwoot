@@ -282,6 +282,7 @@
     }
   },
   "SIDEBAR": {
+    "AI_AGENTS_CONVERSATIONS": "AI agents",
     "CAMPAIGNS_DASHBOARD_REPORT": "Campaigns dashboard",
     "REPORTS_GROUP_CONVERSATIONS": "Conversations",
     "REPORTS_LIVE": "Live",

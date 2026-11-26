@@ -49,7 +49,8 @@ class ConversationFinder
         mine_count: mine_count,
         assigned_count: assigned_count,
         unassigned_count: unassigned_count,
-        all_count: all_count
+        all_count: all_count,
+        ai_agents: ai_agent_counts
       }
     }
   end
@@ -67,6 +68,25 @@ class ConversationFinder
     filter_by_labels
     filter_by_query
     filter_by_source_id
+    @before_ai_agent = @conversations
+    filter_by_ai_agent
+  end
+
+  # «Agente IA» (Plan-Agente-IA-en-Conversaciones): with (solo agente IA, sin responsable) · without (con responsable) · una función
+  # (campaign_seller, customers, prospects, follow_up, custom…). Conversations::AiAttendant.
+  def filter_by_ai_agent
+    return if params[:ai_agent].blank?
+
+    @conversations = Conversations::AiAttendant.filter(@conversations, params[:ai_agent])
+  end
+
+  # Cuántas tiene en curso cada agente de IA con los demás filtros puestos (el combo y el menú).
+  def ai_agent_counts
+    # En su propio punto de guardado: si falla, la lista sigue (no se rompe la transacción).
+    ActiveRecord::Base.transaction(requires_new: true) { Conversations::AiAttendant.counts(@before_ai_agent) }
+  rescue StandardError => e
+    Rails.logger.warn("[ConversationFinder] ai_agent_counts: #{e.message}")
+    {}
   end
 
   def set_inboxes

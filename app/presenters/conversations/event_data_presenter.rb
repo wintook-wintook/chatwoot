@@ -18,7 +18,7 @@ class Conversations::EventDataPresenter < SimpleDelegator
       priority: priority,
       waiting_since: waiting_since.to_i,
       **push_timestamps
-    }
+    }.merge(ai_agent: Conversations::AiAttendant.for(__getobj__)) # «Agente IA» (aparte del responsable)
   end
 
   # CAMBIO LOCAL (no upstream): los eventos de conversacion salian sin ninguna referencia

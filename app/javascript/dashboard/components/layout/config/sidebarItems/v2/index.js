@@ -420,6 +420,14 @@ const conversationsV2 = accountId => {
         toState: frontendURL(`accounts/${accountId}/inbox-view`),
         toStateName: 'inbox_view',
       },
+      // «Agente IA» (Plan-Agente-IA-en-Conversaciones): lo que están atendiendo los agentes de IA; en la lista, el
+      // combo «Agente IA» deja elegir uno (con cuántas tiene cada uno).
+      {
+        icon: 'bot',
+        label: 'AI_AGENTS_CONVERSATIONS',
+        toState: frontendURL(`accounts/${accountId}/dashboard?ai_agent=with`),
+        toStateName: 'home',
+      },
     ],
   };
 };

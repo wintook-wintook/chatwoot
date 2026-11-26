@@ -282,6 +282,7 @@
     }
   },
   "SIDEBAR": {
+    "AI_AGENTS_CONVERSATIONS": "Agentes de IA",
     "CAMPAIGNS_DASHBOARD_REPORT": "Dashboard de campañas",
     "REPORTS_GROUP_CONVERSATIONS": "Conversaciones",
     "REPORTS_LIVE": "En vivo",

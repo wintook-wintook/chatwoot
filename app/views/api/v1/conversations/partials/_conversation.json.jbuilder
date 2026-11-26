@@ -51,6 +51,8 @@ json.unread_count conversation.internal? ? InternalChannel::Access.unread_count(
 json.last_non_activity_message conversation.messages.where(account_id: conversation.account_id).non_activity_messages.first.try(:push_event_data)
 json.last_activity_at conversation.last_activity_at.to_i
 json.priority conversation.priority
+# «Agente IA»: el agente que la está atendiendo ahora (aparte del responsable), o nil.
+json.ai_agent Conversations::AiAttendant.for(conversation)
 json.waiting_since conversation.waiting_since.to_i.to_i
 json.sla_policy_id conversation.sla_policy_id
 json.partial! 'enterprise/api/v1/conversations/partials/conversation', conversation: conversation if ChatwootApp.enterprise?
