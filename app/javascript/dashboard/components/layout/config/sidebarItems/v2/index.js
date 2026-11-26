@@ -285,10 +285,13 @@ export const primaryMenuV2 = (accountId, route) => {
       toStateName: CLASS_VIEW_ROUTES[serviceView],
     },
     // CrmZeus — lo traído de CRMZeus (sin feature flag: lo filtra el área de Ventas).
+    // `hidden`: no se pinta el botón; se entra con Ctrl+L (atajo en Sidebar.vue).
+    // Sigue en la lista para que el submenú y el área de acceso funcionen igual.
     {
       icon: 'briefcase',
       key: 'crmzeus',
       label: 'CRM_ZEUS',
+      hidden: true,
       toState: url('crm-zeus/organizations'),
       toStateName: 'crmzeus_organizations',
     },

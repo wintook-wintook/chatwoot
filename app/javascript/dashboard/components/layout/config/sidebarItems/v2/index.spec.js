@@ -27,6 +27,7 @@ describe('Menú v2', () => {
       'agenda',
       'ventas',
       'servicio',
+      'crmzeus',
       'contacts',
       'campaigns',
       'agentes',
@@ -34,6 +35,11 @@ describe('Menú v2', () => {
       'catalogos',
       'settings',
     ]);
+  });
+
+  it('CrmZeus va oculto (se entra con Ctrl+L) y es el único', () => {
+    const primary = primaryMenuV2(ACCOUNT, route('home'));
+    expect(primary.filter(i => i.hidden).map(i => i.key)).toEqual(['crmzeus']);
   });
 
   it('Ventas y Clientes abren la primera opción de su menú', () => {
