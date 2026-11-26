@@ -89,6 +89,8 @@ const defaultTabFilters = () => ({
   // @tickets_cases — '' fusiona tareas + reuniones agendadas · 'task' / 'meeting'
   // deja solo uno de los dos.
   item_type: '',
+  // Tareas con el cliente — '' todas · 'ours' las nuestras · 'client' las que hace el cliente (de mis casos).
+  audience: '',
   q: '',
 });
 
@@ -475,12 +477,22 @@ export default {
           align: 'left',
           width: 140,
           sortBy: this.sortConfig.assignee || '',
-          renderBodyCell: ({ row }) =>
-            this.assigneeName(row) || (
-              <span class="text-slate-300 dark:text-slate-600">
-                {this.$t('CASE_TICKETS.TASKS.INBOX.UNASSIGNED')}
-              </span>
-            ),
+          // La del cliente no lleva responsable: la hace el cliente en su portal.
+          renderBodyCell: ({ row }) => {
+            if (row.audience === 'client')
+              return (
+                <span class="text-woot-700 dark:text-woot-300">
+                  {this.$t('CASE_TICKETS.TASKS.INBOX.AUDIENCE.CLIENT')}
+                </span>
+              );
+            return (
+              this.assigneeName(row) || (
+                <span class="text-slate-300 dark:text-slate-600">
+                  {this.$t('CASE_TICKETS.TASKS.INBOX.UNASSIGNED')}
+                </span>
+              )
+            );
+          },
         },
         {
           field: 'due_at',
@@ -757,6 +769,7 @@ export default {
       if (this.filters.item_type) p.item_type = this.filters.item_type;
       if (this.filters.q) p.q = this.filters.q;
       if (this.filters.due) p.due = this.filters.due;
+      if (this.filters.audience) p.audience = this.filters.audience;
       if (this.sortBy) {
         p.sort_by = this.sortBy;
         p.sort_order = this.sortOrder || 'asc';
@@ -1489,6 +1502,23 @@ export default {
             </option>
             <option v-for="t in types" :key="t.id" :value="t.id">
               {{ t.name }}
+            </option>
+          </select>
+          <!-- Quién la hace: las del cliente no tienen responsable; «mías» son las de mis casos -->
+          <select
+            v-if="!isMyDay"
+            v-model="filters.audience"
+            class="!mb-0 text-sm w-40"
+            @change="onFilterChange"
+          >
+            <option value="">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.AUDIENCE.ANY') }}
+            </option>
+            <option value="ours">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.AUDIENCE.OURS') }}
+            </option>
+            <option value="client">
+              {{ $t('CASE_TICKETS.TASKS.INBOX.AUDIENCE.CLIENT') }}
             </option>
           </select>
           <select

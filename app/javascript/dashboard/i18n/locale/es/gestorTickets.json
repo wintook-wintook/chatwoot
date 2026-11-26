@@ -782,6 +782,11 @@
           "TASK": "No agendadas",
           "MEETING": "Agendadas"
         },
+        "AUDIENCE": {
+          "ANY": "Quién la hace: todas",
+          "OURS": "Las nuestras",
+          "CLIENT": "Del cliente"
+        },
         "DUE": {
           "ANY": "Cualquier fecha",
           "OVERDUE": "Vencidas",
@@ -874,6 +879,35 @@
       "MILESTONE_LABEL": "Es un hito del proyecto",
       "MILESTONE_HINT": "Cuenta para el avance del proyecto.",
       "MY_DAY": {
+        "CLIENT": {
+          "TITLE": "Esperando al cliente ({n})",
+          "OVERDUE_BADGE": "{n} vencidas",
+          "DONE_BADGE": "{n} por revisar",
+          "HINT": "Lo que le toca al cliente en tus casos. No sale en tus tareas porque lo hace él en su portal: aquí lo sigues.",
+          "GROUPS": {
+            "overdue": "Vencidas ({n})",
+            "soon": "Vencen esta semana ({n})",
+            "done": "Ya las hizo: revisa ({n})",
+            "waiting": "En espera ({n})"
+          },
+          "DONE_BY": "La hizo {who} el {date}",
+          "THE_CLIENT": "el cliente",
+          "OVERDUE_DAYS": "Vencida hace {n} día(s)",
+          "DUE": "Para el {date}",
+          "IN_PROGRESS": "en proceso",
+          "REMIND": "Recordarle",
+          "REMINDED_SHORT": "Recordado",
+          "REMINDED": "Le mandamos el recordatorio con el enlace de su portal.",
+          "OPEN": "Abrir",
+          "REVIEW": "Revisar",
+          "MORE": "Y {n} más: ábrelas desde Tareas › Del cliente.",
+          "NOT_SENT": {
+            "no_conversation": "No tiene conversación: mándale el enlace de su portal por otro medio.",
+            "window_closed": "Pasaron 24 h desde su último mensaje: WhatsApp no deja escribirle libre. Mándale una plantilla o escríbele por otro medio.",
+            "no_owner": "El caso no tiene contacto ni organización: no hay portal al cual mandarlo.",
+            "error": "No se pudo mandar; intenta de nuevo."
+          }
+        },
         "DAY_OF": "Día de:",
         "DAY_OF_ME": "Mío",
         "VIEWING": "Estás viendo el día de {name}: solo para ver, su orden lo arma esa persona.",

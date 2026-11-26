@@ -27,6 +27,20 @@ class CaseTasksAPI extends ApiClient {
     return axios.put(`${base}/my_day_plan`, { day, task_ids: taskIds });
   }
 
+  // Tareas con el cliente — «Esperando al cliente» en Mi día (las de los casos donde userId es responsable).
+  clientWatch(userId) {
+    const base = this.url.replace(/case_tickets$/, 'case_tasks');
+    return axios.get(`${base}/client_watch`, {
+      params: userId ? { user_id: userId } : {},
+    });
+  }
+
+  // «Recordarle»: le escribe al cliente por su conversación con el enlace de su portal.
+  remindClient(taskId) {
+    const base = this.url.replace(/case_tickets$/, 'case_tasks');
+    return axios.post(`${base}/${taskId}/remind_client`);
+  }
+
   // Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA (explica, no reordena).
   myDayAi(day, tz) {
     const base = this.url.replace(/case_tickets$/, 'case_tasks');

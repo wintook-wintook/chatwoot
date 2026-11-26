@@ -37,7 +37,8 @@ class TrackingCampaigns::Motor2Insights < Cases::Ai::BaseService
   def replies
     ids = ContactTracking.where(tracking_campaign_id: @campaign.id).where.not(conversation_id: nil).pluck(:conversation_id)
     Message.where(conversation_id: ids, message_type: :incoming).where('created_at >= ?', @campaign.created_at)
-           .where.not(content: [nil, '']).order(created_at: :desc).limit(MAX_REPLIES).pluck(:content).map { |c| c.squish.first(300) }
+           .where.not(content: [nil, '']).where("#{AiFollowUp.message_attr_sql('auto_reply')} IS DISTINCT FROM 'true'") # sin las automáticas
+           .order(created_at: :desc).limit(MAX_REPLIES).pluck(:content).map { |c| c.squish.first(300) }
   end
 
   def user_text(texts)

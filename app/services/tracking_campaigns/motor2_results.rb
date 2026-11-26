@@ -15,7 +15,7 @@
 #   TrackingCampaigns::Motor2Results.new(campaign).call
 #   TrackingCampaigns::Motor2Results.new(campaign).contacts(group) → [{ contact_id, name, … }] (los de un grupo)
 class TrackingCampaigns::Motor2Results
-  GROUPS = %w[replied interested relayed appointment not_interested no_reply in_progress not_read clicked confirmed declined low_score
+  GROUPS = %w[replied auto_replied interested relayed appointment not_interested no_reply in_progress not_read clicked confirmed declined low_score
               failed bounced achieved not_now future_yes].freeze
   MAX_LIST = 500
   ATTRIBUTION = 30.days
@@ -68,6 +68,7 @@ class TrackingCampaigns::Motor2Results
   def exits
     { not_interested: @trackings.where(outcome: 'discarded').count, handed_off: @trackings.where(outcome: 'handed_off').count,
       opted_out: opted_out_count, bounced: bounced.count, failed: @trackings.where(status: 'failed').count, no_reply: no_reply.count,
+      auto_replied: auto_replied.count,
       in_progress: in_progress.count, skipped: @campaign.entries.skipped.group(:reason).count }
   end
 
@@ -141,10 +142,19 @@ class TrackingCampaigns::Motor2Results
 
   def clicked_contact_ids = @campaign.clicks.distinct.pluck(:contact_id)
 
-  # Contestó: tiene un mensaje del cliente en su conversación después de inscribirse.
+  # Contestó: tiene un mensaje del cliente en su conversación después de inscribirse (la respuesta automática de su
+  # WhatsApp Business no cuenta: Motor2::AutoReply).
   def replied
-    @trackings.where('EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = contact_trackings.conversation_id ' \
-                     'AND m.message_type = 0 AND m.created_at > contact_trackings.created_at)')
+    @trackings.where("EXISTS (SELECT 1 FROM messages m WHERE #{INCOMING_SQL} AND #{AUTO_SQL} IS DISTINCT FROM 'true')")
+  end
+
+  INCOMING_SQL = 'm.conversation_id = contact_trackings.conversation_id AND m.message_type = 0 AND m.created_at > contact_trackings.created_at'
+  AUTO_SQL = "((m.content_attributes #>> '{}')::jsonb ->> 'auto_reply')"
+
+  # Solo llegó su respuesta automática (no contestó una persona).
+  def auto_replied
+    @trackings.where.not(id: replied.select(:id))
+              .where("EXISTS (SELECT 1 FROM messages m WHERE #{INCOMING_SQL} AND #{AUTO_SQL} = 'true')")
   end
 
   # No contestó y ya no le sale nada (terminó sus toques); los que aún esperan toques van en «en curso».

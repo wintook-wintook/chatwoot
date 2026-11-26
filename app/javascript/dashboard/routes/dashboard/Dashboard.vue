@@ -50,6 +50,9 @@ export default {
     currentRoute() {
       return ' ';
     },
+    layoutTypes() {
+      return wootConstants.LAYOUT_TYPES;
+    },
     isSidebarOpen() {
       const { show_secondary_sidebar: showSecondarySidebar } = this.uiSettings;
       return showSecondarySidebar;
@@ -172,8 +175,28 @@ export default {
       @showAddLabelPopup="showAddLabelPopup"
     />
     <section
-      class="flex flex-col flex-1 h-full min-w-0 min-h-0 px-0 overflow-hidden"
+      class="relative flex flex-col flex-1 h-full min-w-0 min-h-0 px-0 overflow-hidden"
     >
+      <!-- Un solo botón para ocultar y volver a mostrar el menú, en todas las pantallas (antes cada una ponía su ☰
+           y en muchas faltaba: ocultabas el menú y ya no había cómo regresarlo). -->
+      <button
+        v-if="displayLayoutType !== layoutTypes.EXPANDED"
+        v-tooltip.right="
+          isSidebarOpen ? $t('SIDEBAR.HIDE_MENU') : $t('SIDEBAR.SHOW_MENU')
+        "
+        type="button"
+        class="absolute left-0 z-20 flex items-center justify-center w-5 h-12 !p-0 -translate-y-1/2 bg-white border border-l-0 rounded-r-lg shadow top-1/2 border-slate-200 text-slate-600 hover:text-woot-600 hover:bg-woot-25 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+        :aria-label="
+          isSidebarOpen ? $t('SIDEBAR.HIDE_MENU') : $t('SIDEBAR.SHOW_MENU')
+        "
+        @click="toggleSidebar"
+      >
+        <fluent-icon
+          :icon="isSidebarOpen ? 'chevron-left' : 'chevron-right'"
+          size="16"
+          class="shrink-0"
+        />
+      </button>
       <!-- Dali siempre a la vista; la pantalla toma el alto que queda. -->
       <AssistantTopBar />
       <div class="flex flex-1 w-full min-h-0 overflow-hidden">

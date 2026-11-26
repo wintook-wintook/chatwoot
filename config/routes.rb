@@ -701,6 +701,9 @@ Rails.application.routes.draw do
             put :my_day_plan, on: :collection # Plan-Bandeja-Prioridad F2 — orden propio de «Mi día»
             post :my_day_ai, on: :collection  # Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA
           end
+          # Tareas con el cliente — «Esperando al cliente» en Mi día y «Recordarle»
+          get 'case_tasks/client_watch', to: 'client_task_watches#index'
+          post 'case_tasks/:id/remind_client', to: 'client_task_watches#remind'
           get 'case_tasks/:id/history', to: 'task_histories#show', as: :case_task_history # historial de la tarea
           # «Cómo habla tu empresa»: base común de Seguimiento IA y Agentes listos
           resource :ai_voice, only: [:show, :update], controller: 'ai_voice' do

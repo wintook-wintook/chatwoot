@@ -489,7 +489,9 @@
     "INTERNAL_CHAT_NEW": "Nuevo chat",
     "MAINTENANCE": "Mantenimientos",
     "INTERNAL_CHAT": "Chat interno",
-    "COLLECTIONS": "Cobranza"
+    "COLLECTIONS": "Cobranza",
+    "SHOW_MENU": "Mostrar el menú",
+    "HIDE_MENU": "Ocultar el menú"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Facturación",
