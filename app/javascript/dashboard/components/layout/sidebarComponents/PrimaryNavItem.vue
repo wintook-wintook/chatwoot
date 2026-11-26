@@ -1,4 +1,6 @@
 <script>
+import { BUS_EVENTS } from 'shared/constants/busEvents';
+
 // feat/apariencia B2 — cada área del menú con su color: se ubica más rápido dónde
 // estás. Las escalas (sky, grass, orange…) traen su versión oscura, así que sirven
 // en los dos modos; Inicio usa el color del tema y Ajustes queda neutro.
@@ -86,6 +88,13 @@ export default {
       return /^(https?:)?\/\//.test(this.to);
     },
   },
+  methods: {
+    // Con el menú oculto (las tres rayas), entrar a un área lo vuelve a abrir.
+    go(navigate, event) {
+      this.$emitter.emit(BUS_EVENTS.OPEN_SIDEMENU);
+      navigate(event);
+    },
+  },
 };
 </script>
 
@@ -112,7 +121,7 @@ export default {
       :class="isActive || isChildMenuActive ? tone.active : tone.idle"
       :rel="openInNewPage ? 'noopener noreferrer nofollow' : undefined"
       :target="openInNewPage ? '_blank' : undefined"
-      @click="navigate"
+      @click="go(navigate, $event)"
     >
       <fluent-icon :icon="icon" />
       <span class="sr-only">{{ name }}</span>

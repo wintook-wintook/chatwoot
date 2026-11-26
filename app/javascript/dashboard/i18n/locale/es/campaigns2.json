@@ -1,14 +1,15 @@
 {
   "CAMPAIGNS2": {
     "BADGE": "Vendedor IA",
-    "NEW_TITLE": "Nueva campaña con Vendedor IA",
-    "EDIT_TITLE": "Modificar campaña con Vendedor IA",
+    "NEW_TITLE": "Nueva campaña",
+    "EDIT_TITLE": "Modificar campaña",
     "SUBTITLE": "La campaña manda el primer mensaje y su Vendedor IA atiende a quien conteste: resuelve dudas, cotiza, agenda y pasa el relevo.",
     "BACK": "Volver a campañas",
     "LOADING": "Cargando…",
     "LOAD_ERROR": "No se pudo cargar la campaña.",
     "NAME": "Nombre de la campaña",
     "NAME_PLACEHOLDER": "Ej. Promo de aire acondicionado — marzo",
+    "NAME_HINT": "Solo lo ven ustedes (lista y Resultados). Vacío, se arma solo con el evento o lo que ofreces.",
     "NEEDS_SELLER_AND_CHANNEL": "Elige el canal para guardarla.",
     "SAVE_ERROR": "No se pudo guardar la campaña.",
     "SAVED": "Campaña guardada.",
@@ -846,7 +847,7 @@
         "audience": "Por qué canal y a quién le llega la invitación.",
         "messages": "La invitación, la información completa, los toques a quien no contesta y los recordatorios del evento.",
         "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
-        "review": "Nombre, cuándo sale, la revisión y las pruebas (los Casos corren solos)."
+        "review": "Cuándo sale, la revisión y las pruebas (los Casos corren solos)."
       },
       "EDIT_EVENT": "Editar evento",
       "EVENT_ERROR": "No se pudo abrir el evento"
@@ -888,7 +889,7 @@
         "audience": "Por qué canal y a quién le llega la oferta.",
         "messages": "La apertura, la información completa, los toques a quien no contesta y qué pasa si contestó y se calla.",
         "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
-        "review": "Nombre, cuándo sale, la revisión y las pruebas (los Casos corren solos)."
+        "review": "Cuándo sale, la revisión y las pruebas (los Casos corren solos)."
       },
       "PRODUCTS_TITLE": "¿Qué ofreces?",
       "PRODUCTS_HINT": "Busca en tu Catálogo: cada producto llega con su nombre, precio, descripción y foto (la foto se agrega sola como imagen de la oferta). Pon el precio de promoción o el % de descuento.",
@@ -949,7 +950,7 @@
         "interest": "Qué hace la IA cuando le interesa volver. Elige una opción; abajo sale solo lo que necesita.",
         "messages": "La apertura (puede usar {{ultima_compra}}), la información completa, los toques y qué pasa si contestó y se calla.",
         "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
-        "review": "Nombre, cuándo sale, la revisión y las pruebas (los Casos corren solos)."
+        "review": "Cuándo sale, la revisión y las pruebas (los Casos corren solos)."
       },
       "DAYS": "No compran desde hace (días)",
       "CATEGORY": "De la categoría (opcional)",
@@ -1021,7 +1022,7 @@
         "audience": "Por qué canal y a quién: de entrada, los que atendiste en los últimos días.",
         "messages": "La invitación a contestar (en correo, la primera pregunta va con botones) y los toques a quien no contesta.",
         "replies": "Qué contesta al terminar o si no quiere contestar, y la etiqueta que le queda.",
-        "review": "Nombre, cuándo sale, la revisión y las pruebas (los Casos corren solos)."
+        "review": "Cuándo sale, la revisión y las pruebas (los Casos corren solos)."
       },
       "WHO": "A quién le preguntas",
       "QUESTIONS_TITLE": "Las preguntas",

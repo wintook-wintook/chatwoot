@@ -1,14 +1,15 @@
 {
   "CAMPAIGNS2": {
     "BADGE": "AI Seller",
-    "NEW_TITLE": "New campaign with AI Seller",
-    "EDIT_TITLE": "Edit campaign with AI Seller",
+    "NEW_TITLE": "New campaign",
+    "EDIT_TITLE": "Edit campaign",
     "SUBTITLE": "The campaign sends the first message and its AI Seller handles whoever replies: answers questions, quotes, books and hands off.",
     "BACK": "Back to campaigns",
     "LOADING": "Loading…",
     "LOAD_ERROR": "The campaign couldn't be loaded.",
     "NAME": "Campaign name",
     "NAME_PLACEHOLDER": "E.g. Air conditioning promo — March",
+    "NAME_HINT": "Only your team sees it (list and Results). Left blank, it is built from the event or what you offer.",
     "NEEDS_SELLER_AND_CHANNEL": "Pick the channel to save it.",
     "SAVE_ERROR": "The campaign couldn't be saved.",
     "SAVED": "Campaign saved.",
@@ -811,7 +812,7 @@
         "audience": "Which channel and who gets the invitation.",
         "messages": "The invitation, the full information, follow-ups to those who do not reply and the event reminders.",
         "replies": "What it replies at each moment and the label the contact gets. They come ready; customize only if you want.",
-        "review": "Name, when it goes out, the review and the tests (Cases run on their own)."
+        "review": "When it goes out, the review and the tests (Cases run on their own)."
       },
       "EDIT_EVENT": "Edit event",
       "EVENT_ERROR": "Could not open the event"
@@ -853,7 +854,7 @@
         "audience": "Which channel and who gets the offer.",
         "messages": "The opener, the full information, follow-ups to those who do not reply and what happens if they replied and went silent.",
         "replies": "What it replies at each moment and the label the contact gets. They come ready; customize only if you want.",
-        "review": "Name, when it goes out, the review and the tests (Cases run on their own)."
+        "review": "When it goes out, the review and the tests (Cases run on their own)."
       },
       "PRODUCTS_TITLE": "What do you offer?",
       "PRODUCTS_HINT": "Search your Catalog: each product comes with its name, price, description and photo (the photo is added as the offer image). Set the promo price or the % off.",
@@ -914,7 +915,7 @@
         "interest": "What the AI does when they want to come back. Pick one; below appears only what it needs.",
         "messages": "The opener (can use {{ultima_compra}}), the full information, follow-ups and what happens if they replied and went silent.",
         "replies": "What it replies at each moment and the label the contact gets. They come ready; customize only if you want.",
-        "review": "Name, when it goes out, the review and the tests (Cases run on their own)."
+        "review": "When it goes out, the review and the tests (Cases run on their own)."
       },
       "DAYS": "Not buying for (days)",
       "CATEGORY": "From category (optional)",
@@ -986,7 +987,7 @@
         "audience": "Which channel and who: by default, those you served in the last days.",
         "messages": "The invitation to answer (by email the first question has buttons) and follow-ups to those who do not reply.",
         "replies": "What it replies at the end or if they do not want to answer, and the label they get.",
-        "review": "Name, when it goes out, the review and the tests (Cases run on their own)."
+        "review": "When it goes out, the review and the tests (Cases run on their own)."
       },
       "WHO": "Who you ask",
       "QUESTIONS_TITLE": "The questions",

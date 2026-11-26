@@ -8,7 +8,7 @@
     "LOADING": "Loading campaigns…",
     "EMPTY_TITLE": "No campaigns yet.",
     "EMPTY_HINT": "Create one with the “Add campaign” button or bulk-assign an AI Agent from Contacts.",
-    "SEARCH_PLACEHOLDER": "Search by name, AI Agent or channel…",
+    "SEARCH_PLACEHOLDER": "Search by name or channel…",
     "FILTER_STATUS_ALL": "All statuses",
     "NO_RESULTS": "No campaigns match the filter.",
     "DELETE": "Delete campaign",

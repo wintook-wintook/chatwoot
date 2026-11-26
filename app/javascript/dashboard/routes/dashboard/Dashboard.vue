@@ -85,10 +85,12 @@ export default {
     this.handleResize();
     window.addEventListener('resize', this.handleResize);
     this.$emitter.on(BUS_EVENTS.TOGGLE_SIDEMENU, this.toggleSidebar);
+    this.$emitter.on(BUS_EVENTS.OPEN_SIDEMENU, this.openSidebar);
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
     this.$emitter.off(BUS_EVENTS.TOGGLE_SIDEMENU, this.toggleSidebar);
+    this.$emitter.off(BUS_EVENTS.OPEN_SIDEMENU, this.openSidebar);
   },
 
   methods: {
@@ -116,6 +118,13 @@ export default {
         show_secondary_sidebar: !this.isSidebarOpen,
         previously_used_sidebar_view: !this.isSidebarOpen,
       });
+    },
+    // En pantalla chica el menú se oculta solo: ahí no se fuerza.
+    openSidebar() {
+      if (this.isSidebarOpen) return;
+      if (this.displayLayoutType === wootConstants.LAYOUT_TYPES.EXPANDED)
+        return;
+      this.toggleSidebar();
     },
     openCreateAccountModal() {
       this.showAccountModal = false;

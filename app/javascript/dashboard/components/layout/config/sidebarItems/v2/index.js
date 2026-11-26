@@ -769,6 +769,10 @@ const campanas = accountId => ({
   routes: [
     'contact_trackings_campaigns',
     'contact_trackings_campaign_detail',
+    // Campaña con Vendedor IA: crear, modificar y resultados (si no, el menú no sale ahí)
+    'campaigns2_new',
+    'campaigns2_edit',
+    'campaigns2_detail',
     'ongoing_campaigns',
     'one_off',
     'contact_trackings_metrics',
@@ -776,7 +780,15 @@ const campanas = accountId => ({
     'event_detail',
   ],
   menuItems: [
-    campaignItem(accountId, 'contact_trackings_campaigns', 'CAMPAIGNS_AI'),
+    {
+      ...campaignItem(accountId, 'contact_trackings_campaigns', 'CAMPAIGNS_AI'),
+      activeRoutes: [
+        'contact_trackings_campaign_detail',
+        'campaigns2_new',
+        'campaigns2_edit',
+        'campaigns2_detail',
+      ],
+    },
     campaignItem(accountId, 'ongoing_campaigns', 'CAMPAIGNS_WEB'),
     campaignItem(accountId, 'one_off', 'CAMPAIGNS_SMS'),
     campaignItem(accountId, 'contact_trackings_metrics', 'CAMPAIGNS_DASHBOARD'),

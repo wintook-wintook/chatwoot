@@ -934,6 +934,7 @@ export default {
       while (this.form.touches.emails.length < this.attempts) {
         this.form.touches.emails.push({ body: '', blocks: [] });
       }
+      if (this.autoName(data.name)) this.form.name = '';
       if (!this.form.brief.labels) this.resetLabels();
       // Encuesta de antes (solo textos): pasa a preguntas con tipo.
       if (
@@ -999,9 +1000,21 @@ export default {
         email_subject_b: f.email_subject_b,
       };
     },
+    // El que se arma solo (o el de antes, que se quedaba en «Invitar»): se sigue armando con el evento/producto.
+    autoName(name) {
+      const title = this.t(`KINDS.${this.kind}.TITLE`);
+      return (
+        !name ||
+        name === 'Campaña sin nombre' ||
+        name === title ||
+        name.startsWith(`${title} — `)
+      );
+    },
     defaultName() {
       const what =
-        this.kind === 'invite' ? this.event?.name : this.form.brief.offer_what;
+        this.kind === 'invite'
+          ? this.event?.name
+          : this.form.brief.offer_what || this.offerName();
       return [this.t(`KINDS.${this.kind}.TITLE`), what]
         .filter(Boolean)
         .join(' — ')
@@ -1022,7 +1035,6 @@ export default {
           ? await Motor2CampaignsAPI.update(this.campaignId, this.body())
           : await Motor2CampaignsAPI.create(this.body());
         this.campaignId = data.id;
-        if (!this.form.name.trim()) this.form.name = data.name;
         return true;
       } catch (e) {
         useAlert(e.response?.data?.error || this.t('SAVE_ERROR'));
@@ -1203,17 +1215,38 @@ export default {
       <div class="flex items-start gap-2">
         <woot-sidemenu-icon />
         <div>
-          <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
-            {{ campaignId ? t('EDIT_TITLE') : t('NEW_TITLE') }}
-            <span
-              v-if="!showKindPicker"
-              class="ml-1 px-2 py-0.5 align-middle text-xs font-semibold rounded-full bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200"
+          <!-- Nueva/Modificar + tipo + nombre de la campaña (editable aquí mismo) -->
+          <div class="flex flex-wrap items-center gap-2">
+            <h1
+              class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100"
             >
-              {{ t(`KINDS.${kind}.TITLE`) }}
-            </span>
-          </h1>
-          <p class="m-0 mt-1 text-sm text-slate-600 dark:text-slate-400">
+              {{ campaignId ? t('EDIT_TITLE') : t('NEW_TITLE') }}
+            </h1>
+            <template v-if="!showKindPicker && !loading">
+              <span
+                class="px-2 py-0.5 text-xs font-semibold rounded-full bg-woot-50 text-woot-700 dark:bg-woot-900/30 dark:text-woot-200"
+              >
+                {{ t(`KINDS.${kind}.TITLE`) }}
+              </span>
+              <input
+                v-model="form.name"
+                v-tooltip.bottom="t('NAME')"
+                type="text"
+                maxlength="120"
+                :aria-label="t('NAME')"
+                class="!mb-0 !py-1 !w-[28rem] max-w-full !text-base font-semibold"
+                :placeholder="defaultName() || t('NAME_PLACEHOLDER')"
+              />
+            </template>
+          </div>
+          <p
+            v-if="showKindPicker || loading"
+            class="m-0 mt-1 text-sm text-slate-600 dark:text-slate-400"
+          >
             {{ t('SUBTITLE') }}
+          </p>
+          <p v-else class="m-0 mt-1 text-xs text-slate-500">
+            {{ t('NAME') }} · {{ t('NAME_HINT') }}
           </p>
         </div>
       </div>
@@ -2174,21 +2207,11 @@ export default {
 
           <!-- 6 · Revisar y lanzar -->
           <template v-if="step === 'review'">
-            <!-- Invitar: nombre y cuándo aquí (no hay paso «Cuándo») -->
+            <!-- Proceso guiado: cuándo aquí (no hay paso «Cuándo»); el nombre va en el encabezado -->
             <section
               v-if="guided"
               class="flex flex-col gap-2 p-3 border rounded-md border-slate-100 dark:border-slate-700"
             >
-              <label class="block">
-                <span class="field-label">{{ t('NAME') }}</span>
-                <input
-                  v-model="form.name"
-                  type="text"
-                  maxlength="120"
-                  class="!mb-0"
-                  :placeholder="defaultName() || t('NAME_PLACEHOLDER')"
-                />
-              </label>
               <fieldset class="flex flex-wrap items-center gap-3">
                 <legend class="field-label">{{ t('WHEN.START') }}</legend>
                 <label class="flex items-center gap-2 text-sm">
