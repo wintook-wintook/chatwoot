@@ -21,7 +21,7 @@
 #   GET   motor2_campaigns/:id/test_run         «Prueba real»: cómo va · POST la arranca { recipients, every_minutes }
 #   DELETE motor2_campaigns/:id/test_run        la termina (cancela los toques que falten)
 class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseController
-  before_action :set_campaign, except: %i[options preview test test_email cases run_case create]
+  before_action :set_campaign, except: %i[options preview preview_csv test test_email cases run_case create]
 
   def options
     render json: { attend: TrackingCampaigns::CampaignAgent.defaults(Current.account), sources: Motor2::SourceMap.new(Current.account).available,
@@ -37,13 +37,15 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
     { case_types: names(Current.account.case_types.active), contract_types: names(Current.account.contract_types) }
   end
 
+  # «A quién»: la audiencia clasificada, por páginas, con filtro y búsqueda (TrackingCampaigns::AudiencePage).
   def preview
-    result = ContactTrackings::BulkAssignPreviewService.new(
-      account: Current.account, current_user: current_user, filter_payload: params.permit!['payload'] || [],
-      template_id: params[:template_id], inbox_id: params[:inbox_id], excluded_contact_ids: params[:excluded_contact_ids] || []
-    ).call
-    result = TrackingCampaigns::PreviewFacts.call(Current.account, result) if params[:facts].present? # Reactivar y Recordar
+    result = audience_page.call
     render json: result, status: result[:error] ? :unprocessable_entity : :ok
+  end
+
+  # «Descargar lista»: lo filtrado en CSV.
+  def preview_csv
+    send_data audience_page.csv, filename: 'invitados.csv', type: 'text/csv; charset=utf-8'
   end
 
   # Con «Cómo atiende» de la pantalla (sin guardar) sobre el agente de la campaña, si ya existe.
@@ -140,6 +142,8 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
   end
 
   private
+
+  def audience_page = TrackingCampaigns::AudiencePage.new(Current.account, current_user, params.permit!.to_h)
 
   def set_campaign
     @campaign = Current.account.tracking_campaigns.real.where(engine: '2').find(params[:id])

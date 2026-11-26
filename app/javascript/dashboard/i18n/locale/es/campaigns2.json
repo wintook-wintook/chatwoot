@@ -169,7 +169,35 @@
       "EVENT_OF": "Asistentes de este evento",
       "inactive": "No compran desde hace…",
       "served": "Atendidos hace poco",
-      "contracts": "Contratos por vencer"
+      "contracts": "Contratos por vencer",
+      "SEARCH": "Buscar por nombre, teléfono, correo o empresa",
+      "SHOWING": "Mostrando {from}–{to} de {n}",
+      "SHOWING_FILTERED": "Mostrando {from}–{to} de {n} (filtrados)",
+      "REMOVE_ALL": "Quitar de la campaña ({n})",
+      "RESTORE_ALL": "Regresar ({n})",
+      "DOWNLOAD": "Descargar lista",
+      "CSV_NAME": "invitados.csv",
+      "BULK_ERROR": "No se pudo; intenta de nuevo.",
+      "READY": "Le llega",
+      "NO_MATCH": "Nadie con ese filtro o búsqueda.",
+      "PREV": "Anterior",
+      "NEXT": "Siguiente",
+      "PAGE": "Página {page} de {pages}",
+      "TOO_MANY": "Son {n} contactos: la lista se revisa hasta 20,000. Afina el segmento o la etiqueta para verla.",
+      "COL": {
+        "NAME": "Nombre",
+        "COMPANY": "Empresa",
+        "PHONE": "Teléfono",
+        "EMAIL": "Correo",
+        "STATUS": "¿Le llega?"
+      },
+      "REASON": {
+        "NO_PHONE": "Sin teléfono",
+        "NO_EMAIL": "Sin correo",
+        "UNSUPPORTED_CHANNEL": "El canal no permite escribirle primero",
+        "OPTED_OUT": "Pidió no ser contactado",
+        "INVALID_EMAIL": "Correo mal escrito o que no recibe"
+      }
     },
     "MESSAGES": {
       "CHANNEL": "Canal",
@@ -194,7 +222,9 @@
         "emails": "Correos",
         "info": "Información completa",
         "reminders": "Recordatorios del evento",
-        "silent": "Si se queda callado"
+        "silent": "Si se queda callado",
+        "questions": "Las preguntas",
+        "last_call": "Último aviso"
       }
     },
     "EMAIL": {
@@ -619,7 +649,13 @@
       "FIXED_TEXT": "Texto fijo",
       "TOUCHES_NOTE": "Si contesta en cualquier toque, ya no salen los que faltan.",
       "OPEN_WINDOW": "Mensaje fijo si escribió en las últimas 24 horas (opcional)",
-      "OPEN_WINDOW_PLACEHOLDER": "Hola {{contacto}}, tenemos {{oferta}}. ¿Te mando la información?",
+      "OPEN_WINDOW_PLACEHOLDER": {
+        "invite": "Hola {{contacto}}, te queremos invitar a {{oferta}}. ¿Te cuento?",
+        "offer": "Hola {{contacto}}, tenemos {{oferta}}. ¿Te mando la información?",
+        "reactivate": "Hola {{contacto}}, hace tiempo que no sabemos de ti. Tenemos algo para que vuelvas: {{oferta}}. ¿Te cuento?",
+        "renew": "Hola {{contacto}}, tu {{que_vence}} vence el {{vence}}. ¿Te ayudo a renovarlo?",
+        "survey": "Hola {{contacto}}, ¿nos ayudas con unas preguntas sobre tu servicio? Es un minuto."
+      },
       "OPEN_WINDOW_HINT": "Con {{contacto}}, {{empresa}} y {{oferta}}. Vacío: lo escribe la IA con la misma idea.",
       "INFO_TITLE": {
         "offer": "Información completa · si le interesa, se manda",
@@ -678,9 +714,15 @@
         }
       },
       "TOUCH_TITLE": "Toque {n} · si no contesta",
-      "TOUCH_HINT": "Le vuelve a escribir si no ha contestado. Sin ventana de 24 horas sale su plantilla.",
+      "TOUCH_HINT": "Si no ha escrito en 24 horas sale su plantilla.",
       "TEMPLATE": "Plantilla (si no ha escrito en 24 horas)",
-      "TOUCH_PLACEHOLDER": "{{contacto}}, ¿pudiste ver lo de {{oferta}}?",
+      "TOUCH_PLACEHOLDER": {
+        "invite": "{{contacto}}, ¿pudiste ver la invitación a {{oferta}}?",
+        "offer": "{{contacto}}, ¿pudiste ver lo de {{oferta}}?",
+        "reactivate": "{{contacto}}, ¿te interesa lo que te mandamos?",
+        "renew": "{{contacto}}, te recuerdo que tu {{que_vence}} vence el {{vence}}.",
+        "survey": "{{contacto}}, tu opinión nos ayuda mucho. ¿Nos regalas un minuto?"
+      },
       "INFO_PREVIEW": "a la derecha ves cómo le llega",
       "LINKS_AUTO": "Se agregan solas al final: {names}. Si escribes la liga en el texto, ya no se repite."
     },
@@ -850,7 +892,7 @@
       "HINTS": {
         "event": "El evento al que invitas, cómo confirma y lo que la IA debe saber.",
         "audience": "Por qué canal y a quién le llega la invitación.",
-        "messages": "La invitación, la información completa, los toques a quien no contesta y los recordatorios del evento.",
+        "messages": "La invitación, la información completa, los toques a quien no contesta, los recordatorios del evento y qué pasa si contestó y se calla.",
         "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
         "review": "Cuándo sale, la revisión y las pruebas (los Casos corren solos)."
       },
@@ -877,7 +919,10 @@
       "NEVER": "Nunca a los que dijeron que no, pidieron que no les escribieran, se dieron de baja o ya atiende una persona. A quien no ha contestado y todavía tenía toques, ya no le salen.",
       "PENDING_TEMPLATE": "Plantilla para los que no han contestado",
       "SAME_TEMPLATE": "La misma de los confirmados",
-      "COST_HINT": " A los que no han contestado casi siempre les llega con plantilla: Meta la cobra como mensaje de marketing."
+      "COST_HINT": " A los que no han contestado casi siempre les llega con plantilla: Meta la cobra como mensaje de marketing.",
+      "AI_HINT_CONFIRMED": "Un recordatorio cálido para ese contacto, con cuándo y dónde (o la liga), y retomando lo último que platicó.",
+      "AI_HINT_PENDING": "La última invitación para ese contacto: persuasiva con la urgencia real (mañana, en una hora) y una salida fácil.",
+      "FIXED_HINT": "Sale igual para todos. Usa {{nombre}} {{evento}} {{cuando}} {{lugar}} {{liga}}; vacío = el texto en gris. Puedes pedírselo a Dali."
     },
     "OFFER_FLOW": {
       "STEPS": {
@@ -892,7 +937,7 @@
         "offer": "Qué ofreces (del Catálogo), a qué precio de promoción, hasta cuándo y lo que la IA debe saber.",
         "interest": "Qué hace la IA cuando le interesa. Elige una opción; abajo sale solo lo que necesita.",
         "audience": "Por qué canal y a quién le llega la oferta.",
-        "messages": "La apertura, la información completa, los toques a quien no contesta y qué pasa si contestó y se calla.",
+        "messages": "La apertura, la información completa, los toques a quien no contesta, qué pasa si contestó y se calla y, con vigencia, el último aviso.",
         "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
         "review": "Cuándo sale, la revisión y las pruebas (los Casos corren solos)."
       },
@@ -951,7 +996,7 @@
         "audience": "Los clientes que ya no compran: elige desde hace cuántos días y el canal. En la muestra ves lo último que compró cada uno.",
         "offer": "La novedad o el incentivo para que vuelvan (del Catálogo con precio de promoción, o escrito), hasta cuándo y lo que sabe la IA.",
         "interest": "Qué hace la IA cuando le interesa volver. Elige una opción; abajo sale solo lo que necesita.",
-        "messages": "La apertura (puede usar {{ultima_compra}}), la información completa, los toques y qué pasa si contestó y se calla.",
+        "messages": "La apertura (puede usar {{ultima_compra}}), la información completa, los toques, qué pasa si contestó y se calla y, con vigencia, el último aviso.",
         "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
         "review": "Cuándo sale, la revisión y las pruebas (los Casos corren solos)."
       },
@@ -977,7 +1022,7 @@
       "HINTS": {
         "due": "De qué contratos y en qué días antes de vencer salen los mensajes; cada contacto los recibe según SU fecha.",
         "pay": "Qué cuenta como logrado y lo que sabe la IA para que pague o renueve (lo que le vence sale de su contrato).",
-        "messages": "El texto de cada recordatorio (puede usar {{que_vence}}, {{vence}} y {{monto}}).",
+        "messages": "La apertura y los recordatorios por días antes de vencer (pueden usar {{que_vence}}, {{vence}} y {{monto}}), la información completa y qué pasa si contestó y se calla.",
         "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
         "review": "Nombre, la revisión y las pruebas. Queda prendida: cada mañana entran los contratos que ya les toca."
       },
@@ -1023,7 +1068,7 @@
         "questions": "Hasta 5 preguntas, cada una con su tipo. La IA las hace tal cual, una por mensaje, en este orden.",
         "low": "Qué pasa si alguien califica bajo: a quién le llega el caso y qué se le contesta.",
         "audience": "Por qué canal y a quién: de entrada, los que atendiste en los últimos días.",
-        "messages": "La invitación a contestar (en correo, la primera pregunta va con botones) y los toques a quien no contesta.",
+        "messages": "La invitación a contestar (en correo, la primera pregunta va con botones), los toques a quien no contesta y qué pasa si empezó y se calló.",
         "replies": "Qué contesta al terminar o si no quiere contestar, y la etiqueta que le queda.",
         "review": "Cuándo sale, la revisión y las pruebas (los Casos corren solos)."
       },
@@ -1091,10 +1136,28 @@
       "HINT": {
         "info": "Arma el copy de WhatsApp con lo que tiene la campaña (evento u oferta, ficha, preguntas, ligas y cómo habla tu empresa): gancho, emojis, viñetas y el cierre según el objetivo. La liga se agrega sola al final.",
         "opener": "Un mensaje corto para que conteste.",
-        "touch": "Un recordatorio corto con otro ángulo.",
-        "email": "Arma el correo con asunto, asunto B y sus bloques (texto y botón con la liga de la campaña). La firma se agrega sola."
+        "email": "Arma el correo con asunto, asunto B y sus bloques (texto y botón con la liga de la campaña). La firma se agrega sola.",
+        "touch": "Un recordatorio corto con otro ángulo."
       },
       "SUBJECT_B": "· B: {subject}"
+    },
+    "MESSAGE_CHOICE": {
+      "LEGEND": "Si escribió en las últimas 24 horas",
+      "AI": "La IA lo escribe al momento (recomendado)",
+      "FIXED": "Mensaje fijo",
+      "AI_HINT": "Con lo que sabe de ese contacto (lo que escribió, lo que compró, si dio clic): persuasivo y sin repetir lo anterior.",
+      "FIXED_HINT": "Sale igual para todos. Puedes escribirlo tú o pedírselo a Dali."
+    },
+    "LAST_CALL": {
+      "TITLE": "Último aviso antes de que termine la promoción",
+      "HINT": "Un día antes de que termine ({date}), a quien recibió la oferta y nunca contestó. Una sola vez; nunca a quien dijo que no o se dio de baja.",
+      "ON": "Mandar el último aviso",
+      "PLACEHOLDER": "¡Hola {{nombre}}! La promoción de {{oferta}} termina {{cuando}}. ¿Te la aparto? {{liga}}",
+      "AI_HINT": "Para ese contacto: persuasivo con la urgencia real (termina hoy o mañana) y un beneficio concreto, con la liga.",
+      "FIXED_HINT": "Sale igual para todos. Usa {{nombre}} {{oferta}} {{cuando}} {{liga}}; vacío = el texto en gris. Puedes pedírselo a Dali.",
+      "TEMPLATE": "Plantilla (si no ha escrito en 24 horas)",
+      "NO_TEMPLATE": "Sin plantilla (solo a quien escribió en 24 h)",
+      "TEMPLATE_HINT": "Pasadas 24 horas WhatsApp solo deja mandar plantilla aprobada (Meta la cobra)."
     }
   }
 }

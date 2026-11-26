@@ -25,7 +25,7 @@ export default {
     // Solo momentos, no toques: la apertura y los toques en WhatsApp salen como plantilla (la imagen va en su
     // encabezado) y en correo «Cuando muestre interés» ya va adjunta al primer correo.
     flags() {
-      if (this.kind === 'survey') return [];
+      if (this.kind === 'survey') return ['ask'];
       return this.kind === 'invite'
         ? ['interest', 'confirm', 'ask']
         : ['interest', 'ask'];

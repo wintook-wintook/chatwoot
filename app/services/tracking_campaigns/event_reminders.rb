@@ -71,7 +71,7 @@ module TrackingCampaigns::EventReminders
 
   def deliver(campaign, event, tracking, kind, pending:)
     config = config(campaign)
-    message = Motor2::LateMessage.deliver(tracking, text(campaign, event, tracking, kind, pending: pending),
+    message = Motor2::LateMessage.deliver(tracking, text_for(campaign, event, tracking, kind, pending: pending),
                                           template: Settings.template_for(config, pending))
     not_sent(tracking, kind) if !message && !pending
     stop_touches(tracking, event) if message && pending
@@ -81,6 +81,15 @@ module TrackingCampaigns::EventReminders
     false
   ensure
     mark(tracking, kind)
+  end
+
+  # Con la ventana abierta y «La IA lo escribe al momento»: para ese contacto (si falla, el texto fijo).
+  def text_for(campaign, event, tracking, kind, pending:)
+    if Settings.ai?(config(campaign), kind, pending) && tracking.conversation && Motor2::LateMessage.window_open?(tracking.conversation)
+      written = TrackingCampaigns::ReminderWriter.new(campaign, kind: kind, pending: pending)
+                                                 .for_contact(tracking, values(campaign, event, tracking, pending: pending))
+    end
+    written.presence || text(campaign, event, tracking, kind, pending: pending)
   end
 
   def text(campaign, event, tracking, kind, pending: false)

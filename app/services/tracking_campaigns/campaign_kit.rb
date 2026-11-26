@@ -59,7 +59,8 @@ module TrackingCampaigns::CampaignKit
   def sanitize(kind, raw)
     { 'facts' => sanitize_facts(kind, raw['facts']), 'links' => sanitize_links(raw['links']),
       'replies' => sanitize_replies(raw['replies']), 'labels' => raw['labels'].is_a?(Hash) ? sanitize_labels(raw['labels']) : nil,
-      'reminders' => (TrackingCampaigns::EventReminders.sanitize(raw['reminders']) if kind == 'invite') }
+      'reminders' => (TrackingCampaigns::EventReminders.sanitize(raw['reminders']) if kind == 'invite'),
+      'last_call' => (TrackingCampaigns::LastCall.sanitize(raw['last_call']) if TrackingCampaigns::LastCall::KINDS.include?(kind)) }
       .merge(offer_products(kind, raw), survey_parts(kind, raw), renew_parts(kind, raw))
   end
 

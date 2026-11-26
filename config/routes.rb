@@ -420,6 +420,7 @@ Rails.application.routes.draw do
             collection do
               get :options
               post :preview
+              post :preview_csv
               post :test
               post :test_email
               post :cases

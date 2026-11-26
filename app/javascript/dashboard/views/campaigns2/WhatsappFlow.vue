@@ -8,6 +8,7 @@
 -->
 <script>
 import DaliWriter from './DaliWriter.vue';
+import MessageChoice from './MessageChoice.vue';
 import {
   VAR_SOURCES,
   templateVariables,
@@ -20,7 +21,7 @@ const MAX_CONTENT = 4000;
 
 export default {
   name: 'WhatsappFlow',
-  components: { DaliWriter },
+  components: { DaliWriter, MessageChoice },
   props: {
     touches: { type: Object, required: true },
     brief: { type: Object, required: true },
@@ -38,7 +39,8 @@ export default {
   },
   emits: ['update:touches', 'update:brief'],
   data() {
-    return { maxContent: MAX_CONTENT, sources: VAR_SOURCES };
+    // fixedOpen: los toques donde eligió «Mensaje fijo» (aún sin texto).
+    return { maxContent: MAX_CONTENT, sources: VAR_SOURCES, fixedOpen: [] };
   },
   computed: {
     numbers() {
@@ -129,6 +131,15 @@ export default {
       if (n === 1) return this.brief.opener || '';
       return (this.brief.touch_texts || [])[n - 2] || '';
     },
+    // Toque: ¿mensaje fijo? (con texto, o recién elegido). Al volver a «la IA al momento» se borra el fijo.
+    fixedMode(n) {
+      return !!this.fixedOf(n) || this.fixedOpen.includes(n);
+    },
+    setFixedMode(n, fixed) {
+      this.fixedOpen = fixed
+        ? [...this.fixedOpen, n]
+        : this.fixedOpen.filter(x => x !== n);
+    },
     setFixed(n, value) {
       if (n === 1) {
         this.setBrief('opener', value);
@@ -209,30 +220,26 @@ export default {
             />
           </div>
         </template>
-        <label class="block">
-          <span class="field-label">{{ t('OPEN_WINDOW') }}</span>
-          <textarea
-            rows="2"
-            maxlength="1500"
-            class="!mb-0"
-            :value="fixedOf(n)"
-            :placeholder="
-              n === 1 ? t('OPEN_WINDOW_PLACEHOLDER') : t('TOUCH_PLACEHOLDER')
-            "
-            @input="setFixed(n, $event.target.value)"
-          />
-          <span class="block text-[11px] text-slate-500">
-            {{ t('OPEN_WINDOW_HINT') }}
-          </span>
-        </label>
-        <DaliWriter
-          compact
-          :target="n === 1 ? 'opener' : 'touch'"
-          :number="Math.max(n - 1, 1)"
-          :current="fixedOf(n)"
+        <!-- Con la ventana abierta: la apertura con su texto fijo; cada toque, la IA al momento o un fijo -->
+        <MessageChoice
+          :value="fixedOf(n)"
+          :ai="!fixedMode(n)"
+          :choose-mode="n > 1"
+          :legend="n === 1 ? t('OPEN_WINDOW') : ''"
+          :placeholder="
+            n === 1
+              ? t(`OPEN_WINDOW_PLACEHOLDER.${kind}`)
+              : t(`TOUCH_PLACEHOLDER.${kind}`)
+          "
+          :fixed-hint="n === 1 ? t('OPEN_WINDOW_HINT') : ''"
+          :dali="{
+            target: n === 1 ? 'opener' : 'touch',
+            number: Math.max(n - 1, 1),
+          }"
           :campaign-id="campaignId"
           :save="save"
-          @use="setFixed(n, $event.text)"
+          @update:value="setFixed(n, $event)"
+          @update:ai="setFixedMode(n, !$event)"
         />
       </section>
       <p v-if="followUps.length" class="m-0 text-[11px] text-slate-500">

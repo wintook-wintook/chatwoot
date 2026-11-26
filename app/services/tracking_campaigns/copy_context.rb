@@ -67,7 +67,7 @@ class TrackingCampaigns::CopyContext
 
   def variable_line
     vars = %w[contacto] + VARIABLES.fetch(kind, [])
-    "- Variables que puedes usar (se llenan solas por contacto): #{vars.map { |v| "{{#{v}}}" }.join(', ')}"
+    "- Variables que puedes usar (se llenan solas por contacto; {{monto}} ya trae el signo $): #{vars.map { |v| "{{#{v}}}" }.join(', ')}"
   end
 
   # Lo que ya le llegó antes de ese mensaje: la apertura, los toques y, en correo, los correos anteriores.
@@ -98,7 +98,8 @@ class TrackingCampaigns::CopyContext
 
   def package_links = Array(@brief['links']).select { |l| l['use'] == 'package' && l['url'].present? }
 
-  def package_urls = package_links.pluck('url')
+  # Encuesta: sin botón a una liga (las preguntas y sus botones se agregan solos).
+  def package_urls = kind == 'survey' ? [] : package_links.pluck('url')
 
   def links_note
     names = package_links.pluck('name').compact_blank
@@ -111,6 +112,8 @@ class TrackingCampaigns::CopyContext
     goal = TrackingCampaigns::CampaignKit.goal(kind, @brief['offer_goal'])
     return "pedirle que escriba *#{keyword}* cuando lo haga" if goal == 'external'
     return 'la pregunta de si va (que conteste aquí)' if goal == 'confirm'
+    return 'la invitación a contestar (es un minuto)' if goal == 'answers'
+    return 'la oferta de ayudarle a hacerlo ya (renovar o pagar)' if kind == 'renew'
 
     'una pregunta fácil de contestar que lo lleve al siguiente paso'
   end

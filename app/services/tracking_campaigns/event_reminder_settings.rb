@@ -9,6 +9,8 @@
 #                                     solo a los confirmados.
 #   day_text / hour_text              texto para los que confirmaron
 #   day_pending_text / hour_pending_text   texto para los que no han contestado (última invitación)
+#   day_ai / hour_ai / day_pending_ai / hour_pending_ai   con la ventana abierta, lo escribe la IA al momento para
+#                                     cada contacto (TrackingCampaigns::ReminderWriter); de fábrica, sí. En false, el texto.
 #   template / pending_template       plantillas de WhatsApp (pasadas 24 h); sin la segunda, se usa la primera
 # Textos con {{nombre}} {{evento}} {{cuando}} {{lugar}} {{liga}}; vacíos = los de fábrica (DEFAULTS).
 module TrackingCampaigns::EventReminderSettings
@@ -25,6 +27,7 @@ module TrackingCampaigns::EventReminderSettings
   LABELS = { 'day_before' => 'un día antes', 'hour_before' => 'una hora antes' }.freeze
   MAX_TEXT = 600
   BOOL = ActiveModel::Type::Boolean.new
+  AI_KEYS = %w[ai pending_ai].freeze
 
   module_function
 
@@ -32,12 +35,20 @@ module TrackingCampaigns::EventReminderSettings
     raw = raw.is_a?(Hash) ? raw.stringify_keys : {}
     KINDS.each_with_object(templates(raw)) do |kind, out|
       prefix = PREFIX[kind]
-      out[kind] = raw.key?(kind) ? BOOL.cast(raw[kind]) || false : true
+      out[kind] = flag(raw, kind)
       out["#{prefix}_who"] = raw["#{prefix}_who"].to_s.presence_in(WHO) || DEFAULT_WHO[kind]
-      out["#{prefix}_text"] = raw["#{prefix}_text"].to_s.strip.first(MAX_TEXT)
-      out["#{prefix}_pending_text"] = raw["#{prefix}_pending_text"].to_s.strip.first(MAX_TEXT)
+      out.merge!(texts(raw, prefix))
     end
   end
+
+  # Los textos de un recordatorio (confirmados y los que no han contestado) y si los escribe la IA al momento.
+  def texts(raw, prefix)
+    out = %w[text pending_text].to_h { |key| ["#{prefix}_#{key}", raw["#{prefix}_#{key}"].to_s.strip.first(MAX_TEXT)] }
+    AI_KEYS.each_with_object(out) { |key, all| all["#{prefix}_#{key}"] = flag(raw, "#{prefix}_#{key}") }
+  end
+
+  # Sin la llave, de fábrica sí.
+  def flag(raw, key) = raw.key?(key) ? BOOL.cast(raw[key]) || false : true
 
   def templates(raw)
     { 'template' => raw['template'].to_s.strip.first(200), 'pending_template' => raw['pending_template'].to_s.strip.first(200) }
@@ -48,6 +59,9 @@ module TrackingCampaigns::EventReminderSettings
     key = "#{PREFIX[kind]}_#{pending ? 'pending_text' : 'text'}"
     config[key].presence || DEFAULTS[pending ? "#{kind}_pending" : kind]
   end
+
+  # ¿Lo escribe la IA al momento (con la ventana abierta)?
+  def ai?(config, kind, pending) = config["#{PREFIX[kind]}_#{pending ? 'pending_ai' : 'ai'}"] != false
 
   def template_for(config, pending)
     (pending && config['pending_template'].presence) || config['template'].presence

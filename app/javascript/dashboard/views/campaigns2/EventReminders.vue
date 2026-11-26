@@ -9,6 +9,8 @@
   hour_pending_text, template, pending_template })
 -->
 <script>
+import MessageChoice from './MessageChoice.vue';
+
 const DEFAULTS = {
   day_before:
     '¡Hola {{nombre}}! 😊 Te recordamos que mañana es {{evento}}: {{cuando}}. {{lugar}} ¡Te esperamos!',
@@ -24,8 +26,12 @@ const DEFAULT_WHO = { day_before: 'pending', hour_before: 'confirmed' };
 
 export default {
   name: 'EventReminders',
+  components: { MessageChoice },
   props: {
     brief: { type: Object, required: true },
+    // «Redactar con Dali» en el mensaje fijo: la campaña y cómo guardarla antes.
+    campaignId: { type: Number, default: null },
+    save: { type: Function, default: null },
     isWhatsapp: { type: Boolean, default: false },
     templates: { type: Array, default: () => [] },
   },
@@ -73,6 +79,13 @@ export default {
     textKey(kind, pending) {
       return `${PREFIX[kind]}_${pending ? 'pending_text' : 'text'}`;
     },
+    // ¿Lo escribe la IA al momento? (de fábrica, sí)
+    aiOn(kind, pending) {
+      return this.reminders[this.aiKey(kind, pending)] !== false;
+    },
+    aiKey(kind, pending) {
+      return `${PREFIX[kind]}_${pending ? 'pending_ai' : 'ai'}`;
+    },
     placeholder(kind, pending) {
       return DEFAULTS[pending ? `${kind}_pending` : kind];
     },
@@ -115,24 +128,25 @@ export default {
         </select>
       </div>
       <template v-if="reminders[kind]">
-        <span class="text-xs text-slate-500">{{ t('TO_CONFIRMED') }}</span>
-        <textarea
-          :value="reminders[textKey(kind, false)]"
-          rows="2"
-          maxlength="600"
-          class="!mb-0 text-sm"
-          :placeholder="placeholder(kind, false)"
-          @input="set(textKey(kind, false), $event.target.value)"
-        />
-        <template v-if="who(kind) === 'pending'">
-          <span class="text-xs text-slate-500">{{ t('TO_PENDING') }}</span>
-          <textarea
-            :value="reminders[textKey(kind, true)]"
-            rows="2"
-            maxlength="600"
-            class="!mb-0 text-sm"
-            :placeholder="placeholder(kind, true)"
-            @input="set(textKey(kind, true), $event.target.value)"
+        <template
+          v-for="pending in who(kind) === 'pending' ? [false, true] : [false]"
+        >
+          <span :key="`l${pending}`" class="text-xs font-medium text-slate-600">
+            {{ pending ? t('TO_PENDING') : t('TO_CONFIRMED') }}
+          </span>
+          <MessageChoice
+            :key="`m${pending}`"
+            :value="reminders[textKey(kind, pending)] || ''"
+            :ai="aiOn(kind, pending)"
+            :placeholder="placeholder(kind, pending)"
+            :ai-hint="pending ? t('AI_HINT_PENDING') : t('AI_HINT_CONFIRMED')"
+            :fixed-hint="t('FIXED_HINT')"
+            :maxlength="600"
+            :dali="{ target: 'reminder', extra: { kind, pending } }"
+            :campaign-id="campaignId"
+            :save="save"
+            @update:value="set(textKey(kind, pending), $event)"
+            @update:ai="set(aiKey(kind, pending), $event)"
           />
         </template>
       </template>

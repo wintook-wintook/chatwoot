@@ -25,6 +25,13 @@ class Motor2CampaignsAPI extends ApiClient {
     return axios.post(`${this.url}/preview`, body);
   }
 
+  // «Descargar lista»: lo filtrado de «A quién» en CSV.
+  previewCsv(body) {
+    return axios.post(`${this.url}/preview_csv`, body, {
+      responseType: 'blob',
+    });
+  }
+
   test(body) {
     return axios.post(`${this.url}/test`, body);
   }

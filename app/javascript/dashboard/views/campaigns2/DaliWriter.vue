@@ -2,7 +2,7 @@
   Campaña con Vendedor IA — «Redactar con Dali» (Motor2Campaigns::CopiesController → TrackingCampaigns::CopyWriter).
   Escribe con lo que ya tiene la campaña. Primero guarda la campaña (para que Dali lea lo último), luego muestra la
   propuesta: «Usar este texto» la pone (emit use), «Otra versión» pide otra, y con texto escrito se puede mejorar.
-    target   info | opener | touch | email     number  el toque o el correo
+    target   info | opener | touch | email | reminder     number  el toque o el correo · extra  más datos
     current  el texto de ahora                 compact  solo el botón y una línea (apertura y toques)
   emit use: { text } · email: { subject, subject_b, blocks }
 -->
@@ -21,6 +21,8 @@ export default {
     campaignId: { type: Number, default: null },
     save: { type: Function, required: true },
     compact: { type: Boolean, default: false },
+    // Más datos para el pedido (recordatorios: { kind, pending }).
+    extra: { type: Object, default: () => ({}) },
   },
   emits: ['use'],
   data() {
@@ -56,6 +58,7 @@ export default {
       this.loading = true;
       try {
         const { data } = await Motor2CampaignsAPI.copy(this.campaignId, {
+          ...this.extra,
           target: this.target,
           number: this.number,
           tone: this.tone,

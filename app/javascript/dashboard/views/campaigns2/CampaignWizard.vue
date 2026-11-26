@@ -21,6 +21,8 @@ import WizardTabs from 'dashboard/views/readyAgents/WizardTabs.vue';
 import EmailPreview from './EmailPreview.vue';
 import EmailEditor, { toMarkdown } from './EmailEditor.vue';
 import DaliWriter from './DaliWriter.vue';
+import AudienceList from './AudienceList.vue';
+import LastCall from './LastCall.vue';
 import CampaignChat from './CampaignChat.vue';
 import CampaignSimulator from './CampaignSimulator.vue';
 import CampaignTestRun from './CampaignTestRun.vue';
@@ -166,6 +168,8 @@ export default {
     EmailPreview,
     EmailEditor,
     DaliWriter,
+    AudienceList,
+    LastCall,
     CampaignChat,
     CampaignSimulator,
     CampaignTestRun,
@@ -204,6 +208,7 @@ export default {
       campaignId: null,
       preview: null,
       previewLoading: false,
+      audienceKey: 0, // sube para que «A quién» (AudienceList) vuelva a contar
       checks: [],
       checkError: false,
       loadFailed: false, // editando, no se pudo traer la campaña: no se guarda (crearía otra)
@@ -388,7 +393,10 @@ export default {
       const tabs = [this.isEmail ? 'emails' : 'touches'];
       if (this.isWhatsapp) tabs.push('info');
       if (this.isInvite) tabs.push('reminders');
-      if (this.offerLike && this.form.attend) tabs.push('silent');
+      // Ofrecer y Reactivar con vigencia: el «Último aviso» antes de que termine (TrackingCampaigns::LastCall).
+      if (this.offerLike && this.form.brief.valid_until) tabs.push('last_call');
+      // Quien ya platicó y dejó de contestar: en todos los tipos (el vendedor lo vuelve a buscar).
+      if (this.form.attend) tabs.push('silent');
       return tabs;
     },
     currentMessageTab() {
@@ -1098,26 +1106,13 @@ export default {
         this.saving = false;
       }
     },
-    async loadPreview() {
+    // Vuelve a contar «A quién» (AudienceList hace la consulta y manda sus contadores con @loaded).
+    loadPreview() {
       if (this.continuous || !this.filterPayload.length || !this.hasChannel) {
         this.preview = null;
         return;
       }
-      this.previewLoading = true;
-      try {
-        const { data } = await Motor2CampaignsAPI.preview({
-          payload: this.filterPayload,
-          template_id: null,
-          inbox_id: this.form.inbox_id,
-          excluded_contact_ids: this.form.audience.excluded_contact_ids,
-          facts: this.previewFacts ? 1 : undefined,
-        });
-        this.preview = data;
-      } catch (e) {
-        this.preview = null;
-      } finally {
-        this.previewLoading = false;
-      }
+      this.audienceKey += 1;
     },
     setSource(type) {
       if (type === 'list' && !this.isEmail)
@@ -1126,11 +1121,8 @@ export default {
       this.form.audience.excluded_contact_ids = [];
       this.loadPreview();
     },
-    toggleExclude(id) {
-      const list = this.form.audience.excluded_contact_ids;
-      this.form.audience.excluded_contact_ids = list.includes(id)
-        ? list.filter(x => x !== id)
-        : [...list, id];
+    setExcluded(list) {
+      this.form.audience.excluded_contact_ids = list;
       this.loadPreview();
     },
     setTemplate(n, name) {
@@ -1776,65 +1768,19 @@ export default {
               <p v-if="!hasChannel" class="m-0 text-xs text-amber-700">
                 {{ t('AUDIENCE.NEEDS_CHANNEL') }}
               </p>
-              <p v-else-if="previewLoading" class="m-0 text-xs text-slate-500">
-                {{ t('AUDIENCE.COUNTING') }}
-              </p>
-              <template v-else-if="preview">
-                <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <div
-                    v-for="b in [
-                      'ready',
-                      'in_tracking',
-                      'unreachable',
-                      'excluded',
-                    ]"
-                    :key="b"
-                    class="p-2 bg-white rounded-md dark:bg-slate-900"
-                  >
-                    <p class="m-0 text-lg font-semibold">
-                      {{ (preview.counts || {})[b] || 0 }}
-                    </p>
-                    <p class="m-0 text-xs text-slate-500">
-                      {{ t(`AUDIENCE.BUCKETS.${b}`) }}
-                    </p>
-                  </div>
-                </div>
-                <div
-                  v-if="(preview.contacts || []).length"
-                  class="mt-2 overflow-y-auto max-h-60"
-                >
-                  <label
-                    v-for="c in preview.contacts"
-                    :key="c.id"
-                    class="flex items-center justify-between gap-2 py-1 text-sm border-b border-slate-50 dark:border-slate-700"
-                  >
-                    <span class="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        class="!m-0"
-                        :checked="!c.excluded"
-                        @change="toggleExclude(c.id)"
-                      />
-                      {{ c.name }}
-                      <span class="text-xs text-slate-500">
-                        {{ isWhatsapp ? c.phone_number : c.email }}
-                      </span>
-                      <span
-                        v-if="factLine(c)"
-                        class="text-xs text-woot-700 dark:text-woot-300"
-                      >
-                        {{ factLine(c) }}
-                      </span>
-                    </span>
-                    <span
-                      v-if="c.bucket !== 'ready'"
-                      class="text-xs text-amber-700"
-                    >
-                      {{ t(`AUDIENCE.BUCKETS.${c.bucket}`) }}
-                    </span>
-                  </label>
-                </div>
-              </template>
+              <AudienceList
+                v-else-if="filterPayload.length"
+                :reload-key="audienceKey"
+                :payload="filterPayload"
+                :inbox-id="form.inbox_id"
+                :excluded="form.audience.excluded_contact_ids"
+                :facts="previewFacts"
+                :is-whatsapp="isWhatsapp"
+                :fact-line="factLine"
+                @update:excluded="setExcluded"
+                @loaded="preview = $event"
+                @loading="previewLoading = $event"
+              />
               <p v-else class="m-0 text-xs text-slate-500">
                 {{ t('AUDIENCE.PICK_FIRST') }}
               </p>
@@ -1866,7 +1812,11 @@ export default {
                 "
                 @click="messageTab = tab"
               >
-                {{ t(`MESSAGES.TABS.${tab}`) }}
+                {{
+                  tab === 'info' && isSurvey
+                    ? t('MESSAGES.TABS.questions')
+                    : t(`MESSAGES.TABS.${tab}`)
+                }}
               </button>
             </div>
 
@@ -2027,7 +1977,7 @@ export default {
               :save="save"
             />
 
-            <!-- Ofrecer/Reactivar: si contestó y se calla -->
+            <!-- Si contestó y se calla (todos los tipos) -->
             <section
               v-if="currentMessageTab === 'silent' && form.attend"
               class="flex flex-col gap-2 p-3 border rounded-md border-slate-100 dark:border-slate-700"
@@ -2056,12 +2006,23 @@ export default {
                 "
               />
             </section>
+            <!-- Ofrecer y Reactivar con vigencia: el último aviso -->
+            <LastCall
+              v-if="currentMessageTab === 'last_call'"
+              :brief.sync="form.brief"
+              :is-whatsapp="isWhatsapp"
+              :templates="inboxTemplates"
+              :campaign-id="campaignId"
+              :save="save"
+            />
             <!-- Invitar: recordatorios a los que confirmaron -->
             <EventReminders
               v-if="isInvite && currentMessageTab === 'reminders'"
               :brief.sync="form.brief"
               :is-whatsapp="isWhatsapp"
               :templates="inboxTemplates"
+              :campaign-id="campaignId"
+              :save="save"
             />
           </template>
 

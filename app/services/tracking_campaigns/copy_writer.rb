@@ -6,6 +6,7 @@
 #   target   info    la información completa de WhatsApp: copy con gancho, emojis con medida, viñetas, *negritas*
 #            opener  el mensaje fijo de la apertura (si escribió en 24 h): corto, para que conteste
 #            touch   el mensaje fijo del toque N: otro ángulo, más corto
+#            reminder  Invitar: el mensaje fijo de un recordatorio del evento (kind: day_before|hour_before, pending)
 #            email   el correo N (1 = el que lleva todo; los demás, seguimiento): asunto, asunto B y bloques
 #   number   el toque o el correo (touch: 1 = toque 1; email: 1 = primer correo)
 #   tone     cercano | profesional | entusiasta      length  corto | completo
@@ -25,6 +26,7 @@ class TrackingCampaigns::CopyWriter < Cases::Ai::BaseService
   end
 
   def call
+    return reminder if target == 'reminder'
     return { error: 'Elige qué quieres redactar.' } unless TARGETS.include?(target)
     return { error: 'La cuenta no tiene OpenAI conectado.' } unless available?
 
@@ -35,6 +37,12 @@ class TrackingCampaigns::CopyWriter < Cases::Ai::BaseService
   private
 
   def model = AiModels::DALI
+
+  # Invitar: el mensaje fijo de un recordatorio del evento (kind, pending), con sus variables.
+  def reminder
+    TrackingCampaigns::ReminderWriter.new(@campaign, kind: @params['kind'], pending: @params['pending'])
+                                     .draft(tone: TONES[@params['tone'].to_s], instruction: @params['instruction'], current: @params['current'])
+  end
 
   def target = @params['target'].to_s
 
@@ -47,7 +55,7 @@ class TrackingCampaigns::CopyWriter < Cases::Ai::BaseService
   def shape(result)
     return email_shape(result) if email?
 
-    text = whatsapp_format(result['texto'].to_s.strip)
+    text = whatsapp_format(result['texto'].to_s.strip).gsub('${{monto}}', '{{monto}}')
     text = text.gsub(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]\s?/, '') if no_emojis?
     text.present? ? { text: text.first(TrackingCampaigns::Motor2Brief::MAX_CONTENT) } : { error: 'Dali no pudo redactarlo; intenta de nuevo.' }
   end
@@ -66,7 +74,7 @@ class TrackingCampaigns::CopyWriter < Cases::Ai::BaseService
 
   def block(raw)
     type = BLOCK_TYPES[raw['tipo'].to_s]
-    text = raw['texto'].to_s.strip
+    text = raw['texto'].to_s.strip.gsub('${{monto}}', '{{monto}}')
     return nil if type.nil? || text.blank?
 
     url = raw['url'].to_s.strip
@@ -130,6 +138,7 @@ class TrackingCampaigns::CopyWriter < Cases::Ai::BaseService
       Escribes el PRIMER MENSAJE de WhatsApp a alguien que te escribió hace poco: 1 o 2 renglones, máximo 280
       caracteres, que haga una pregunta fácil de contestar para que responda (no mandes todo aún: la información
       completa sale cuando conteste). Puedes usar {{contacto}} para su nombre. 1 emoji como mucho. Sin URLs.
+      #{Motor2::CampaignPersuasion.first(kind)}
       Responde solo JSON: {"texto": "..."}
     TEXT
   end
@@ -140,6 +149,7 @@ class TrackingCampaigns::CopyWriter < Cases::Ai::BaseService
       caracteres, con OTRO ángulo que los mensajes anteriores (no los repitas), amable y sin presionar, que termine
       con una pregunta fácil. No empieces igual que los mensajes anteriores. Puedes usar {{contacto}}. 1 emoji como
       mucho. Sin URLs.
+      #{Motor2::CampaignPersuasion.angle(number + 1, total_messages, kind)}.
       Responde solo JSON: {"texto": "..."}
     TEXT
   end
@@ -177,6 +187,10 @@ class TrackingCampaigns::CopyWriter < Cases::Ai::BaseService
   end
 
   def ctx = @ctx ||= TrackingCampaigns::CopyContext.new(@campaign, @params)
+
+  def kind = @campaign.brief.to_h['kind'].to_s
+
+  def total_messages = [@campaign.touches.to_h['attempts'].to_i, number + 1].max
 
   def short? = @params['length'].to_s == 'corto' || %w[opener touch].include?(target)
 end
