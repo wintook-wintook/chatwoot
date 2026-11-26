@@ -88,12 +88,7 @@ class Motor2::Relay
     @tracking.update_columns(outcome: outcome.first(250), updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
-  def assign(target)
-    attrs = {}
-    attrs[:assignee_id] = @conversation.account.users.where(id: target[:user_id]).pick(:id) if target[:user_id].present?
-    attrs[:team_id] = @conversation.account.teams.where(id: target[:team_id]).pick(:id) if target[:team_id].present?
-    @conversation.update!(attrs.compact) if attrs.compact.any?
-  end
+  def assign(target) = Motor2::HandoffAssign.call(@conversation, target, tracking: @tracking)
 
   def campaign_name
     name = @tracking.tracking_campaign&.name

@@ -107,6 +107,16 @@ export default {
     };
   },
   computed: {
+    // «Agente IA»: la función (Atención a clientes…) y, si dice algo más, su nombre (la campaña, el agente).
+    aiAgentLabel() {
+      const agent = this.currentChat.ai_agent || {};
+      const key = `CONVERSATION.AI_AGENT_FUNCTIONS.${agent.function}`;
+      return this.$te(key) ? this.$t(key) : agent.name;
+    },
+    aiAgentDetail() {
+      const agent = this.currentChat.ai_agent || {};
+      return agent.name && agent.name !== this.aiAgentLabel ? agent.name : '';
+    },
     ...mapGetters({
       currentChat: 'getSelectedChat',
       currentUser: 'getCurrentUser',
@@ -795,6 +805,29 @@ export default {
         :multiselector-placeholder="$t('AGENT_MGMT.MULTI_SELECTOR.PLACEHOLDER')" :no-search-result="$t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.NO_RESULTS.AGENT')
           " :input-placeholder="$t('AGENT_MGMT.MULTI_SELECTOR.SEARCH.PLACEHOLDER.AGENT')
             " @click="onClickAssignAgent" />
+    </div>
+    <!-- «Agente IA» (Plan-Agente-IA-en-Conversaciones): aparte del responsable, que la IA nunca mueve. -->
+    <div class="mb-3" data-test="conversation-ai-agent">
+      <ContactDetailsItem
+        compact
+        :title="$t('CONVERSATION.AI_AGENT_FIELD.TITLE')"
+      />
+      <p
+        v-if="currentChat.ai_agent"
+        class="flex items-start gap-1.5 m-0 text-sm text-violet-700 dark:text-violet-300"
+      >
+        <fluent-icon icon="bot" size="14" class="mt-0.5 shrink-0" />
+        <span>
+          {{ aiAgentLabel }}
+          <span class="block text-xs text-slate-500 dark:text-slate-400">
+            {{ $t('CONVERSATION.AI_AGENT_FIELD.ATTENDING') }}
+            <template v-if="aiAgentDetail"> · {{ aiAgentDetail }}</template>
+          </span>
+        </span>
+      </p>
+      <p v-else class="m-0 text-sm text-slate-500 dark:text-slate-400">
+        {{ $t('CONVERSATION.AI_AGENT_FIELD.NONE') }}
+      </p>
     </div>
     <div class="multiselect-wrap--small">
       <ContactDetailsItem compact :title="$t('CONVERSATION_SIDEBAR.TEAM_LABEL')" />

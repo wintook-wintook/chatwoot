@@ -323,6 +323,26 @@
     "SENT_BY": "Enviado por:",
     "BOT": "Bot",
     "AI_AGENT": "Agente IA",
+    "AI_AGENT_FILTER": {
+      "LABEL": "Agente IA",
+      "ALL": "Ambos",
+      "WITHOUT": "Atendidos por personas",
+      "WITH": "Solo agente IA"
+    },
+    "AI_AGENT_FUNCTIONS": {
+      "customers": "Atención a clientes",
+      "prospects": "Atención a prospectos",
+      "campaign_seller": "Vendedor de campaña",
+      "follow_up": "Seguimiento IA",
+      "collections": "Cobranza",
+      "custom": "Agente a medida"
+    },
+    "AI_AGENT_FIELD": {
+      "TITLE": "Agente IA",
+      "NONE": "Sin agente",
+      "ATTENDING": "La está atendiendo la IA",
+      "ATTENDED": "Atendió"
+    },
     "SENT_FROM_WHATSAPP_MOBILE": "WhatsApp Business App",
     "SEND_FAILED": "No se pudo enviar el mensaje. ¡Inténtalo de nuevo!",
     "TRY_AGAIN": "intentar de nuevo",

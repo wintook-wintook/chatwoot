@@ -20,7 +20,7 @@ sources:
   - app/finders/conversation_finder.rb
   - app/javascript/dashboard/components/widgets/calls/*.vue
   - app/javascript/dashboard/i18n/locale/es/whatsappCalls.json
-reviewed: 2026-11-14
+reviewed: 2026-11-26
 ---
 ## Para qué sirve
 Aquí llegan y se contestan los mensajes de los clientes de todos los canales (WhatsApp, correo, chat de la página web y otros).
@@ -49,6 +49,12 @@ Conversaciones, en el menú de la izquierda. Su menú tiene: «Todas las Convers
 4. En una nota privada escribe @ y el nombre de un compañero para mencionarlo: le llega un aviso y la conversación sale en su «Menciones».
 5. Con los botones de abajo eliges un emoji, adjuntas archivos («Adjuntar archivos», también arrastrándolos), grabas audio («Grabar audio», según el canal), prendes o apagas tu firma y, en WhatsApp, eliges una plantilla con «Plantillas de Whatsapp».
 6. Si la conversación es de otra persona, arriba de la caja sale «Esta conversación no está asignada a ti…» con el botón «Asignar a mí».
+
+### Ver qué atiende un agente de IA
+1. Cada conversación tiene, aparte del «Responsable» (siempre una persona, y la IA nunca lo cambia), el campo «Agente IA» en «Acciones de la conversación»: el agente que la está atendiendo ahora (Atención a clientes, Atención a prospectos, Vendedor de campaña, Seguimiento IA, Cobranza o un agente a medida) con «La está atendiendo la IA», o «Sin agente». Pueden estar los dos: una persona responsable y un agente trabajando.
+2. En la lista, la tarjeta lleva la etiqueta «🤖» con el agente.
+3. Arriba de la lista, junto a «Abiertas», el combo «Agente IA»: «Ambos» (todas, sin filtrar), «Solo agente IA» (la atiende la IA y no tiene responsable), «Atendidos por personas» (tiene responsable, tenga o no agente de IA) o un agente (todas las suyas, con o sin responsable, y cuántas tiene). Se combina con Mías, No asignadas y Todas, y se recuerda. En el menú, «Agentes de IA» abre la lista con «Solo agente IA».
+4. Las de campaña nacen sin responsable mientras las atiende la IA (no llenan «Mías» del dueño de la campaña) y la asignación automática no se las da a nadie; cuando la IA la entrega (le interesa, pide una persona, cita), se asigna. Si la IA termina sin entregarla y nadie la tiene, se resuelve sola; si el contacto vuelve a escribir, se reabre.
 
 ### Asignar, etiquetar y resolver
 1. En el panel derecho, en «Acciones de la conversación», cambia el «Responsable» («Asignar a mí» te la pasa a ti), el «Equipo asignado», la «Prioridad» (Ninguna, Urgente, Alta, Media o Baja) y las «Etiquetas de la conversación». Ahí también está «Embudo de contactos» para poner la conversación en un embudo.

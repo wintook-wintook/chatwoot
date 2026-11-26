@@ -6,6 +6,7 @@ const state = {
   mineCount: 0,
   unAssignedCount: 0,
   allCount: 0,
+  aiAgents: {}, // «Agente IA»: cuántas tiene en curso cada agente (función → n)
 };
 
 export const getters = {
@@ -36,8 +37,10 @@ export const mutations = {
       mine_count: mineCount,
       unassigned_count: unAssignedCount,
       all_count: allCount,
+      ai_agents: aiAgents,
     } = {}
   ) {
+    Vue.set($state, 'aiAgents', aiAgents || {});
     Vue.set($state, 'mineCount', mineCount);
     Vue.set($state, 'allCount', allCount);
     Vue.set($state, 'unAssignedCount', unAssignedCount);
