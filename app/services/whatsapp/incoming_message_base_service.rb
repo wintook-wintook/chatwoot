@@ -96,6 +96,12 @@ class Whatsapp::IncomingMessageBaseService
     @message.save!
   end
 
+  # diag/waba (H14) — por defecto nada es saliente. Solo Cloud/UnoAPI reciben el eco de lo que
+  # manda el negocio y lo redefinen. Sin esto, las bandejas de 360dialog tronaban al recibir.
+  def outgoing_message_type?
+    false
+  end
+
   def set_contact
     contact_params = @processed_params[:contacts]&.first
     return if contact_params.blank?

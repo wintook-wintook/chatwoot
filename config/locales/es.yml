@@ -571,6 +571,94 @@ es:
     no_permission: 'No tienes permiso para borrar en ese calendario'
     google_error: 'Google no pudo borrar el evento. Inténtalo de nuevo.'
     bot_note: '🗑️ %{name} eliminó la cita desde el calendario. El cliente no fue avisado.'
+  # diag/waba F1 — pestaña «Diagnóstico» de la bandeja de WhatsApp
+  whatsapp_health:
+    only_cloud: 'El diagnóstico es solo para bandejas de WhatsApp Cloud.'
+    reconnect:
+      other_number: 'En la ventana de Meta elegiste otro número (%{number}). Para reconectar esta bandeja elige su mismo número; para otro número crea una bandeja nueva.'
+    unknown: 'No se pudo revisar (%{check}). Inténtalo de nuevo.'
+    ago:
+      minutes: '%{count} min'
+      hours: '%{count} h'
+      days: '%{count} días'
+    quality:
+      green: 'alta'
+      yellow: 'media'
+      red: 'baja'
+    tiers:
+      tier_50: '50 conversaciones por día'
+      tier_250: '250 conversaciones por día'
+      tier_1k: '1 000 conversaciones por día'
+      tier_10k: '10 000 conversaciones por día'
+      tier_100k: '100 000 conversaciones por día'
+      tier_unlimited: 'sin límite'
+    errors:
+      window_24h: 'Pasaron más de 24 h desde el último mensaje del cliente: usa una plantilla.'
+      not_on_whatsapp: 'El número del cliente no tiene WhatsApp o no puede recibir el mensaje.'
+      payment: 'Problema de pago en la cuenta de WhatsApp Business.'
+      ecosystem: 'Meta frenó el envío para cuidar al cliente (demasiados mensajes de marketing).'
+      unsupported: 'Ese tipo de mensaje no está permitido.'
+      template: 'Problema con la plantilla (parámetros, pausada, rechazada o borrada): %{title}'
+      rate_limit: 'Demasiados envíos seguidos; se reintenta más lento.'
+      token: 'El permiso de Meta venció: reconecta la bandeja.'
+      blocked: 'La cuenta o el número está bloqueado por Meta.'
+      other: 'Meta respondió: %{title}'
+      no_title: 'sin detalle'
+    checks:
+      app:
+        ok: 'La app de Meta del sistema está bien configurada'
+        fail: 'La app de Meta del sistema está mal configurada (App ID o App Secret): «Reconectar con Meta» no funcionará hasta corregirla en Super Admin'
+        unknown: 'No se pudo revisar la app de Meta del sistema'
+      token:
+        ok: 'El permiso de Meta de esta bandeja está vigente'
+        warn: 'El permiso de Meta de esta bandeja necesita atención'
+        fail: 'El permiso de Meta de esta bandeja venció o fue revocado: no se reciben ni envían mensajes'
+        unknown: 'No se pudo revisar el permiso de Meta'
+        details:
+          no_app: 'No se pudo revisar cuándo vence: la app de Meta del sistema está mal configurada.'
+          permanent: 'Es permanente.'
+          expires: 'Vence el %{date}.'
+          scopes: 'Le faltan permisos: %{scopes}.'
+      webhook:
+        ok: 'Meta manda los mensajes a este sistema'
+        warn: 'Nuestra app está suscrita, pero no se pudo revisar a qué servidor manda Meta los mensajes'
+        fail: 'Meta no nos manda los mensajes que te escriben'
+        unknown: 'No se pudo revisar si Meta nos manda los mensajes'
+        details:
+          not_subscribed: 'La cuenta de WhatsApp Business no está suscrita a nuestra app.'
+          other_server: 'Meta los manda a otro servidor (%{host}). Corrige la URL del webhook en la app de Meta.'
+          unverified: 'Para revisarlo hace falta que la app de Meta del sistema esté bien configurada.'
+      last_incoming:
+        ok: 'Último mensaje recibido: hace %{ago}'
+        warn: 'Último mensaje recibido: hace %{ago}'
+        never: 'Esta bandeja nunca ha recibido mensajes'
+      number:
+        ok: 'Número conectado · calidad %{quality}'
+        warn: 'La calidad del número está en riesgo (%{quality}): Meta puede bajar su límite'
+        fail: 'El número no está listo para enviar (estado %{state}, calidad %{quality})'
+        unknown: 'No se pudo revisar el número'
+      display_name:
+        ok: 'Nombre visible aprobado: %{name}'
+        warn: 'Meta rechazó el nombre visible «%{name}»: los clientes ven el número en lugar del nombre'
+      limit:
+        ok: 'Límite de envío: %{tier}'
+        unknown: 'No se pudo consultar el límite de envío'
+      account:
+        ok: 'Cuenta de WhatsApp Business aprobada'
+        warn: 'La cuenta de WhatsApp Business está en revisión'
+        fail: 'Meta rechazó o restringió la cuenta de WhatsApp Business'
+        unknown: 'No se pudo revisar la cuenta de WhatsApp Business'
+      failed:
+        ok: 'Sin envíos fallidos en los últimos 7 días'
+        warn: '%{count} envíos fallidos en los últimos 7 días'
+        fail: 'Fallaron todos los envíos de los últimos 7 días (%{count})'
+      reauthorization:
+        ok: 'La bandeja no está marcada para reconexión'
+        fail: 'La bandeja está marcada para reconexión: Meta rechazó su permiso'
+      queue:
+        ok: 'Los envíos se están procesando'
+        warn: 'Los mensajes de WhatsApp van atrasados (%{minutes} min en cola)'
+        fail: 'Ningún proceso atiende la cola %{queues}: los mensajes de WhatsApp no avanzan'
   agenda_items:
     already_linked: 'Ese evento ya tiene una tarea agendada'
     invalid_emails: 'Correo no válido en invitados: %{emails}'

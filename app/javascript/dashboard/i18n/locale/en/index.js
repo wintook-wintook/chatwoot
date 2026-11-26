@@ -54,6 +54,7 @@ import campaigns2 from './campaigns2.json'; // Campaña con Vendedor IA (Motor 2
 import collections from './collections.json'; // Cobranza
 import trackingAssistant from './trackingAssistant.json'; // proyecto@asistente_agentes_ia
 import whatsappCalls from './whatsappCalls.json'; // diag/llamadas_whatsapp
+import whatsappHealth from './whatsappHealth.json'; // diag/waba
 import internalChat from './internalChat.json';
 import academy from './academy.json'; // Academia Kontrolya // feat/chat_interno
 
@@ -112,6 +113,7 @@ export default {
   ...collections, // Cobranza
   ...trackingAssistant, // proyecto@asistente_agentes_ia
   ...whatsappCalls, // diag/llamadas_whatsapp
+  ...whatsappHealth, // diag/waba
   ...internalChat, // feat/chat_interno
   ...academy, // Academia Kontrolya
 };
