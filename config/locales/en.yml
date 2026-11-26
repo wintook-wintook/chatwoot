@@ -586,6 +586,94 @@ en:
     no_permission: 'You do not have permission to delete in that calendar'
     google_error: 'Google could not delete the event. Please try again.'
     bot_note: '🗑️ %{name} deleted the appointment from the calendar. The customer was not notified.'
+  # diag/waba F1 — WhatsApp inbox «Diagnostics» tab
+  whatsapp_health:
+    only_cloud: 'Diagnostics are only for WhatsApp Cloud inboxes.'
+    reconnect:
+      other_number: 'You picked another number in the Meta window (%{number}). To reconnect this inbox pick its same number; for another number create a new inbox.'
+    unknown: 'Could not check (%{check}). Try again.'
+    ago:
+      minutes: '%{count} min'
+      hours: '%{count} h'
+      days: '%{count} days'
+    quality:
+      green: 'high'
+      yellow: 'medium'
+      red: 'low'
+    tiers:
+      tier_50: '50 conversations per day'
+      tier_250: '250 conversations per day'
+      tier_1k: '1,000 conversations per day'
+      tier_10k: '10,000 conversations per day'
+      tier_100k: '100,000 conversations per day'
+      tier_unlimited: 'unlimited'
+    errors:
+      window_24h: 'More than 24 h since the customer last wrote: use a template.'
+      not_on_whatsapp: 'The customer number has no WhatsApp or cannot receive the message.'
+      payment: 'Payment issue on the WhatsApp Business account.'
+      ecosystem: 'Meta held the message to protect the customer (too many marketing messages).'
+      unsupported: 'That message type is not allowed.'
+      template: 'Template problem (parameters, paused, rejected or deleted): %{title}'
+      rate_limit: 'Too many messages in a row; retrying slower.'
+      token: 'The Meta permission expired: reconnect the inbox.'
+      blocked: 'The account or number is blocked by Meta.'
+      other: 'Meta replied: %{title}'
+      no_title: 'no details'
+    checks:
+      app:
+        ok: 'The system Meta app is configured correctly'
+        fail: 'The system Meta app is misconfigured (App ID or App Secret): «Reconnect with Meta» will not work until it is fixed in Super Admin'
+        unknown: 'Could not check the system Meta app'
+      token:
+        ok: 'This inbox Meta permission is valid'
+        warn: 'This inbox Meta permission needs attention'
+        fail: 'This inbox Meta permission expired or was revoked: messages are not received or sent'
+        unknown: 'Could not check the Meta permission'
+        details:
+          no_app: 'Could not check when it expires: the system Meta app is misconfigured.'
+          permanent: 'It never expires.'
+          expires: 'It expires on %{date}.'
+          scopes: 'Missing permissions: %{scopes}.'
+      webhook:
+        ok: 'Meta sends messages to this system'
+        warn: 'Our app is subscribed, but we could not check which server Meta sends messages to'
+        fail: 'Meta is not sending us the messages people write to you'
+        unknown: 'Could not check whether Meta sends us messages'
+        details:
+          not_subscribed: 'The WhatsApp Business account is not subscribed to our app.'
+          other_server: 'Meta sends them to another server (%{host}). Fix the webhook URL in the Meta app.'
+          unverified: 'Checking it requires the system Meta app to be configured correctly.'
+      last_incoming:
+        ok: 'Last message received: %{ago} ago'
+        warn: 'Last message received: %{ago} ago'
+        never: 'This inbox has never received messages'
+      number:
+        ok: 'Number connected · quality %{quality}'
+        warn: 'Number quality at risk (%{quality}): Meta may lower its limit'
+        fail: 'The number is not ready to send (status %{state}, quality %{quality})'
+        unknown: 'Could not check the number'
+      display_name:
+        ok: 'Display name approved: %{name}'
+        warn: 'Meta rejected the display name «%{name}»: customers see the number instead'
+      limit:
+        ok: 'Sending limit: %{tier}'
+        unknown: 'Could not check the sending limit'
+      account:
+        ok: 'WhatsApp Business account approved'
+        warn: 'The WhatsApp Business account is under review'
+        fail: 'Meta rejected or restricted the WhatsApp Business account'
+        unknown: 'Could not check the WhatsApp Business account'
+      failed:
+        ok: 'No failed messages in the last 7 days'
+        warn: '%{count} failed messages in the last 7 days'
+        fail: 'All messages of the last 7 days failed (%{count})'
+      reauthorization:
+        ok: 'The inbox is not flagged for reconnection'
+        fail: 'The inbox is flagged for reconnection: Meta rejected its permission'
+      queue:
+        ok: 'Messages are being processed'
+        warn: 'WhatsApp messages are delayed (%{minutes} min in queue)'
+        fail: 'No process serves the %{queues} queue: WhatsApp messages do not move'
   agenda_items:
     already_linked: 'That event already has a scheduled task'
     invalid_emails: 'Invalid guest email: %{emails}'

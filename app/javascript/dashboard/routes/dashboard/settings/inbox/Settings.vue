@@ -20,6 +20,8 @@ import WidgetBuilder from './WidgetBuilder.vue';
 import BotConfiguration from './components/BotConfiguration.vue';
 import UnoapiConfiguration from './settingsPage/UnoapiConfiguration.vue';
 import WhatsappCallsPage from './settingsPage/WhatsappCallsPage.vue'; // diag/llamadas_whatsapp
+import WhatsappHealthPage from './settingsPage/WhatsappHealthPage.vue'; // diag/waba
+import WhatsappReauthorize from './channels/whatsapp/Reauthorize.vue'; // diag/waba F3
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import SenderNameExamplePreview from './components/SenderNameExamplePreview.vue';
 
@@ -42,6 +44,8 @@ export default {
     TiktokReauthorize,
     UnoapiConfiguration,
     WhatsappCallsPage,
+    WhatsappHealthPage,
+    WhatsappReauthorize,
   },
   mixins: [inboxMixin],
   setup() {
@@ -159,6 +163,17 @@ export default {
         ];
       }
 
+      // diag/waba F2 — diagnóstico de WhatsApp Cloud (justo después de Configuración; la página ya es solo de administradores)
+      if (this.isAWhatsAppCloudChannel) {
+        visibleToAllChannelTabs = [
+          ...visibleToAllChannelTabs,
+          {
+            key: 'whatsappHealth',
+            name: this.$t('WHATSAPP_HEALTH.TAB'),
+          },
+        ];
+      }
+
       if (this.isAWhatsAppChannel) {
         visibleToAllChannelTabs = [
           ...visibleToAllChannelTabs,
@@ -256,6 +271,12 @@ export default {
     microsoftUnauthorized() {
       return this.isAMicrosoftInbox && this.inbox.reauthorization_required;
     },
+    // diag/waba F3 — Meta rechazó el permiso de la bandeja de WhatsApp Cloud.
+    whatsappUnauthorized() {
+      return (
+        this.isAWhatsAppCloudChannel && this.inbox.reauthorization_required
+      );
+    },
     facebookUnauthorized() {
       return this.isAFacebookInbox && this.inbox.reauthorization_required;
     },
@@ -302,6 +323,11 @@ export default {
         return newSelectedFlags;
       }
       return [...selected, current];
+    },
+    // diag/waba F2 — desde el diagnóstico: «Cambiar token» abre Configuración.
+    goToTab(key) {
+      const index = this.tabs.findIndex(tab => tab.key === key);
+      if (index >= 0) this.selectedTabIndex = index;
     },
     onTabChange(selectedTabIndex) {
       this.selectedTabIndex = selectedTabIndex;
@@ -447,6 +473,11 @@ export default {
 
     <MicrosoftReauthorize v-if="microsoftUnauthorized" :inbox="inbox" />
     <FacebookReauthorize v-if="facebookUnauthorized" :inbox="inbox" />
+    <WhatsappReauthorize
+      v-if="whatsappUnauthorized"
+      :inbox="inbox"
+      variant="banner"
+    />
     <TiktokReauthorize v-if="tiktokUnauthorized" />
     <InstagramReauthorize v-if="instagramUnauthorized" />
 
@@ -878,6 +909,9 @@ export default {
     </div>
     <div v-if="selectedTabKey === 'whatsappCalls'">
       <WhatsappCallsPage :inbox="inbox" />
+    </div>
+    <div v-if="selectedTabKey === 'whatsappHealth'">
+      <WhatsappHealthPage :inbox="inbox" @goToTab="goToTab" />
     </div>
   </div>
 </template>

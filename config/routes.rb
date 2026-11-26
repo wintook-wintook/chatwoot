@@ -753,6 +753,13 @@ Rails.application.routes.draw do
           # proyecto@waba_chatwoot
           namespace :whatsapp do
             resource :authorization, only: [:create]
+            # diag/waba F1 — pestaña «Diagnóstico» de la bandeja (id = inbox_id)
+            resources :health_checks, only: [:show] do
+              member do
+                post :run
+                post :subscribe
+              end
+            end
             # @waba_templates — gestión de plantillas (crear/submit/editar/borrar en Meta).
             resources :templates, only: [:index, :show, :create, :update, :destroy] do
               collection do

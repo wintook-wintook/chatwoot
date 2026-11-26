@@ -1,0 +1,67 @@
+{
+  "WHATSAPP_HEALTH": {
+    "TAB": "Diagnostics",
+    "TITLE": "WhatsApp diagnostics",
+    "SUBTITLE": "Checks with Meta why this inbox does not receive or send messages. Read only: nothing is changed.",
+    "RUN": "Run diagnostics",
+    "RUNNING": "Checking with Meta…",
+    "LAST": "Last run: {date}",
+    "NEVER": "Diagnostics have not been run on this inbox yet.",
+    "ERROR": "Could not run the diagnostics. Please try again.",
+    "SUMMARY_OK": "Everything looks good.",
+    "SUMMARY_ISSUES": "{fail} problem(s) and {warn} warning(s).",
+    "GROUPS": {
+      "RECEIVE": "Receiving messages",
+      "SEND": "Sending messages",
+      "SYSTEM": "System"
+    },
+    "STATUS": {
+      "OK": "OK",
+      "WARN": "Attention",
+      "FAIL": "Problem",
+      "UNKNOWN": "Could not check"
+    },
+    "ACTIONS": {
+      "SUBSCRIBE": "Subscribe now",
+      "SUBSCRIBE_CONFIRM": "Our app will be subscribed to the WhatsApp Business account so Meta sends us the messages. Continue?",
+      "SUBSCRIBE_YES": "Yes, subscribe",
+      "SUBSCRIBE_DONE": "Done: our app is subscribed.",
+      "CANCEL": "Cancel",
+      "UPDATE_TOKEN": "Change token",
+      "OPEN_META": "Open Meta"
+    },
+    "RECONNECT": {
+      "BUTTON": "Reconnect with Meta",
+      "BANNER": "WhatsApp lost its Meta permission: this inbox does not receive or send messages. Reconnect it to make it work again.",
+      "HINT": "The Meta window opens: sign in with the account that manages the business and pick the same number.",
+      "DONE": "Done: the inbox is reconnected.",
+      "ERROR": "Could not reconnect. Please try again.",
+      "CANCELLED": "Reconnection cancelled.",
+      "SDK_NOT_LOADED": "The Meta window did not load. Reload the page and try again.",
+      "APP_BROKEN": "The system Meta app is misconfigured: ask the system administrator to fix it in Super Admin.",
+      "SECTION_TITLE": "Reconnect with Meta",
+      "STATE": {
+        "NOT_NEEDED": "The inbox is connected: reconnecting is not needed. Do it only if support asks you to or if the Meta account that manages the number changed.",
+        "NEEDED": "Meta rejected this inbox permission: reconnecting fixes it.",
+        "UNKNOWN": "Use it if the Meta permission expired or the Meta account that manages the number changed. Run the diagnostics to know if it is needed."
+      }
+    },
+    "ERRORS": {
+      "WINDOW_24H": "More than 24 h since the customer last wrote: use a template.",
+      "NOT_ON_WHATSAPP": "The customer number has no WhatsApp or cannot receive the message.",
+      "PAYMENT": "Payment issue on the WhatsApp Business account.",
+      "ECOSYSTEM": "Meta held the message to protect the customer (too many marketing messages).",
+      "UNSUPPORTED": "That message type is not allowed.",
+      "TEMPLATE": "Template problem (parameters, paused, rejected or deleted): {title}",
+      "RATE_LIMIT": "Too many messages in a row; retrying slower.",
+      "TOKEN": "The Meta permission expired: reconnect the inbox in Settings → Inboxes → Diagnostics.",
+      "BLOCKED": "The account or number is blocked by Meta.",
+      "META_CODE": "(Meta {code})"
+    },
+    "REPORT": {
+      "COPY": "Copy diagnostics for support",
+      "COPIED": "Diagnostics copied: paste them in your support request.",
+      "HEADER": "WhatsApp diagnostics · {name} {phone} · inbox #{id}"
+    }
+  }
+}

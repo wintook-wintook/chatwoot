@@ -97,6 +97,15 @@ class Whatsapp::FacebookApiClient
 
   # subscribed_fields (diag/llamadas_whatsapp): sin él, Meta deja los campos de la App; con
   # él, por ejemplo %w[messages calls] para recibir las llamadas.
+  # diag/waba F1 — suscribe la app a la WABA SIN cambiar la URL del webhook: Meta usa la de la
+  # app. Para bandejas dadas de alta a mano (la WABA puede estar compartida con otro servidor).
+  def subscribe_app(waba_id, access_token)
+    HTTParty.post(
+      "#{BASE_URI}/#{@api_version}/#{waba_id}/subscribed_apps",
+      headers: { 'Authorization' => "Bearer #{access_token}" }
+    )
+  end
+
   def subscribe_webhook(waba_id, access_token, callback_url, verify_token, subscribed_fields: nil)
     body = { override_callback_uri: callback_url, verify_token: verify_token }
     body[:subscribed_fields] = subscribed_fields if subscribed_fields.present?

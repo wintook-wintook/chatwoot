@@ -33,6 +33,7 @@ import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { getDayDifferenceFromNow } from 'shared/helpers/DateHelper';
 import * as Sentry from '@sentry/browser';
+import { translateMetaError } from 'dashboard/helper/metaErrorTranslator'; // diag/waba F4
 
 export default {
   components: {
@@ -272,8 +273,12 @@ export default {
     contentAttributes() {
       return this.data.content_attributes || {};
     },
+    // diag/waba F4 (D7) — el error de Meta en palabras del usuario (con su código para soporte).
     externalError() {
-      return this.contentAttributes.external_error || '';
+      return translateMetaError(
+        this.contentAttributes.external_error || '',
+        this.$t.bind(this)
+      );
     },
     sender() {
       return this.data.sender || {};

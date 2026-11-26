@@ -67,7 +67,7 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     message = @processed_params[:messages]&.first
     return if message.blank?
 
-    message[:from] == @processed_params['metadata']['display_phone_number'].sub('+', '')
+    message[:from] == business_phone
   end
 
   def activity_message_type?
@@ -78,6 +78,11 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
     return if contact_params.blank?
 
     !group_message? &&
-      @processed_params['metadata']['display_phone_number'].sub('+', '') == contact_params[:wa_id] && contact_params[:wa_id] == message[:from]
+      business_phone == contact_params[:wa_id] && contact_params[:wa_id] == message[:from]
+  end
+
+  # diag/waba — número del negocio que manda Meta en `metadata`; si no viene, no truena.
+  def business_phone
+    @processed_params.dig('metadata', 'display_phone_number').to_s.sub('+', '')
   end
 end
