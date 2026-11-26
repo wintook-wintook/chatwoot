@@ -156,7 +156,7 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
 
   def info_text
     text = Motor2::CampaignTouch.fill(function.content, contact, @turn.tracking&.tracking_campaign)
-    with_registration(text)
+    with_package_links(text)
   end
 
   # ---------- lo logró ----------

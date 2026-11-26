@@ -6,15 +6,18 @@
 # cada respuesta.
 class Motor2::Probe
   # answers: encima de lo del agente (la oferta de una Campaña con Vendedor IA, sin guardar).
-  def initialize(template, messages:, state: {}, answers: nil)
+  # campaign: la campaña guardada, para que pruebe con SUS imágenes y archivos (los de «Cuando muestre interés», «Al
+  # confirmar»…); lo de la pantalla (answers) gana sobre lo guardado.
+  def initialize(template, messages:, state: {}, answers: nil, campaign: nil)
     @template = template
+    @campaign = campaign
     @answers = answers
     @messages = messages
     @state = Motor2::State.new(state)
   end
 
   def call
-    config = Motor2::Config.new(@template, answers: @answers)
+    config = Motor2::Config.new(@template, campaign: @campaign, answers: @answers)
     result = Motor2::Runner.new(config, state: @state, history: @messages, welcome: first_welcome(config)).call
     return { error: result.error, trace: result.trace } if result.error
 

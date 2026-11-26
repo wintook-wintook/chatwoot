@@ -853,20 +853,21 @@ export default {
 
 <template>
   <div class="flex flex-col h-full w-full bg-slate-50 dark:bg-slate-900">
-    <!-- Header con Navegación y Filtros -->
+    <!-- Header con Navegación y Filtros. flex-wrap: en ventanas angostas los filtros y botones bajan
+         de renglón en vez de salirse (Plan-Pantallas-Responsive #7). -->
     <div
-      class="flex items-center justify-between p-4 bg-white border-b dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm">
-      <div class="flex items-center space-x-4">
+      class="flex flex-wrap items-center justify-between gap-2 p-4 bg-white border-b dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-sm">
+      <div class="flex flex-wrap items-center min-w-0 gap-x-4 gap-y-2">
         <woot-sidemenu-icon />
 
         <!-- Título y breadcrumbs - MOVIDO A LA IZQUIERDA -->
-        <div class="flex flex-row w-50 ">
+        <div class="flex flex-row flex-wrap items-center min-w-0 gap-y-2">
           <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100 pr-3">
             {{ pageTitle }}
           </h1>
 
           <!-- Breadcrumbs/Filtros aplicados -->
-          <div v-if="label || statusFilter || selectedKanbanType" class="flex items-center space-x-2 mt-1">
+          <div v-if="label || statusFilter || selectedKanbanType" class="flex flex-wrap items-center gap-2 mt-1">
             <span v-if="label" class="kanban-badge-primary">
               Label: {{ label }}
             </span>

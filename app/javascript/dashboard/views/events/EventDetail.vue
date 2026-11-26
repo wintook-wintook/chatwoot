@@ -263,26 +263,31 @@ export default {
       <header
         class="flex flex-wrap items-start justify-between gap-3 px-6 pt-5 pb-3 border-b border-slate-50 dark:border-slate-800"
       >
-        <div>
-          <router-link
-            :to="{
-              name: 'events_list',
-              params: { accountId: $route.params.accountId },
-            }"
-            class="inline-flex items-center gap-1 text-xs text-slate-500 hover:underline"
-          >
-            <fluent-icon icon="chevron-left" size="12" />
-            {{ $t('EVENTS.TITLE') }}
-          </router-link>
-          <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
-            {{ event.name }}
-          </h1>
-          <p class="m-0 text-sm text-slate-600 dark:text-slate-300">
-            {{ $t(`EVENTS.KINDS.${event.kind}`) }} ·
-            {{ formatDateTime(event.starts_at) }}
-            <template v-if="event.location"> · {{ event.location }}</template>
-            · {{ $t(`EVENTS.STATUSES.${event.status}`) }}
-          </p>
+        <div class="flex items-start gap-2">
+          <woot-sidemenu-icon />
+          <div>
+            <router-link
+              :to="{
+                name: 'events_list',
+                params: { accountId: $route.params.accountId },
+              }"
+              class="inline-flex items-center gap-1 text-xs text-slate-500 hover:underline"
+            >
+              <fluent-icon icon="chevron-left" size="12" />
+              {{ $t('EVENTS.TITLE') }}
+            </router-link>
+            <h1
+              class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100"
+            >
+              {{ event.name }}
+            </h1>
+            <p class="m-0 text-sm text-slate-600 dark:text-slate-300">
+              {{ $t(`EVENTS.KINDS.${event.kind}`) }} ·
+              {{ formatDateTime(event.starts_at) }}
+              <template v-if="event.location"> · {{ event.location }}</template>
+              · {{ $t(`EVENTS.STATUSES.${event.status}`) }}
+            </p>
+          </div>
         </div>
         <div v-if="access.canEdit" class="flex flex-wrap items-center gap-2">
           <woot-button

@@ -21,7 +21,7 @@
 #   GET   motor2_campaigns/:id/test_run         «Prueba real»: cómo va · POST la arranca { recipients, every_minutes }
 #   DELETE motor2_campaigns/:id/test_run        la termina (cancela los toques que falten)
 class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseController
-  before_action :set_campaign, except: %i[options preview test test_email cases run_case create]
+  before_action :set_campaign, except: %i[options preview preview_csv test test_email cases run_case create]
 
   def options
     render json: { attend: TrackingCampaigns::CampaignAgent.defaults(Current.account), sources: Motor2::SourceMap.new(Current.account).available,
@@ -37,20 +37,23 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
     { case_types: names(Current.account.case_types.active), contract_types: names(Current.account.contract_types) }
   end
 
+  # «A quién»: la audiencia clasificada, por páginas, con filtro y búsqueda (TrackingCampaigns::AudiencePage).
   def preview
-    result = ContactTrackings::BulkAssignPreviewService.new(
-      account: Current.account, current_user: current_user, filter_payload: params.permit!['payload'] || [],
-      template_id: params[:template_id], inbox_id: params[:inbox_id], excluded_contact_ids: params[:excluded_contact_ids] || []
-    ).call
-    result = TrackingCampaigns::PreviewFacts.call(Current.account, result) if params[:facts].present? # Reactivar y Recordar
+    result = audience_page.call
     render json: result, status: result[:error] ? :unprocessable_entity : :ok
+  end
+
+  # «Descargar lista»: lo filtrado en CSV.
+  def preview_csv
+    send_data audience_page.csv, filename: 'invitados.csv', type: 'text/csv; charset=utf-8'
   end
 
   # Con «Cómo atiende» de la pantalla (sin guardar) sobre el agente de la campaña, si ya existe.
   def test
     seller = test_agent
     answers = TrackingCampaigns::Motor2Brief.seller_answers(TrackingCampaign.new(brief: TrackingCampaigns::Motor2Brief.brief(params[:brief])))
-    result = Motor2::Probe.new(seller, messages: test_messages, state: Motor2::Sanitizer.plain(params[:state]), answers: answers).call
+    result = Motor2::Probe.new(seller, messages: test_messages, state: Motor2::Sanitizer.plain(params[:state]), answers: answers,
+                                       campaign: saved_campaign).call
     render json: result.merge(tools: Array(result.dig(:trace, 'tools'))), status: result[:error] ? :unprocessable_entity : :ok
   end
 
@@ -141,6 +144,8 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
 
   private
 
+  def audience_page = TrackingCampaigns::AudiencePage.new(Current.account, current_user, params.permit!.to_h)
+
   def set_campaign
     @campaign = Current.account.tracking_campaigns.real.where(engine: '2').find(params[:id])
   end
@@ -159,16 +164,22 @@ class Api::V1::Accounts::Motor2CampaignsController < Api::V1::Accounts::BaseCont
     params[:email_signature].presence || Current.account.tracking_templates.find_by(id: params[:template_id])&.email_signature
   end
 
+  # La campaña ya guardada (la pantalla guarda al cambiar de paso): sus imágenes y archivos en «Probar» y «Casos».
+  def saved_campaign
+    return @saved_campaign if defined?(@saved_campaign)
+
+    @saved_campaign = Current.account.tracking_campaigns.real.find_by(id: params[:campaign_id], engine: '2')
+  end
+
   def test_agent
-    campaign = Current.account.tracking_campaigns.real.find_by(id: params[:campaign_id], engine: '2') ||
-               Current.account.tracking_campaigns.new(engine: '2', name: 'Prueba', brief: {})
+    campaign = saved_campaign || Current.account.tracking_campaigns.new(engine: '2', name: 'Prueba', brief: {})
     campaign.brief = TrackingCampaigns::Motor2Brief.brief(params[:brief]) if params[:brief]
     TrackingCampaigns::CampaignAgent.new(campaign, current_user).draft(params[:attend]&.permit!&.to_h || {})
   end
 
   def campaign_cases
     answers = TrackingCampaigns::Motor2Brief.seller_answers(TrackingCampaign.new(brief: TrackingCampaigns::Motor2Brief.brief(params[:brief])))
-    TrackingCampaigns::Motor2Cases.new(test_agent, answers, opener: params[:opener].to_s.first(1500))
+    TrackingCampaigns::Motor2Cases.new(test_agent, answers, opener: params[:opener].to_s.first(1500), campaign: saved_campaign)
   end
 
   def test_runner = @test_runner ||= TrackingCampaigns::Motor2TestRun.new(@campaign, current_user)

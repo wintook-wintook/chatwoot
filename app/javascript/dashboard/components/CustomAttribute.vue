@@ -321,6 +321,7 @@ export default {
     </div>
     <div v-if="isAttributeTypeList">
       <MultiselectDropdown
+        wide
         :options="listOptions"
         :selected-item="selectedItem"
         :has-thumbnail="false"

@@ -19,7 +19,6 @@ export default {
     kit: { type: Object, default: null },
     campaignId: { type: Number, default: null },
     save: { type: Function, required: true },
-    attempts: { type: Number, default: 1 },
   },
   emits: ['update:brief'],
   data() {
@@ -158,7 +157,6 @@ export default {
       :kit="kit"
       :campaign-id="campaignId"
       :save="save"
-      :attempts="attempts"
       no-survey
       @update:brief="$emit('update:brief', $event)"
     />

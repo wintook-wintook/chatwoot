@@ -33,9 +33,15 @@ RSpec.describe TrackingCampaigns::Motor2FileCheck do
     file(camp, 'sin-regla', { 'interest' => false })
     file(camp, 'interes', { 'interest' => true })
     file(camp, 'pedida', { 'ask' => true })
-    file(camp, 'toque-1', { 'attempts' => [1] })
     texts = described_class.new(camp).call.pluck(:text)
-    expect(texts.join("\n")).to include('«sin-regla»: no tiene cuándo va', '«interes»: en una encuesta', '«toque-1»: está marcada para el toque 1')
+    expect(texts.join("\n")).to include('«sin-regla»: no tiene cuándo va', '«interes»: en una encuesta')
     expect(texts.join).not_to include('pedida')
+  end
+
+  it 'en Invitar, «cuando muestre interés» también aplica (sale con la información del evento)' do
+    wa = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false).inbox
+    camp = campaign('invite', wa)
+    file(camp, 'flyer', { 'interest' => true })
+    expect(described_class.new(camp).call).to be_empty
   end
 end

@@ -67,13 +67,13 @@ class TrackingCampaigns::Motor2Simulation
     name = Array(data['templates'])[touch - 1].presence
     return { channel: 'whatsapp', source: 'ai', template: nil } unless name
 
-    { channel: 'whatsapp', source: 'template', template: name, text: template_text(name), opener: touch == 1 ? opener_text : nil }
+    { channel: 'whatsapp', source: 'template', template: name, text: template_text(name), opener: opener_text(touch) }
   end
 
-  # La apertura escrita para cuando la ventana de 24 h está abierta (vacía: la escribe la IA).
-  def opener_text
-    opener = @campaign.brief.to_h['opener'].to_s.strip
-    opener.present? ? Motor2::CampaignTouch.fill(opener, @contact, @campaign) : nil
+  # Lo escrito para ese mensaje cuando la ventana de 24 h está abierta (vacío: lo escribe la IA).
+  def opener_text(touch)
+    written = Motor2::CampaignTouch.fixed_text(@campaign, touch)
+    written.present? ? Motor2::CampaignTouch.fill(written, @contact, @campaign) : nil
   end
 
   # La información completa: lo que se manda tal cual cuando le interesa (WhatsApp), con sus imágenes.

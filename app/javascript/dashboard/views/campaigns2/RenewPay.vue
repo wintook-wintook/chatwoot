@@ -18,7 +18,6 @@ export default {
     teams: { type: Array, default: () => [] },
     campaignId: { type: Number, default: null },
     save: { type: Function, required: true },
-    attempts: { type: Number, default: 1 },
   },
   emits: ['update:brief'],
   computed: {
@@ -130,7 +129,6 @@ export default {
       :kit="kit"
       :campaign-id="campaignId"
       :save="save"
-      :attempts="attempts"
       :hidden-facts="['what_due']"
       @update:brief="$emit('update:brief', $event)"
     />

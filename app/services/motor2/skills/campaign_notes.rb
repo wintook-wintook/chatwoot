@@ -69,10 +69,9 @@ module Motor2::Skills::CampaignNotes
                       "#{link['url']}. Nada más (no ofrezcas la información completa)." }
   end
 
-  # Invitar: la liga de registro (la que va «con la información») sale con ese texto aunque no la hayan escrito en él.
-  def with_registration(text)
-    return text unless function.invite?
-
+  # Las ligas que van «con la información» (registro, compra, pago) salen al final aunque no estén en el texto;
+  # si ya la escribieron en él, no se repite. En todos los tipos.
+  def with_package_links(text)
     missing = Array(function.links).select { |l| l['use'] == 'package' && l['url'].present? && text.exclude?(l['url']) }
     missing.reduce(text.rstrip) { |all, l| "#{all}\n\n#{l['name']}: #{l['url']}" }
   end
@@ -100,20 +99,30 @@ module Motor2::Skills::CampaignNotes
 
   # ---------- los toques que escribe la IA ----------
 
+  # La apertura (mensaje 1) y, si no contesta, cada toque persuasivo según su número (Motor2::CampaignPersuasion).
   def attempt_note
     n = @turn.tracking ? @turn.tracking.attempt_count + 1 : 1
-    main = Array(function.links).find { |l| l['use'] == 'package' }
-    link = main ? " y la liga «#{main['name']}» como [texto del botón](#{main['url']})" : ''
-    return email_attempt_note(n, link) if email?
+    return first_note if n == 1
 
-    n == 1 && content? ? 'Es el primer mensaje: corto, sin ligas ni la información completa; termina preguntando si le gustaría conocer más.' : ''
+    total = [@turn.tracking.max_attempts.to_i, n].max
+    Motor2::CampaignPersuasion.note(n, total, kind: function.purpose, clicked: clicked?, email: email?, link: email? ? email_link : '')
   end
 
-  def email_attempt_note(touch, link)
-    return "Es el PRIMER correo: lleva todo lo esencial de LA FICHA#{link}; una sola invitación a actuar al final." if touch == 1
-    return "Ya dio clic en la liga pero no ha confirmado: pregúntale en corto si pudo hacerlo y ofrécele ayuda#{link}." if clicked?
+  def first_note
+    return first_email_note if email?
 
-    "No ha contestado: otro ángulo, más corto que el anterior#{link}."
+    Motor2::CampaignPersuasion.first(function.purpose)
+  end
+
+  def first_email_note
+    return 'Es el PRIMER correo: invítalo a contestar la encuesta (es un minuto); las preguntas van solas abajo.' if function.purpose == 'survey'
+
+    "Es el PRIMER correo: lleva todo lo esencial de LA FICHA#{email_link}; una sola invitación a actuar al final."
+  end
+
+  def email_link
+    main = Array(function.links).find { |l| l['use'] == 'package' }
+    main ? " y la liga «#{main['name']}» como [texto del botón](#{main['url']})" : ''
   end
 
   def clicked? = @turn.tracking.present? && TrackingCampaignClick.exists?(contact_tracking_id: @turn.tracking.id)

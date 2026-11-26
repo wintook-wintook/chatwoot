@@ -1,13 +1,14 @@
 <!--
-  Campaña con Vendedor IA por WhatsApp — paso «Mensajes», en el orden en que pasa:
-    Mensaje 1 · Apertura   la plantilla del toque 1 (y de dónde sale cada variable) o, si escribió en las últimas 24 h,
-                           el texto de apertura (vacío: lo escribe la IA). Toques 2…n si no contesta.
-    Información completa   si le interesa: el copy que sale TAL CUAL, una sola vez (con las imágenes «con la
-                           información» y la liga que elijas de la ficha); en Encuesta, las preguntas.
-    Después                la IA resuelve dudas con LA FICHA y lleva al objetivo.
-  .sync: touches (templates, template_vars) y brief (opener, content).
+  Campaña con Vendedor IA por WhatsApp — paso «Mensajes», en dos partes (prop part):
+    touches  La apertura (no es toque) y los toques 1…n a quien no contesta. Cada uno: su plantilla (y de dónde sale
+             cada variable) para cuando no ha escrito en 24 h y, opcional, su texto fijo para cuando sí (vacío: la IA).
+    info     La información completa, a lo ancho y con cómo le llega: sale TAL CUAL, una sola vez, si le interesa
+             (con las imágenes «cuando muestre interés» y, al final, las ligas «con la información»); en Encuesta, las preguntas.
+  .sync: touches (templates, template_vars) y brief (opener, touch_texts, content).
 -->
 <script>
+import DaliWriter from './DaliWriter.vue';
+import MessageChoice from './MessageChoice.vue';
 import {
   VAR_SOURCES,
   templateVariables,
@@ -20,6 +21,7 @@ const MAX_CONTENT = 4000;
 
 export default {
   name: 'WhatsappFlow',
+  components: { DaliWriter, MessageChoice },
   props: {
     touches: { type: Object, required: true },
     brief: { type: Object, required: true },
@@ -29,10 +31,16 @@ export default {
     event: { type: Object, default: null },
     // Las ligas de la ficha, para meterlas en la información completa.
     links: { type: Array, default: () => [] },
+    // Qué parte se ve: «touches» (apertura y toques) o «info» (la información completa).
+    part: { type: String, default: 'touches' },
+    // «Redactar con Dali»: la campaña y cómo guardarla antes (para que lea lo último).
+    campaignId: { type: Number, default: null },
+    save: { type: Function, required: true },
   },
   emits: ['update:touches', 'update:brief'],
   data() {
-    return { maxContent: MAX_CONTENT, sources: VAR_SOURCES };
+    // fixedOpen: los toques donde eligió «Mensaje fijo» (aún sin texto).
+    return { maxContent: MAX_CONTENT, sources: VAR_SOURCES, fixedOpen: [] };
   },
   computed: {
     numbers() {
@@ -43,6 +51,16 @@ export default {
     },
     isSurvey() {
       return this.kind === 'survey';
+    },
+    // Toques a quien no contesta (después de la apertura): mensaje 2, 3…
+    followUps() {
+      return this.numbers.slice(1);
+    },
+    // Las ligas que se agregan solas al final de la información.
+    packageLinks() {
+      return this.links
+        .filter(l => l.use === 'package' && (l.url || '').trim())
+        .map(l => l.name || l.url);
     },
     contentLength() {
       return (this.brief.content || '').length;
@@ -108,32 +126,32 @@ export default {
       vars[tpl.name] = rules;
       this.$emit('update:touches', { ...this.touches, template_vars: vars });
     },
-    insertLink(index) {
-      const link = this.links[Number(index)];
-      if (!link || !link.url) return;
-      const content = (this.brief.content || '').trimEnd();
-      this.setBrief(
-        'content',
-        `${content}${content ? '\n\n' : ''}👉 ${link.url}`
-      );
+    // Texto fijo del mensaje n (1 = apertura → brief.opener; 2.. = toque → brief.touch_texts).
+    fixedOf(n) {
+      if (n === 1) return this.brief.opener || '';
+      return (this.brief.touch_texts || [])[n - 2] || '';
+    },
+    // Toque: ¿mensaje fijo? (con texto, o recién elegido). Al volver a «la IA al momento» se borra el fijo.
+    fixedMode(n) {
+      return !!this.fixedOf(n) || this.fixedOpen.includes(n);
+    },
+    setFixedMode(n, fixed) {
+      this.fixedOpen = fixed
+        ? [...this.fixedOpen, n]
+        : this.fixedOpen.filter(x => x !== n);
+    },
+    setFixed(n, value) {
+      if (n === 1) {
+        this.setBrief('opener', value);
+        return;
+      }
+      const texts = [...(this.brief.touch_texts || [])];
+      while (texts.length < n - 1) texts.push('');
+      texts[n - 2] = value;
+      this.setBrief('touch_texts', texts);
     },
     setBrief(field, value) {
       this.$emit('update:brief', { ...this.brief, [field]: value });
-    },
-    // Invitar: el «Mensaje 2» de inicio con los datos del evento (para completarlo).
-    fillFromEvent() {
-      if (!this.event) return;
-      const s = this.samples;
-      const lines = [
-        this.t('EVENT_DRAFT.TITLE', { name: s.event_name }),
-        s.event_date && this.t('EVENT_DRAFT.WHEN', { when: s.event_date }),
-        s.event_place && this.t('EVENT_DRAFT.WHERE', { where: s.event_place }),
-        this.event.description,
-      ].filter(Boolean);
-      this.setBrief(
-        'content',
-        `${lines.join('\n')}\n\n${this.t('EVENT_DRAFT.CLOSE')}`
-      );
     },
   },
 };
@@ -141,26 +159,35 @@ export default {
 
 <template>
   <div class="flex flex-col gap-3">
-    <!-- Mensaje 1 · Apertura -->
-    <section
-      class="flex flex-col gap-2 p-3 border rounded-md border-slate-100 dark:border-slate-700"
-    >
-      <p class="m-0 text-sm font-semibold">{{ t('OPENER_TITLE') }}</p>
-      <p class="m-0 text-xs text-slate-500">{{ t('OPENER_HINT') }}</p>
-
-      <div v-for="n in numbers" :key="n" class="flex flex-col gap-1">
-        <span class="field-label">
-          {{ n === 1 ? t('TEMPLATE_OPENER') : t('TEMPLATE_TOUCH', { n }) }}
-        </span>
-        <select
-          :value="touches.templates[n - 1] || ''"
-          @change="setTemplate(n, $event.target.value)"
-        >
-          <option value="">{{ t('TEMPLATE_PICK') }}</option>
-          <option v-for="tpl in templates" :key="tpl.name" :value="tpl.name">
-            {{ tpl.name }}
-          </option>
-        </select>
+    <template v-if="part === 'touches'">
+      <p v-if="!templates.length" class="m-0 text-xs text-amber-700">
+        {{ $t('CAMPAIGNS2.MESSAGES.NO_TEMPLATES') }}
+      </p>
+      <!-- La apertura y cada toque: su plantilla (sin ventana) y su texto fijo (con ventana abierta) -->
+      <section
+        v-for="n in numbers"
+        :key="n"
+        class="flex flex-col gap-2 p-3 border rounded-md border-slate-100 dark:border-slate-700"
+      >
+        <p class="m-0 text-sm font-semibold">
+          {{ n === 1 ? t('OPENER_TITLE') : t('TOUCH_TITLE', { n: n - 1 }) }}
+        </p>
+        <p class="m-0 text-xs text-slate-500">
+          {{ n === 1 ? t('OPENER_HINT') : t('TOUCH_HINT') }}
+        </p>
+        <label class="block">
+          <span class="field-label">{{ t('TEMPLATE') }}</span>
+          <select
+            class="!mb-0"
+            :value="touches.templates[n - 1] || ''"
+            @change="setTemplate(n, $event.target.value)"
+          >
+            <option value="">{{ t('TEMPLATE_PICK') }}</option>
+            <option v-for="tpl in templates" :key="tpl.name" :value="tpl.name">
+              {{ tpl.name }}
+            </option>
+          </select>
+        </label>
         <template v-if="templateOf(n)">
           <p
             class="m-0 text-xs whitespace-pre-line rounded-md p-2 bg-slate-25 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
@@ -193,37 +220,37 @@ export default {
             />
           </div>
         </template>
-        <p v-if="n === 2" class="m-0 text-[11px] text-slate-500">
-          {{ t('TOUCHES_NOTE') }}
-        </p>
-      </div>
-      <p v-if="!templates.length" class="m-0 text-xs text-amber-700">
-        {{ $t('CAMPAIGNS2.MESSAGES.NO_TEMPLATES') }}
-      </p>
-
-      <label class="block">
-        <span class="field-label">{{ t('OPEN_WINDOW') }}</span>
-        <textarea
-          rows="3"
-          maxlength="1500"
-          :value="brief.opener"
-          :placeholder="t('OPEN_WINDOW_PLACEHOLDER')"
-          @input="setBrief('opener', $event.target.value)"
+        <!-- Con la ventana abierta: la apertura con su texto fijo; cada toque, la IA al momento o un fijo -->
+        <MessageChoice
+          :value="fixedOf(n)"
+          :ai="!fixedMode(n)"
+          :choose-mode="n > 1"
+          :legend="n === 1 ? t('OPEN_WINDOW') : ''"
+          :placeholder="
+            n === 1
+              ? t(`OPEN_WINDOW_PLACEHOLDER.${kind}`)
+              : t(`TOUCH_PLACEHOLDER.${kind}`)
+          "
+          :fixed-hint="n === 1 ? t('OPEN_WINDOW_HINT') : ''"
+          :dali="{
+            target: n === 1 ? 'opener' : 'touch',
+            number: Math.max(n - 1, 1),
+          }"
+          :campaign-id="campaignId"
+          :save="save"
+          @update:value="setFixed(n, $event)"
+          @update:ai="setFixedMode(n, !$event)"
         />
-        <span class="block text-[11px] text-slate-500">
-          {{ t('OPEN_WINDOW_HINT') }}
-        </span>
-      </label>
-    </section>
-
-    <!-- Mensaje 2 -->
-    <section
-      class="flex flex-col gap-2 p-3 border rounded-md border-slate-100 dark:border-slate-700"
-    >
-      <p class="m-0 text-sm font-semibold">
-        {{ t(`INFO_TITLE.${isSurvey ? 'survey' : kind}`) }}
+      </section>
+      <p v-if="followUps.length" class="m-0 text-[11px] text-slate-500">
+        {{ t('TOUCHES_NOTE') }}
       </p>
+    </template>
+
+    <!-- La información completa: a lo ancho, con cómo le llega -->
+    <template v-else>
       <template v-if="isSurvey">
+        <p class="m-0 text-sm font-semibold">{{ t('INFO_TITLE.survey') }}</p>
         <p class="m-0 text-xs text-slate-500">{{ t('SURVEY_HINT') }}</p>
         <ol class="m-0 text-sm ltr:pl-5 rtl:pr-5">
           <li v-for="q in questions" :key="q">{{ q }}</li>
@@ -233,57 +260,40 @@ export default {
         </p>
       </template>
       <template v-else>
+        <p class="m-0 text-sm font-semibold">
+          {{ t(`INFO_TITLE.${kind}`) }}
+        </p>
         <p class="m-0 text-xs text-slate-500">
           {{ t(`INFO_HINT.${kind}`) }}
         </p>
+        <DaliWriter
+          target="info"
+          :current="brief.content || ''"
+          :campaign-id="campaignId"
+          :save="save"
+          @use="setBrief('content', $event.text)"
+        />
+        <!-- Las ligas «con la información» se agregan solas al final (Skills::CampaignNotes#with_package_links) -->
+        <p v-if="packageLinks.length" class="m-0 text-[11px] text-slate-600">
+          {{ t('LINKS_AUTO', { names: packageLinks.join(', ') }) }}
+        </p>
         <textarea
-          rows="8"
+          class="!mb-0 !h-auto min-h-[26rem] text-sm leading-relaxed"
+          rows="18"
           :maxlength="maxContent"
           :value="brief.content"
           :placeholder="t(`INFO_PLACEHOLDER.${kind}`)"
           @input="setBrief('content', $event.target.value)"
         />
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <span class="text-[11px] text-slate-500">
-            {{ t('INFO_COUNT', { n: contentLength, max: maxContent }) }}
-          </span>
-          <span class="flex flex-wrap items-center gap-2">
-            <select
-              v-if="links.some(l => l.url)"
-              class="!mb-0 !w-auto !h-7 !py-0 text-xs"
-              value=""
-              @change="
-                insertLink($event.target.value);
-                $event.target.value = '';
-              "
-            >
-              <option value="">{{ t('INSERT_LINK') }}</option>
-              <option
-                v-for="(l, i) in links"
-                v-show="l.url"
-                :key="i"
-                :value="i"
-              >
-                {{ l.name || l.url }}
-              </option>
-            </select>
-            <button
-              v-if="kind === 'invite' && event"
-              type="button"
-              class="text-xs text-woot-600 hover:underline"
-              @click="fillFromEvent"
-            >
-              {{ t('FROM_EVENT') }}
-            </button>
-          </span>
-        </div>
+        <span class="text-[11px] text-slate-500">
+          {{ t('INFO_COUNT', { n: contentLength, max: maxContent }) }} ·
+          {{ t('INFO_PREVIEW') }}
+        </span>
         <p class="m-0 text-[11px] text-slate-500">{{ t('INFO_FILES') }}</p>
       </template>
-    </section>
-
-    <!-- Después -->
-    <p class="m-0 text-xs text-slate-600 dark:text-slate-300">
-      {{ t(`AFTER.${kind}`) }}
-    </p>
+      <p class="m-0 text-xs text-slate-600 dark:text-slate-300">
+        {{ t(`AFTER.${kind}`) }}
+      </p>
+    </template>
   </div>
 </template>

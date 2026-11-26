@@ -75,11 +75,12 @@ class TrackingCampaigns::Motor2Check
     item(:offer, 'ok', "Invita a «#{event.name}».")
   end
 
-  # Invitar: los recordatorios a confirmados (TrackingCampaigns::EventReminders.check).
+  # Invitar: los recordatorios (EventReminders.check); Ofrecer y Reactivar con vigencia: el «Último aviso» (LastCall.check).
   def reminders
-    return nil unless @brief['kind'] == 'invite'
+    return item(:reminders, *TrackingCampaigns::EventReminders.check(@campaign)) if @brief['kind'] == 'invite'
 
-    item(:reminders, *TrackingCampaigns::EventReminders.check(@campaign))
+    last_call = TrackingCampaigns::LastCall.check(@campaign)
+    last_call && item(:last_call, *last_call)
   end
 
   # Un evento de hoy todavía se puede invitar (hora de México).
@@ -156,6 +157,8 @@ class TrackingCampaigns::Motor2Check
   def channel
     inbox = @campaign.inbox
     return item(:channel, 'error', 'Elige la bandeja de WhatsApp o de correo.') unless inbox
+    # WhatsApp de prueba (rake whatsapp:test_inbox): sirve para armar y simular, no envía.
+    return item(:channel, 'error', "«#{inbox.name}» es de prueba: no envía. Elige una bandeja real para lanzar.") if sandbox?(inbox)
 
     item(:channel, 'ok', "Sale por «#{inbox.name}».")
   end
@@ -166,17 +169,10 @@ class TrackingCampaigns::Motor2Check
     @campaign.inbox.whatsapp? ? whatsapp_touches : email_touches
   end
 
-  # WhatsApp: a quien no ha escrito solo se le puede escribir con plantilla aprobada, en cada toque.
-  def whatsapp_touches
-    approved = approved_templates
-    (1..attempts).map do |n|
-      name = Array(@touches['templates'])[n - 1].presence
-      next item(:"touch_#{n}", 'error', "Toque #{n}: elige su plantilla de WhatsApp.") unless name
-      next item(:"touch_#{n}", 'error', "Toque #{n}: la plantilla «#{name}» no está aprobada o ya no existe.") unless approved.include?(name)
+  def whatsapp_touches = TrackingCampaigns::Motor2TouchCheck.new(@campaign, attempts).call
 
-      item(:"touch_#{n}", 'ok', "Toque #{n}: plantilla «#{name}».")
-    end
-  end
+  # WhatsApp de prueba (rake whatsapp:test_inbox): sirve para armar y simular, no envía.
+  def sandbox?(inbox) = inbox.whatsapp? && inbox.channel.provider_config.to_h['sandbox'].present?
 
   def email_touches
     subject = if @campaign.email_subject.present?
@@ -192,10 +188,6 @@ class TrackingCampaigns::Motor2Check
              item(:bodies, 'warning', "#{attempts - written} correo(s) sin texto: los escribe el agente con IA para cada contacto.")
            end
     [subject, body]
-  end
-
-  def approved_templates
-    Array(@campaign.inbox.channel.try(:message_templates)).select { |t| t['status'].to_s.casecmp('approved').zero? }.pluck('name')
   end
 
   def relay

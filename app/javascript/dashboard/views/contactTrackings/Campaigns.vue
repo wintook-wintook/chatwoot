@@ -109,7 +109,7 @@ export default {
           return false;
         }
         if (!query) return true;
-        const haystack = [c.name, c.template_name, c.inbox_name]
+        const haystack = [c.name, c.inbox_name]
           .filter(Boolean)
           .join(' ')
           .toLowerCase();
@@ -166,10 +166,7 @@ export default {
             </div>
           ),
         }),
-        col('template_name', 'AGENT', {
-          width: 180,
-          renderBodyCell: ({ row }) => row.template_name || '—',
-        }),
+        // «Agente IA» quitada: en las de Vendedor IA solo repetía «Campaña N · tipo» (su agente interno).
         col('inbox_name', 'CHANNEL', {
           width: 160,
           renderBodyCell: ({ row }) => row.inbox_name || '—',

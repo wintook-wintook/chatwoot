@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 # Campaña con IA · Reactivar y Recordar — en la muestra de la audiencia, lo último que compró o lo que le vence a cada
-# contacto (los primeros 30; TrackingCampaigns::ContactFacts), para ver a quién le va a llegar qué.
+# contacto (los de la página; TrackingCampaigns::ContactFacts), para ver a quién le va a llegar qué.
 module TrackingCampaigns::PreviewFacts
   KEYS = %w[last_purchase days_since due_what due_date due_amount].freeze
-  LIMIT = 30
+  LIMIT = 100 # una página de «A quién» (TrackingCampaigns::AudiencePage)
 
   module_function
 

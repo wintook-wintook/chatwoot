@@ -24,7 +24,6 @@ export default {
     event: { type: Object, default: null },
     campaignId: { type: Number, default: null },
     save: { type: Function, required: true },
-    attempts: { type: Number, default: 1 },
     // Invitar: cuándo y dónde salen del evento (InviteEvent), no se piden aquí.
     hiddenFacts: { type: Array, default: () => [] },
     // Encuesta con su propio paso de preguntas (SurveyQuestions): aquí no se piden.
@@ -319,11 +318,6 @@ export default {
       </button>
     </section>
 
-    <CampaignFiles
-      :campaign-id="campaignId"
-      :save="save"
-      :attempts="attempts"
-      :kind="kind"
-    />
+    <CampaignFiles :campaign-id="campaignId" :save="save" :kind="kind" />
   </div>
 </template>

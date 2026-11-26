@@ -18,23 +18,21 @@
 module ContactTrackings::AttemptFiles
   module_function
 
-  # Campaña con Vendedor IA: primero los archivos de la oferta para ese toque, luego los del vendedor.
+  # Campaña con Vendedor IA: primero los de la campaña (solo en el primer correo), luego los del vendedor para ese toque.
   def names_for(tracking, numero)
     (campaign_names(tracking, numero) + tracking.tracking_template.files_for_attempt(numero)).uniq
   end
 
   def campaign_names(tracking, numero)
+    # Los de la campaña no van por toque; en correo, los de «cuando muestre interés» van adjuntos al primer correo
+    # (el que lleva todo).
     campaign = tracking.tracking_campaign
-    return [] unless campaign&.motor2?
+    return [] unless campaign&.motor2? && first_email?(tracking, numero)
 
-    first_email = numero.to_i == 1 && tracking.inbox&.email?
-    campaign.offer_files.select { |f| goes_in?(f.rules.to_h, numero, first_email) }.map(&:name)
+    campaign.offer_files.select { |f| f.rules.to_h['interest'].present? }.map(&:name)
   end
 
-  # En ese toque; en correo, las de «cuando muestre interés» van adjuntas al primer correo (el que lleva todo).
-  def goes_in?(rules, numero, first_email)
-    Array(rules['attempts']).map(&:to_i).include?(numero.to_i) || (first_email && rules['interest'].present?)
-  end
+  def first_email?(tracking, numero) = numero.to_i == 1 && tracking.inbox&.email?
 
   def scope_for(tracking)
     campaign = tracking.tracking_campaign

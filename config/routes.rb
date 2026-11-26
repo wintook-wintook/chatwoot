@@ -420,6 +420,7 @@ Rails.application.routes.draw do
             collection do
               get :options
               post :preview
+              post :preview_csv
               post :test
               post :test_email
               post :cases
@@ -438,6 +439,7 @@ Rails.application.routes.draw do
               get :test_run
               post :test_run, action: :start_test_run
               delete :test_run, action: :stop_test_run
+              post :copy, to: 'motor2_campaigns/copies#create' # «Redactar con Dali» (TrackingCampaigns::CopyWriter)
             end
             resources :files, only: [:index, :create, :update, :destroy], controller: 'motor2_campaigns/files'
           end

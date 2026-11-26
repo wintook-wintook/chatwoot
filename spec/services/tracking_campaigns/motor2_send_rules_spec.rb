@@ -137,6 +137,16 @@ RSpec.describe 'Motor2 campaign send rules' do # rubocop:disable RSpec/DescribeC
       expect(Motor2::CampaignTouch.text(trk)).to be_nil
     end
 
+    it 'con la ventana abierta, cada toque sale con su texto escrito; vacío lo escribe la IA' do
+      camp = wa_campaign('touch_texts' => ['', '{{contacto}}, ¿pudiste ver lo de {{oferta}}?'])
+      expect(camp.brief['touch_texts']).to eq(['', '{{contacto}}, ¿pudiste ver lo de {{oferta}}?'])
+      trk = ContactTracking.new(account: account, contact: contact, inbox: wa, tracking_template: seller, tracking_campaign: camp,
+                                attempt_count: 1)
+      expect(Motor2::CampaignTouch.text(trk)).to be_nil # toque 1 vacío
+      trk.attempt_count = 2
+      expect(Motor2::CampaignTouch.text(trk)).to eq('Mario, ¿pudiste ver lo de Mantenimiento gratis?')
+    end
+
     it 'enviar_informacion manda la información tal cual después del turno; le_interesa sale hasta que ya la tiene' do # -- un recorrido
       camp = wa_campaign
       trk = tracking(camp)
@@ -177,6 +187,33 @@ RSpec.describe 'Motor2 campaign send rules' do # rubocop:disable RSpec/DescribeC
       expect(Motor2::Delivery).to receive(:send_reply)
         .with(trk, conversation, "Hola Mario: todo sobre Mantenimiento gratis\n\nRegistro: https://ejemplo.com/registro")
       after.each(&:call)
+    end
+
+    it 'Ofrecer: la liga de compra también sale sola al final, y no se repite si ya está en el texto' do
+      links = [{ 'name' => 'Comprar', 'url' => 'https://ejemplo.com/compra', 'use' => 'package' }]
+      skill = Motor2::Skills::Campaign.new(instance_double(Motor2::Runner, config: Motor2::Config.for(tracking(wa_campaign('links' => links))),
+                                                                           state: Motor2::State.new))
+      expect(skill.send(:with_package_links, 'Todo sobre la promo')).to eq("Todo sobre la promo\n\nComprar: https://ejemplo.com/compra")
+      expect(skill.send(:with_package_links, 'Compra aquí https://ejemplo.com/compra')).to eq('Compra aquí https://ejemplo.com/compra')
+    end
+
+    it 'la revisión avisa si un toque repite la plantilla de la apertura' do
+      wa.channel.update_columns(message_templates: [{ 'name' => 'promo', 'status' => 'APPROVED', 'components' => [] }]) # rubocop:disable Rails/SkipsModelValidations
+      camp = wa_campaign({}, 'attempts' => 2, 'templates' => %w[promo promo])
+      items = TrackingCampaigns::Motor2Check.new(camp).call.index_by { |i| i[:key] }
+      expect(items[:touch_1]).to include(level: 'ok', text: 'Apertura: plantilla «promo».')
+      expect(items[:touch_2]).to include(level: 'warning', text: 'Toque 1: usa la misma plantilla que «Apertura»; le llegaría lo mismo.')
+    end
+
+    it 'cada toque que escribe la IA es persuasivo según su número' do
+      expect(Motor2::CampaignPersuasion.note(2, 4)).to include('UN beneficio concreto')
+      expect(Motor2::CampaignPersuasion.note(3, 4)).to include('Otro ángulo')
+      expect(Motor2::CampaignPersuasion.note(4, 4)).to include('ÚLTIMO', 'nunca inventes urgencia')
+      expect(Motor2::CampaignPersuasion.note(3, 4, clicked: true)).to include('Ya dio clic')
+      # según el tipo: Recordar habla de lo que le vence; Encuesta, de que es un minuto; Reactivar, de lo que compró
+      expect(Motor2::CampaignPersuasion.note(2, 3, kind: 'renew')).to include('qué le vence y la fecha')
+      expect(Motor2::CampaignPersuasion.note(3, 3, kind: 'survey')).to include('agradécele')
+      expect(Motor2::CampaignPersuasion.first('reactivate')).to include('cliente de antes')
     end
 
     it 'la revisión avisa variables sin origen y un «Mensaje 2» vacío' do

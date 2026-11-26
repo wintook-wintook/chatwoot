@@ -36,7 +36,8 @@ class ContactTrackings::BulkAssignPreviewService
 
   # inbox_id: Campaña con Vendedor IA, el canal es de la campaña (no del agente).
   def initialize(account:, current_user:, filter_payload:, template_id:, # rubocop:disable Metrics/ParameterLists
-                 skip_active: true, excluded_contact_ids: [], inbox_id: nil)
+                 skip_active: true, excluded_contact_ids: [], inbox_id: nil, limit: PREVIEW_LIMIT)
+    @limit                = limit # Campaña con Vendedor IA: más (TrackingCampaigns::AudiencePage la pagina)
     @inbox_id             = inbox_id
     @account              = account
     @current_user         = current_user
@@ -57,7 +58,7 @@ class ContactTrackings::BulkAssignPreviewService
     total = resolved[:count]
     # Audiencia demasiado grande para clasificar/listar → solo el total (counts_only).
     # El usuario debe reducir el filtro (igual no puede confirmar sobre el límite).
-    return counts_only_result(inbox, total) if total > PREVIEW_LIMIT
+    return counts_only_result(inbox, total) if total > @limit
 
     classified = classify_audience(inbox)
 
@@ -112,6 +113,7 @@ class ContactTrackings::BulkAssignPreviewService
       name: contact.name,
       phone_number: contact.phone_number,
       email: contact.email,
+      company: contact.additional_attributes.to_h['company_name'].presence,
       bucket: bucket,
       reason: reason,
       excluded: @excluded_contact_ids.include?(contact.id)

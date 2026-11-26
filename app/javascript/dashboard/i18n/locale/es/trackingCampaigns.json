@@ -8,7 +8,7 @@
     "LOADING": "Cargando campañas…",
     "EMPTY_TITLE": "Todavía no hay campañas.",
     "EMPTY_HINT": "Crea una con el botón «Agregar campaña» o asigna un Agente IA de forma masiva desde Contactos.",
-    "SEARCH_PLACEHOLDER": "Buscar por nombre, Agente IA o canal…",
+    "SEARCH_PLACEHOLDER": "Buscar por nombre o canal…",
     "FILTER_STATUS_ALL": "Todos los estados",
     "NO_RESULTS": "No hay campañas que coincidan con el filtro.",
     "DELETE": "Borrar campaña",

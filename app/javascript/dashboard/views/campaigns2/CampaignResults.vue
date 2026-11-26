@@ -462,7 +462,13 @@ export default {
               :key="row.n"
               class="border-t border-slate-50 dark:border-slate-700"
             >
-              <td class="py-1">{{ t('TOUCHES.N', { n: row.n }) }}</td>
+              <td class="py-1">
+                {{
+                  row.n === 1
+                    ? t('TOUCHES.OPENER')
+                    : t('TOUCHES.N', { n: row.n - 1 })
+                }}
+              </td>
               <td class="py-1">{{ row.sent }}</td>
               <td class="py-1">
                 {{ row.replied }}

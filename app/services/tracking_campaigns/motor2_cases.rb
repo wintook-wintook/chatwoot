@@ -13,7 +13,8 @@ class TrackingCampaigns::Motor2Cases
   CAMPAIGN_TOOLS = %w[enviar_informacion reenviar_informacion mandar_liga le_interesa ya_lo_hizo confirmar_asistencia no_esta_vez futuras
                       no_contactar no_le_interesa mas_adelante guardar_respuesta].freeze
 
-  def initialize(agent, answers, opener: nil)
+  def initialize(agent, answers, opener: nil, campaign: nil)
+    @campaign = campaign # la guardada: sus imágenes y archivos (Motor2::Probe)
     @agent = agent
     @answers = answers
     @opener = opener.to_s.strip.presence || 'Hola 👋 Te escribimos de parte de la empresa. ¿Te gustaría conocer más?'
@@ -25,7 +26,8 @@ class TrackingCampaigns::Motor2Cases
     item = cases.find { |c| c[:key] == key.to_s }
     return { key: key, ok: false, reason: 'Ese caso ya no aplica a la campaña.' } unless item
 
-    result = Motor2::Probe.new(@agent, messages: item[:messages], state: item[:state] || {}, answers: item[:answers] || @answers).call
+    result = Motor2::Probe.new(@agent, messages: item[:messages], state: item[:state] || {}, answers: item[:answers] || @answers,
+                                       campaign: @campaign).call
     return { key: key, ok: false, reason: result[:error].to_s } if result[:error]
 
     tools = Array(result.dig(:trace, 'tools')).select { |t| t['ok'] }.pluck('name')

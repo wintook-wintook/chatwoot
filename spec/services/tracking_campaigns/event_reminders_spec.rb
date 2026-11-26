@@ -48,6 +48,32 @@ RSpec.describe TrackingCampaigns::EventReminders do
     expect(text).to include('https://zoom.us/j/1')
   end
 
+  it 'con la ventana abierta lo escribe la IA para ese contacto; con «Mensaje fijo» o si la IA falla, el texto' do
+    confirmed = tracking('Logrado: confirmó')
+    allow(Motor2::LateMessage).to receive_messages(window_open?: true, deliver: true)
+    writer = instance_double(TrackingCampaigns::ReminderWriter, for_contact: 'Mario, mañana te esperamos en Hotel Fiesta')
+    allow(TrackingCampaigns::ReminderWriter).to receive(:new).and_return(writer)
+
+    expect(described_class.text_for(campaign, event, confirmed, 'day_before', pending: false)).to eq('Mario, mañana te esperamos en Hotel Fiesta')
+    allow(writer).to receive(:for_contact).and_return(nil)
+    expect(described_class.text_for(campaign, event, confirmed, 'day_before', pending: false)).to include('Lanzamiento')
+
+    campaign.update!(brief: campaign.brief.merge('reminders' => { 'day_ai' => false, 'day_text' => 'Hola {{nombre}}, mañana es {{evento}}' }))
+    expect(TrackingCampaigns::EventReminderSettings.sanitize('day_ai' => false)).to include('day_ai' => false, 'day_pending_ai' => true)
+    expect(described_class.text_for(campaign, event, confirmed, 'day_before', pending: false)).to eq('Hola Mario, mañana es Lanzamiento')
+  end
+
+  it 'la IA al momento: con sus datos reales y, si no la puso, la liga al final; el fijo de Dali lleva {{nombre}} y {{liga}}' do
+    writer = TrackingCampaigns::ReminderWriter.new(campaign, kind: 'hour_before', pending: false)
+    allow(writer).to receive_messages(available?: true, chat: { 'texto' => 'Mario, en una hora empieza **Lanzamiento**' })
+    expect(writer.for_contact(tracking('Logrado: confirmó'), { 'nombre' => 'Mario', 'liga' => 'https://zoom.us/j/1' }))
+      .to eq("Mario, en una hora empieza *Lanzamiento*\nhttps://zoom.us/j/1")
+
+    draft = TrackingCampaigns::ReminderWriter.new(campaign, kind: 'day_before', pending: true)
+    allow(draft).to receive_messages(available?: true, chat: { 'texto' => 'Hola {{contacto}}, mañana es {{evento}}' })
+    expect(draft.draft).to eq(text: 'Hola {{nombre}}, mañana es {{evento}} {{liga}}')
+  end
+
   it 'un día antes también a los que no han contestado (última invitación, con la liga de registro); una hora antes solo confirmados' do
     campaign.update!(brief: campaign.brief.merge('offer_goal' => 'external',
                                                  'links' => [{ 'name' => 'Registro', 'url' => 'https://zoom.us/r', 'use' => 'package' }]))
