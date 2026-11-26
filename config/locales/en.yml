@@ -588,6 +588,7 @@ en:
     bot_note: '🗑️ %{name} deleted the appointment from the calendar. The customer was not notified.'
   agenda_items:
     already_linked: 'That event already has a scheduled task'
+    invalid_emails: 'Invalid guest email: %{emails}'
     all_day: 'An all-day event has no time: it stays in Google only'
     untitled: 'Untitled'
   access_roles:

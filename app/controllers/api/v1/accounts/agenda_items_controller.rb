@@ -16,6 +16,7 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
   include ItemConversionActions # pasarla a tarea
   include TaskReportGuard
   include MeetingParticipantsActions # participantes: «No puedo ir» y avisos
+  include AttendeeEmailsParams # invitados por correo (F3 ventana del calendario)
 
   CASES_LIMIT = 50
   FROZEN_MSG = 'Ticket cerrado: no se puede modificar. Reábrelo si necesitas cambiarlo.'
@@ -23,6 +24,7 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
   before_action :set_meeting, only: %i[update destroy to_task] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
   before_action :block_if_frozen, only: %i[update destroy to_task] # rubocop:disable Rails/LexicallyScopedActionFilter -- schedule/to_task: ItemConversionActions
   before_action :lock_closed_meeting, only: :update # realizada, no asistió o cancelada: solo lectura
+  before_action :reject_invalid_attendee_emails, only: %i[create update] # F3: correos mal escritos → 422
 
   def index
     # Las suyas: como responsable o como participante (Cases::Meetings::Participants).
@@ -152,12 +154,14 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
   end
 
   def create_attrs
-    params.permit(:title, :description, :starts_at, :ends_at, :location, :is_visit, :calendar_id, :google_event_id,
-                  attendee_emails: []).to_h.symbolize_keys
+    params.permit(:title, :description, :starts_at, :ends_at, :location, :is_visit, :calendar_id, :google_event_id)
+          .to_h.symbolize_keys.merge(attendee_emails: clean_attendee_emails)
   end
 
   def update_attrs
     attrs = params.permit(:title, :description, :starts_at, :ends_at, :location, :status, :contact_id)
+    # feat/ventana_evento_calendario F3 — invitados por correo también al editar.
+    attrs[:attendee_emails] = clean_attendee_emails if params.key?(:attendee_emails)
     attrs.delete(:status) unless CaseMeeting.statuses.key?(attrs[:status].to_s)
     attrs.delete(:contact_id) if @meeting.case_ticket
     attrs[:contact_id] = visible_contacts.find(attrs[:contact_id]).id if attrs[:contact_id].present?
@@ -197,7 +201,8 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
 
   # Si la ve por ser participante (no responsable) y quiénes participan.
   def participation_json(meeting)
-    { participating: meeting.organizer_id != current_user.id, participants: participants_json(meeting) }
+    { participating: meeting.organizer_id != current_user.id, participants: participants_json(meeting),
+      attendee_emails: Array(meeting.attendee_emails) }
   end
 
   def ref(record)

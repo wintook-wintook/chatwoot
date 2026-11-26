@@ -20,6 +20,9 @@ export default {
     kind: { type: String, default: 'task' }, // task | meeting
     busy: { type: Boolean, default: false },
     error: { type: String, default: '' },
+    // feat/ventana_evento_calendario F5 — sin «¿Prefieres reprogramarla?» (p. ej. la tarea es
+    // de un compañero y desde aquí no se edita).
+    allowReschedule: { type: Boolean, default: true },
   },
   emits: ['submit', 'close', 'reschedule'],
   data() {
@@ -52,7 +55,7 @@ export default {
     show(open) {
       if (!open) return;
       this.form = this.emptyForm();
-      this.step = this.isMeeting ? 'ask' : 'form';
+      this.step = this.isMeeting && this.allowReschedule ? 'ask' : 'form';
       if (!this.reasons.length) this.load();
     },
   },

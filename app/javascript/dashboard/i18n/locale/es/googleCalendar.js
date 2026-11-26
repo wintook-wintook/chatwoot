@@ -192,6 +192,10 @@ export default {
       EVENT_MODAL: {
         TITLE: 'Agenda de {name}',
         READ_ONLY: 'Solo lectura: es un evento del calendario de tu compañero.',
+        // feat/ventana_evento_calendario F5
+        CAN_EDIT:
+          'Es del calendario de tu compañero. Te dio «Hacer cambios»: puedes cancelarlo o eliminarlo.',
+        DELETE_DESC: 'Se borra del calendario de {name}.',
         PRIVATE: 'Tu compañero no comparte los detalles de este evento.',
         WHEN: 'Cuándo',
         WHERE: 'Lugar',
@@ -249,8 +253,37 @@ export default {
         'Sin Google conectado: lo que agendes queda solo en Kontrolya.',
       LEGEND_NO_TASK: 'Borde punteado: evento sin tarea',
     },
+    // feat/ventana_evento_calendario F2 — un solo buscador de participantes.
+    PEOPLE: {
+      LABEL: 'Agregar agentes o invitados',
+      LABEL_AGENTS: 'Agregar agentes',
+      LABEL_GUESTS: 'Invitados',
+      PLACEHOLDER_GUESTS: 'Busca un contacto o escribe un correo',
+      AGENTS: 'Agentes',
+      PLACEHOLDER: 'Escribe un nombre o un correo',
+      PLACEHOLDER_AGENTS: 'Escribe el nombre de un agente',
+      HINT: 'Separa varios correos con comas. También puedes pegarlos todos juntos.',
+      AGENT: 'Agente',
+      GUEST: 'Invitado',
+      CONTACT: 'contacto',
+      INVITE_EMAIL: 'Invitar «{email}» por correo',
+      INVITE_CLIENT: 'Invitar al cliente: {name} · {email}',
+      INVITE: 'Invitar',
+      INVALID: '«{text}» no es un correo válido',
+      INVALID_SUBMIT:
+        'Hay un correo mal escrito en Participantes: corrígelo o bórralo.',
+      BUSY: '● ocupado: {what}',
+      DECLINED: 'No puede ir',
+      REMOVE: 'Quitar',
+    },
+    // feat/ventana_evento_calendario F1
+    EVENT_TABS: {
+      CLIENT: 'Cliente',
+      PEOPLE: 'Participantes',
+    },
     EDIT_EVENT: {
-      TITLE: 'Editar Evento',
+      TITLE: 'Editar evento',
+      TITLE_ITEM: 'Editar tarea agendada',
       SUBMIT: 'Guardar cambios',
       SUCCESS: 'Evento actualizado exitosamente',
       ERROR: 'No se pudo actualizar el evento. Inténtalo de nuevo.',

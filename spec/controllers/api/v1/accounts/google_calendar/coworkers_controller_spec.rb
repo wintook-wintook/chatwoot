@@ -100,6 +100,31 @@ RSpec.describe 'Google Calendar coworkers API', type: :request do
       expect(rows.first).not_to have_key('google_email')
       expect(google).to have_received(:list_shared_events).once
     end
+
+    # feat/ventana_evento_calendario F5 — lo que hace falta para cancelar o eliminar.
+    it 'marca la serie, cuántos invitados tiene y si es una tarea agendada (sigue agendada)' do
+      meeting = CaseMeeting.create!(account: account, title: 'Visita', organizer: beto, google_event_id: 'b1',
+                                    starts_at: 1.day.from_now, ends_at: 25.hours.from_now)
+      CaseMeeting.create!(account: account, title: 'Vieja', organizer: beto, google_event_id: 'b2', status: :cancelled,
+                          starts_at: 1.day.from_now, ends_at: 25.hours.from_now)
+      when_ = { 'start' => { 'dateTime' => '2026-11-26T08:00:00-06:00' }, 'end' => { 'dateTime' => '2026-11-26T09:00:00-06:00' } }
+      google_answers(
+        'beto@gmail.com' => { code: 200, access_role: 'writer',
+                              items: [{ 'id' => 'b1', 'summary' => 'Visita', **when_ },
+                                      { 'id' => 'b2', 'summary' => 'Vieja', **when_ },
+                                      { 'id' => 's_1', 'summary' => 'Junta', 'recurringEventId' => 's', **when_,
+                                        'attendees' => [{ 'email' => 'beto@gmail.com', 'organizer' => true },
+                                                        { 'email' => 'x@y.com' }, { 'email' => 'sala@r.com', 'resource' => true }] }] }
+      )
+
+      get "#{base_url}/coworkers/events", params: { agent_ids: [beto.id] }, headers: viewer.create_new_auth_token
+
+      events = response.parsed_body['coworkers'].first['events'].index_by { |e| e['id'] }
+      expect(events['b1']['agenda_item']).to include('id' => meeting.id, 'title' => 'Visita', 'series' => false,
+                                                     'has_client' => false)
+      expect(events['b2']).not_to have_key('agenda_item')
+      expect(events['s_1']).to include('recurring_event_id' => 's', 'guests' => 1)
+    end
   end
 
   describe 'GET /availability (D1)' do

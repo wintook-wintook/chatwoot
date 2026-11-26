@@ -284,6 +284,12 @@ export default {
                 summary: e.summary,
                 location: e.location,
                 private: e.private,
+                // feat/ventana_evento_calendario F5 (D7) — cancelar o eliminar con su permiso.
+                eventId: e.id,
+                recurringEventId: e.recurring_event_id || null,
+                guests: e.guests || 0,
+                agendaItem: e.agenda_item || null,
+                canSchedule: !!row.can_schedule,
               },
             },
           });
