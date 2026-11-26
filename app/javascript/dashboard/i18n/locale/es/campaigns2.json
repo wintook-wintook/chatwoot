@@ -849,7 +849,12 @@
       "ERROR": "No se pudo correr.",
       "RUN": "Correr",
       "TOOLS": "hizo: {names}",
-      "SAYS": "«{message}»"
+      "SAYS": "«{message}»",
+      "STALE": "Cambiaste la campaña después de correrlos: vuelve a correr los casos.",
+      "NOT_RUN": "No has corrido los Casos (a la derecha, «Correr todos»): son la forma de ver cómo contesta antes de lanzar.",
+      "SOME_BAD": "{bad} de {n} casos salieron mal: revísalos a la derecha.",
+      "ALL_OK": "Los Casos salieron bien ({n} de {n}).",
+      "PARTIAL": "Corriste {done} de {n} casos: corre los demás para ver todo antes de lanzar."
     },
     "INVITE": {
       "KIND": "Tipo:",
@@ -894,7 +899,7 @@
         "audience": "Por qué canal y a quién le llega la invitación.",
         "messages": "La invitación, la información completa, los toques a quien no contesta, los recordatorios del evento y qué pasa si contestó y se calla.",
         "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
-        "review": "Cuándo sale, la revisión y las pruebas (los Casos corren solos)."
+        "review": "Cuándo sale, la revisión y las pruebas («Correr todos» en los Casos)."
       },
       "EDIT_EVENT": "Editar evento",
       "EVENT_ERROR": "No se pudo abrir el evento"
@@ -939,7 +944,7 @@
         "audience": "Por qué canal y a quién le llega la oferta.",
         "messages": "La apertura, la información completa, los toques a quien no contesta, qué pasa si contestó y se calla y, con vigencia, el último aviso.",
         "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
-        "review": "Cuándo sale, la revisión y las pruebas (los Casos corren solos)."
+        "review": "Cuándo sale, la revisión y las pruebas («Correr todos» en los Casos)."
       },
       "PRODUCTS_TITLE": "¿Qué ofreces?",
       "PRODUCTS_HINT": "Busca en tu Catálogo: cada producto llega con su nombre, precio, descripción y foto (la foto se agrega sola como imagen de la oferta). Pon el precio de promoción o el % de descuento.",
@@ -998,7 +1003,7 @@
         "interest": "Qué hace la IA cuando le interesa volver. Elige una opción; abajo sale solo lo que necesita.",
         "messages": "La apertura (puede usar {{ultima_compra}}), la información completa, los toques, qué pasa si contestó y se calla y, con vigencia, el último aviso.",
         "replies": "Qué contesta en cada momento y la etiqueta que le queda al contacto. Ya vienen listas; personaliza solo si quieres.",
-        "review": "Cuándo sale, la revisión y las pruebas (los Casos corren solos)."
+        "review": "Cuándo sale, la revisión y las pruebas («Correr todos» en los Casos)."
       },
       "DAYS": "No compran desde hace (días)",
       "CATEGORY": "De la categoría (opcional)",
@@ -1070,7 +1075,7 @@
         "audience": "Por qué canal y a quién: de entrada, los que atendiste en los últimos días.",
         "messages": "La invitación a contestar (en correo, la primera pregunta va con botones), los toques a quien no contesta y qué pasa si empezó y se calló.",
         "replies": "Qué contesta al terminar o si no quiere contestar, y la etiqueta que le queda.",
-        "review": "Cuándo sale, la revisión y las pruebas (los Casos corren solos)."
+        "review": "Cuándo sale, la revisión y las pruebas («Correr todos» en los Casos)."
       },
       "WHO": "A quién le preguntas",
       "QUESTIONS_TITLE": "Las preguntas",

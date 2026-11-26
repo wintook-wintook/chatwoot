@@ -42,7 +42,7 @@ import SurveyLow from './SurveyLow.vue';
 import RenewDue from './RenewDue.vue';
 import RenewPay from './RenewPay.vue';
 import FollowUpPlan from 'dashboard/views/readyAgents/FollowUpPlan.vue';
-import { fillTemplate, sampleValues } from './campaignFlow';
+import { fillTemplate, sampleValues, signatureOf } from './campaignFlow';
 
 // En «Revisar»: probar la campaña completa, no solo al vendedor.
 const TEST_TABS = ['cases', 'simulate', 'chat', 'real'];
@@ -210,6 +210,7 @@ export default {
       previewLoading: false,
       audienceKey: 0, // sube para que «A quién» (AudienceList) vuelva a contar
       checks: [],
+      casesRun: null, // los Casos corridos (CampaignCases): siguen al regresar a «Revisar»
       checkError: false,
       loadFailed: false, // editando, no se pudo traer la campaña: no se guarda (crearía otra)
       touchTab: 1,
@@ -578,6 +579,40 @@ export default {
             at: fmt(`${this.form.brief.valid_until}T23:59`),
           });
         return this.t('REVIEW.NO_END');
+      };
+    },
+    // La revisión del servidor y, aparte, cómo salieron los Casos (solo avisa; no impide lanzar).
+    reviewItems() {
+      return this.checks.length ? [...this.checks, this.casesItem] : [];
+    },
+    casesItem() {
+      const run = this.casesRun;
+      const results = Object.values(run?.results || {});
+      if (!results.length)
+        return {
+          key: 'cases',
+          level: 'warning',
+          text: this.t('CASES.NOT_RUN'),
+        };
+      if (run.signature !== signatureOf(this.chatPayload()))
+        return { key: 'cases', level: 'warning', text: this.t('CASES.STALE') };
+      const bad = results.filter(r => !r.ok).length;
+      if (!bad && run.total && results.length < run.total)
+        return {
+          key: 'cases',
+          level: 'warning',
+          text: this.t('CASES.PARTIAL', { done: results.length, n: run.total }),
+        };
+      if (bad)
+        return {
+          key: 'cases',
+          level: 'warning',
+          text: this.t('CASES.SOME_BAD', { bad, n: results.length }),
+        };
+      return {
+        key: 'cases',
+        level: 'ok',
+        text: this.t('CASES.ALL_OK', { n: results.length }),
       };
     },
     readyCount() {
@@ -2368,7 +2403,7 @@ export default {
             </div>
             <ul class="flex flex-col gap-1 m-0 list-none">
               <li
-                v-for="c in checks"
+                v-for="c in reviewItems"
                 :key="c.key"
                 class="flex items-start gap-2 text-sm"
                 :class="levelClass(c.level)"
@@ -2460,7 +2495,7 @@ export default {
               v-if="testTab === 'cases'"
               :payload="chatPayload"
               :disabled="!hasChannel"
-              :auto-run="guided"
+              :stored.sync="casesRun"
             />
             <!-- Invitar: simular y la prueba real, juntas en «Más pruebas» -->
             <template v-else-if="testTab === 'more'">

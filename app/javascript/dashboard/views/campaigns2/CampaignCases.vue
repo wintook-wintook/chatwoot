@@ -1,20 +1,23 @@
 <!--
   Campaña con IA — «Casos»: las pruebas que se arman solas con lo que tiene la campaña en pantalla
   (TrackingCampaigns::Motor2Cases): «sí me interesa», una duda, la palabra clave, «no puedo esta vez», «no me manden
-  nada», algo de otro tema, un «gracias», la liga que no le llegó… Se corren una por una con la IA (sin mandar ni
-  guardar nada) y cada una dice si salió bien, qué contestó y qué hizo.
+  nada», algo de otro tema, un «gracias», la liga que no le llegó… Se corren cuando lo pides («Correr todos» o uno),
+  una por una con la IA (sin mandar ni guardar nada), y cada una dice si salió bien, qué contestó y qué hizo.
+  stored (.sync): los resultados y la huella de la campaña con la que corrieron; la pantalla los guarda, así que al
+  regresar se siguen viendo, y si la campaña cambió avisa que hay que volver a correrlos.
 -->
 <script>
 import Motor2CampaignsAPI from 'dashboard/api/motor2Campaigns';
+import { signatureOf } from './campaignFlow';
 
 export default {
   name: 'CampaignCases',
   props: {
     payload: { type: Function, required: true },
     disabled: { type: Boolean, default: false },
-    // Invitar: al abrir «Revisar» corren solos (una vez).
-    autoRun: { type: Boolean, default: false },
+    stored: { type: Object, default: null },
   },
+  emits: ['update:stored'],
   data() {
     return {
       cases: [],
@@ -31,10 +34,18 @@ export default {
     passed() {
       return Object.values(this.results).filter(r => r.ok).length;
     },
+    // Corrieron con otra versión de la campaña.
+    stale() {
+      return (
+        this.done > 0 &&
+        !!this.stored &&
+        this.stored.signature !== signatureOf(this.payload())
+      );
+    },
   },
   async mounted() {
     await this.load();
-    if (this.autoRun && !this.disabled && this.cases.length) this.runAll();
+    if (this.stored?.results) this.results = { ...this.stored.results };
   },
   methods: {
     t(key, params) {
@@ -46,7 +57,6 @@ export default {
       try {
         const { data } = await Motor2CampaignsAPI.cases(this.payload());
         this.cases = data.cases || [];
-        this.results = {};
       } catch (e) {
         this.error = true;
       } finally {
@@ -64,6 +74,19 @@ export default {
       } catch (e) {
         this.$set(this.results, key, { ok: false, reason: this.t('ERROR') });
       }
+      this.remember();
+    },
+    async rebuild() {
+      await this.load();
+      this.results = {};
+      this.remember();
+    },
+    remember() {
+      this.$emit('update:stored', {
+        signature: signatureOf(this.payload()),
+        results: { ...this.results },
+        total: this.cases.length,
+      });
     },
     async runAll() {
       this.running = true;
@@ -105,7 +128,7 @@ export default {
         size="small"
         variant="clear"
         :disabled="running"
-        @click="load"
+        @click="rebuild"
       >
         {{ t('RELOAD') }}
       </woot-button>
@@ -113,6 +136,7 @@ export default {
         {{ t('SCORE', { ok: passed, n: cases.length }) }}
       </span>
     </div>
+    <p v-if="stale" class="m-0 text-xs text-amber-700">{{ t('STALE') }}</p>
     <p v-if="disabled" class="m-0 text-xs text-slate-500">
       {{ $t('CAMPAIGNS2.PREVIEW.PICK_CHANNEL') }}
     </p>

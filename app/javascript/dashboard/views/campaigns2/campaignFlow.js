@@ -89,3 +89,14 @@ export const fillCampaignText = (text, samples = {}) =>
     .replace(/\{\{\s*que_vence\s*\}\}/gi, samples.due_what || '')
     .replace(/\{\{\s*vence\s*\}\}/gi, samples.due_date || '')
     .replace(/\{\{\s*monto\s*\}\}/gi, samples.due_amount || '');
+
+// Una «huella» corta de lo que se prueba (la campaña en pantalla): si cambia, los Casos ya corridos quedan viejos.
+export const signatureOf = value => {
+  const text = JSON.stringify(value || {});
+  let hash = 5381;
+  for (let i = 0; i < text.length; i += 1) {
+    // eslint-disable-next-line no-bitwise
+    hash = ((hash << 5) + hash + text.charCodeAt(i)) | 0;
+  }
+  return String(hash);
+};
