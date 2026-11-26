@@ -615,6 +615,8 @@
       "REQUIRED_MARK": "*",
       "INBOX_CHOOSE": "Elige el canal",
       "RETRY_VALUE": "Tiempo entre intentos",
+      "GROUP_SECONDS": "Esperar mensajes seguidos (segundos)",
+      "GROUP_SECONDS_HELP": "Si el cliente manda varios mensajes seguidos, el agente espera estos segundos y los contesta juntos en una sola respuesta. 0 = contesta cada mensaje al momento, como siempre.",
       "RETRY_UNIT": "Intervalo",
       "ATTEMPTS": "Núm. intentos",
       "UNIT_MINUTES": "Minutos",

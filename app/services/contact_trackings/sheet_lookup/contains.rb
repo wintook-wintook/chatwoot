@@ -43,8 +43,16 @@ module ContactTrackings::SheetLookup::Contains
     []
   end
 
+  # El texto con los valores de los sinónimos que nombra (ver SheetSynonyms). Lo usan «~?» y,
+  # en SheetLookup#mentions?, «=?».
+  def with_synonyms(text)
+    return text if @synonyms.blank?
+
+    (@expanded ||= {})[text] ||= ContactTrackings::SheetSynonyms.expand(text, @synonyms)
+  end
+
   def in_vocabulary(text, vocabulario)
-    words(text).select { |w| vocabulario.include?(w) }.uniq
+    words(with_synonyms(text)).select { |w| vocabulario.include?(w) }.uniq
   end
 
   def contains_word?(wanted, value)

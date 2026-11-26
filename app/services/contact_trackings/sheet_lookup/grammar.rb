@@ -51,10 +51,17 @@ module ContactTrackings::SheetLookup::Grammar
   def parse_filter(cond)
     _, column, op, wanted = cond.match(L::OPERATOR_RE).to_a.map { |part| part.to_s.strip }
     return nil if column.blank? || wanted.blank?
-    return L::Filter.new(column: column, op: op, wanted: L::ASK) if wanted == L::ASK
+    return ask_filter(column, op, wanted) if ask_word?(wanted)
     return numeric_filter(column, op, wanted) if L::NUMERIC_OPS.include?(op)
 
     L::Filter.new(column: column, op: op, wanted: wanted.split(',').map(&:strip).compact_blank)
+  end
+
+  def ask_word?(wanted) = wanted.casecmp?(L::ASK) || wanted.casecmp?(L::ASK_OPTIONAL)
+
+  # «?» u «?opcional»: el valor sale de la conversación.
+  def ask_filter(column, operator, wanted)
+    L::Filter.new(column: column, op: operator, wanted: L::ASK, optional: wanted.casecmp?(L::ASK_OPTIONAL))
   end
 
   # «capacidad_t>=40»: un solo número. «>=grande» no es una condición válida.

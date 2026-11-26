@@ -54,7 +54,16 @@ class ContactTrackings::Ficha::Updater
 
   def resources
     { 'items' => @items, 'confirmed_at' => Time.current.iso8601,
-      'files' => @settings.file_rules || @template.file_rules, 'attempts' => attempts }.compact
+      'files' => @settings.file_rules || @template.file_rules, 'attempts' => attempts,
+      ContactTrackings::MessageBurst::KEY => group_seconds }.compact
+  end
+
+  # Mensajes seguidos (ContactTrackings::MessageBurst): 0 la apaga; sin el campo, lo que tenía.
+  def group_seconds
+    return @template.resources.to_h[ContactTrackings::MessageBurst::KEY] unless @params.key?(:group_seconds)
+
+    segundos = @params[:group_seconds].to_i.clamp(0, ContactTrackings::MessageBurst::MAX_SECONDS)
+    segundos.positive? ? segundos : nil
   end
 
   def attempts

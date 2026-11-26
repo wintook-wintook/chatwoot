@@ -31,8 +31,8 @@ RSpec.describe ContactTrackings::SheetLookup do
       spec = described_class.parse_all('x {{hoja_buscar: Servicio Gruas | remolque=TP-64,TP-63; estatus=activo | Calendar_ID, peso_max_t}}').first
 
       expect(spec.sheet).to eq('Servicio Gruas')
-      expect(spec.filters.map(&:to_h)).to eq([{ column: 'remolque', op: '=', wanted: %w[TP-64 TP-63] },
-                                              { column: 'estatus', op: '=', wanted: ['activo'] }])
+      expect(spec.filters.map { |f| f.to_h.compact }).to eq([{ column: 'remolque', op: '=', wanted: %w[TP-64 TP-63] },
+                                                             { column: 'estatus', op: '=', wanted: ['activo'] }])
       expect(spec.returns).to eq(%w[Calendar_ID peso_max_t])
     end
 
@@ -337,6 +337,36 @@ RSpec.describe ContactTrackings::SheetLookup do
         result = en_platica('Inventario | COLOR~? | TIPO', [:outgoing, 'Tenemos GRIS y BLANCO'], [:incoming, '¿y en café?'])
         expect(result.rows.pluck('TIPO')).to eq(['Escape'])
         expect(result.criteria).to include('COLOR contiene cafe')
+      end
+    end
+
+    describe 'en la plática: «?opcional» y [SINÓNIMOS]' do
+      let(:conversation) { create(:conversation, account: account) }
+
+      def buscar(inner, texto, synonyms: nil)
+        create(:message, conversation: conversation, account: account, message_type: :incoming, content: texto)
+        described_class.new(account, described_class.parse(inner), conversation: conversation, synonyms: synonyms).call
+      end
+
+      it '«?opcional» sin el dato no filtra ni pregunta; con el dato, filtra' do
+        expect(buscar('Inventario | MARCA=?; MODELO>=?opcional | TIPO', '¿tienen nissan?').rows.pluck('TIPO'))
+          .to eq(%w[Versa March])
+        expect(buscar('Inventario | MARCA=?; MODELO>=?opcional | TIPO', 'nissan del 2020 en adelante').rows.pluck('TIPO'))
+          .to eq(['Versa'])
+      end
+
+      it 'el «?» de siempre sigue preguntando' do
+        expect(buscar('Inventario | MARCA=?; MODELO>=? | TIPO', '¿tienen nissan?').status).to eq(:needs_value)
+      end
+
+      it 'un sinónimo declarado cuenta como el valor, también en plural' do
+        sinonimos = { 'NISSAN' => ['datsun'] }
+        expect(buscar('Inventario | MARCA=? | TIPO', '¿algún datsun?', synonyms: sinonimos).rows.pluck('TIPO')).to eq(%w[Versa March])
+        expect(buscar('Inventario | MARCA=? | TIPO', '¿tienen nissans?', synonyms: sinonimos).rows.pluck('TIPO')).to eq(%w[Versa March])
+      end
+
+      it 'sin sinónimos declarados nada cambia: el plural no empata' do
+        expect(buscar('Inventario | MARCA=? | TIPO', '¿tienen nissans?').status).to eq(:needs_value)
       end
     end
 

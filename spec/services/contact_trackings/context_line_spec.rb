@@ -23,4 +23,11 @@ RSpec.describe ContactTrackings::ContextLine do
     expect(described_class.brief('Me interesa el Jetta')).to eq('Me interesa el Jetta')
     expect(described_class.brief('a' * 200)).to eq("#{'a' * 117}...")
   end
+
+  it 'recent?: lo de hace más de 12 horas ya no es de esta plática' do
+    ahora = Time.current
+    actual = Struct.new(:created_at).new(ahora)
+    expect(described_class.recent?(Struct.new(:created_at).new(ahora - 2.hours), actual)).to be(true)
+    expect(described_class.recent?(Struct.new(:created_at).new(ahora - 1.day), actual)).to be(false)
+  end
 end

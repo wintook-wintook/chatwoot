@@ -502,6 +502,15 @@ RSpec.describe ContactTrackings::Assistant::ValidatorService do
       expect(codigos(r, :degrading)).not_to include(:canned_group_too_small)
     end
 
+    # 25/11/2026: con UNA sola respuesta el motor la usa sin umbral.
+    it 'no avisa cuando el grupo tiene una sola respuesta' do
+      create(:canned_response, account: account, short_code: 'visita')
+
+      r = validar('@ruta(visita #demo: dónde están): @buscar_predefinidas(visita)')
+
+      expect(codigos(r, :degrading)).not_to include(:canned_group_too_small)
+    end
+
     # Sin grupo el umbral es 0.20 y busca sobre todo el corpus: no aplica.
     it 'no avisa cuando la rama busca sin grupo' do
       create(:canned_response, account: account, short_code: 'DATOS FISCALES')
