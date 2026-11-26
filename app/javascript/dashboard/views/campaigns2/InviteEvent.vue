@@ -24,7 +24,6 @@ export default {
     goals: { type: Array, default: () => [] },
     campaignId: { type: Number, default: null },
     save: { type: Function, required: true },
-    attempts: { type: Number, default: 1 },
   },
   emits: ['update:brief', 'eventSaved'],
   data() {
@@ -219,7 +218,6 @@ export default {
       :event="event"
       :campaign-id="campaignId"
       :save="save"
-      :attempts="attempts"
       :hidden-facts="['when', 'place']"
       @update:brief="$emit('update:brief', $event)"
     />

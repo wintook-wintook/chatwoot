@@ -6,7 +6,7 @@ category: Campañas
 keywords: [ficha de campana, si ya dio clic, encuesta por correo, botones de calificacion, etiqueta del contacto, calentar el dominio, spf, dkim, dmarc, rebotes, campana pausada, prospectos de listas, importo, importar contactos, contactos en cuarentena, cuarentena de contactos, campana por correo, campana de correo, lista fria, lista de correos, subir lista, importar lista, csv, cuarentena, prospectos de lista, de la lista a la venta, proceso completo, flujo de la campana, vendedor ia, vendedor de campana, relevo, atencion a prospectos, calificar, cotizar, oportunidad, seguimiento de cotizacion, cierre, ganada, perdida, limpieza automatica, lista de exclusion, darse de baja, rebote, tope diario, prueba a/b, que hace el humano, automatico]
 pages: [campaigns, ready_agents, contacts, quotes, opportunities, catalog, inboxes]
 sources: [app/javascript/dashboard/views/campaigns2/*.vue, app/services/prospect_lists/import.rb, app/jobs/prospect_lists/cleanup_job.rb, app/services/tracking_campaigns/motor2_*.rb, app/services/motor2/relay.rb, app/services/motor2/skills/quote.rb, app/jobs/motor2/quote_follow_up_job.rb]
-reviewed: 2026-11-25
+reviewed: 2026-11-26
 ---
 ## Para qué sirve
 Una campaña por correo con Vendedor IA lleva a un contacto desde una lista fría hasta una venta ganada. Los agentes hacen casi todo; una persona de tu equipo entra solo en algunos momentos: preparar, lanzar, atender a quien pide hablar con alguien, revisar la cotización y cerrar.
@@ -16,7 +16,7 @@ Una campaña por correo con Vendedor IA lleva a un contacto desde una lista frí
 El flujo de un vistazo:
 1. Subir la lista (persona): se limpia y los nuevos quedan en cuarentena.
 2. Revisar, probar y lanzar (persona): tope diario y prueba a tu correo.
-3. Envíos y toques (automático): un correo cada N días hasta que conteste. Si nunca contesta, se borra solo a los 30 días de terminar la campaña.
+3. Envíos y toques (automático): el primer correo y, si no contesta, sus toques (uno cada N días) hasta que conteste. Si nunca contesta, se borra solo a los 30 días de terminar la campaña.
 4. Contesta o da clic (automático): sale de la cuarentena y ya es contacto.
 5. Vendedor de campaña (automático): resuelve 2 o 3 dudas con la oferta. Sale del flujo si no le interesa, si pide «ya no me escriban» o si pide una persona.
 6. Relevo a Atención a prospectos (automático): en la misma conversación, con una nota de contexto.
@@ -58,7 +58,7 @@ Las listas son solo para correo. En WhatsApp no se ofrece: escribirle a quien no
 ### 3. Envíos y toques (automático)
 - Cada contacto recibe su primer correo en el horario de atención, sin pasar el tope del día.
 - No se le escribe a quien otra campaña contactó hace poco, a quien se dio de baja ni a quien tiene un correo inválido.
-- El primer correo lleva todo (en correo casi nadie contesta «mándame info»): el que escribiste (con {{contacto}}, {{empresa}}, {{oferta}}; en Reactivar, {{ultima_compra}}; en Recordar, {{que_vence}}, {{vence}} y {{monto}}: el editor del correo pone los botones de las que tiene ese tipo, la vista previa las llena de ejemplo y el asunto también las acepta) o, si lo dejaste vacío, uno que la IA escribe con lo esencial de «La ficha» y la liga principal como botón. Lleva el asunto A o B, la firma, la liga para darse de baja y ligas que cuentan los clics.
+- El primer correo lleva todo (en correo casi nadie contesta «mándame info»): el que escribiste (con {{contacto}}, {{empresa}}, {{oferta}}; en Reactivar, {{ultima_compra}}; en Recordar, {{que_vence}}, {{vence}} y {{monto}}: el editor del correo pone los botones de las que tiene ese tipo, la vista previa las llena de ejemplo y el asunto también las acepta) o, si lo dejaste vacío, uno que la IA escribe con lo esencial de «La ficha» y la liga principal como botón. Para escribirlo tú sin empezar de cero, «✨ Redactar con Dali» (en «Mensajes › Correos», en cada correo) lo arma con lo que tiene la campaña: asunto, asunto B y los bloques con el botón a la liga; lo revisas y lo cambias. Lleva el asunto A o B, la firma, la liga para darse de baja y ligas que cuentan los clics.
 - Si no contesta, sale el siguiente cada N días. Cada toque cambia según lo que hizo: a quien ya dio clic y no confirmó le sale su versión «si ya dio clic» (o la IA le pregunta si pudo hacerlo); a los demás, otro ángulo más corto. En cuanto contesta o lo logra, ya no salen más.
 - Encuesta por correo: la primera pregunta va con botones de su rango (del 0 al 10 o del 1 al 5); el botón abre una página donde confirma y contesta las demás (abrir la liga no guarda nada). Una calificación baja (cada pregunta tiene la suya) levanta el caso que pusiste en «Si califica bajo», como en WhatsApp.
 - Recordar por correo: cada contacto recibe sus correos en los días antes de que venza SU contrato (por omisión 7, 1 y el día), no «cada N días».

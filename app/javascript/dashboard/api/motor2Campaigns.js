@@ -100,7 +100,12 @@ class Motor2CampaignsAPI extends ApiClient {
     return axios.delete(`${this.url}/${id}/test_run`);
   }
 
-  // «Imágenes y archivos de esta oferta» (Motor2Campaigns::FilesController).
+  // «Redactar con Dali» (Motor2Campaigns::CopiesController): { target, number, tone, length, instruction, current }.
+  copy(id, params) {
+    return axios.post(`${this.url}/${id}/copy`, params);
+  }
+
+  // «Imágenes y archivos de esta campaña» (Motor2Campaigns::FilesController).
   files(id) {
     return axios.get(`${this.url}/${id}/files`, fresh());
   }

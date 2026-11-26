@@ -16,19 +16,19 @@ export default {
   props: {
     campaignId: { type: [Number, String], default: null },
     save: { type: Function, required: true },
-    attempts: { type: Number, default: 1 },
     kind: { type: String, default: 'offer' },
   },
   data() {
     return { files: [], uploading: false };
   },
   computed: {
-    touches() {
-      return Array.from({ length: this.attempts }, (_, i) => i + 1);
-    },
+    // Solo momentos, no toques: la apertura y los toques en WhatsApp salen como plantilla (la imagen va en su
+    // encabezado) y en correo «Cuando muestre interés» ya va adjunta al primer correo.
     flags() {
       if (this.kind === 'survey') return [];
-      return this.kind === 'invite' ? ['confirm', 'ask'] : ['interest', 'ask'];
+      return this.kind === 'invite'
+        ? ['interest', 'confirm', 'ask']
+        : ['interest', 'ask'];
     },
     canAdd() {
       return this.files.length < MAX_FILES;
@@ -86,16 +86,6 @@ export default {
     },
     has(file, key) {
       return !!file.rules?.[key];
-    },
-    hasTouch(file, n) {
-      return (file.rules?.attempts || []).map(Number).includes(n);
-    },
-    toggleTouch(file, n) {
-      const list = (file.rules?.attempts || []).map(Number);
-      const attempts = list.includes(n)
-        ? list.filter(x => x !== n)
-        : [...list, n].sort();
-      this.update(file, { attempts });
     },
     toggle(file, key) {
       this.update(file, { [key]: !this.has(file, key) });
@@ -172,19 +162,6 @@ export default {
         </button>
       </div>
       <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs">
-        <label
-          v-for="n in touches"
-          :key="`t${n}`"
-          class="flex items-center gap-1"
-        >
-          <input
-            type="checkbox"
-            class="!m-0"
-            :checked="hasTouch(file, n)"
-            @change="toggleTouch(file, n)"
-          />
-          {{ t('TOUCH', { n }) }}
-        </label>
         <label v-for="key in flags" :key="key" class="flex items-center gap-1">
           <input
             type="checkbox"

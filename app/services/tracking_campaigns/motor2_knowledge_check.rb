@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 # Campaña con IA — la parte de la revisión antes de lanzar (Motor2Check) que mira lo que sabe la IA: la ficha, la
-# palabra clave del objetivo «lo hace por su cuenta» y las ligas (que la del paquete vaya en su texto).
+# palabra clave del objetivo «lo hace por su cuenta» y que haya liga donde lo hace. Las ligas «con la información» no
+# hace falta escribirlas en su texto: se agregan solas al final (Skills::CampaignNotes#with_package_links).
 class TrackingCampaigns::Motor2KnowledgeCheck
   def initialize(campaign)
     @campaign = campaign
@@ -31,20 +32,12 @@ class TrackingCampaigns::Motor2KnowledgeCheck
   end
 
   def link_items
-    return [item(:links, 'warning', "Agrega en #{link_step} la liga donde lo hace (registro, compra, pago).")] if needs_link?
-    return [] unless package_text?
-    return [] if @brief['kind'] == 'invite' # en Invitar se pega sola al final de la información (Skills::Campaign#with_registration)
+    return [] unless needs_link?
 
-    links.select { |l| l['use'] == 'package' && content.exclude?(l['url']) }.map do |l|
-      item(:"link_#{l['name']}", 'warning', "La liga «#{l['name']}» va con la información, pero no está en su texto (en «Mensajes»).")
-    end
+    [item(:links, 'warning', "Agrega en #{link_step} la liga donde lo hace (registro, compra, pago).")]
   end
 
-  def package_text? = @campaign.inbox&.whatsapp? && content.present?
-
   def links = Array(@brief['links'])
-
-  def content = @brief['content'].to_s
 
   def needs_link? = links.none? && @brief['offer_goal'] == 'external'
 

@@ -179,24 +179,30 @@
         "Whatsapp": "WhatsApp",
         "Email": "Correo"
       },
-      "TOUCHES": "Toques",
+      "TOUCHES": "Si no contesta, toques:",
       "EVERY": "uno cada",
       "HOURS": "horas",
       "DAYS": "días",
-      "TOUCHES_HINT": "Si no contesta, le vuelve a escribir. En cuanto contesta, ya no hay más toques: lo atiende el vendedor.",
+      "TOUCHES_HINT": "0 = solo la apertura. En cuanto contesta, ya no salen más toques: lo atiende el vendedor.",
       "TEMPLATE_FOR": "Plantilla del toque {n}",
       "TEMPLATE_PICK": "Elige la plantilla aprobada",
       "NO_TEMPLATES": "Esta bandeja no tiene plantillas aprobadas. Créalas en Ajustes › Bandejas › Plantillas (o con «Crear con Dali»).",
-      "NO_TEMPLATE_PREVIEW": "Elige la plantilla del primer toque para ver cómo llega.",
+      "NO_TEMPLATE_PREVIEW": "Elige la plantilla de la apertura para ver cómo llega.",
       "PICK_CHANNEL_FIRST": "Elige el canal para escribir los mensajes.",
-      "CHANNEL_IS": "Canal: {name}."
+      "TABS": {
+        "touches": "Apertura y toques",
+        "emails": "Correos",
+        "info": "Información completa",
+        "reminders": "Recordatorios del evento",
+        "silent": "Si se queda callado"
+      }
     },
     "EMAIL": {
       "SUBJECT": "Asunto",
       "SUBJECT_PLACEHOLDER": "{{contacto}}, una idea para {{empresa}}",
       "SUBJECT_B": "Asunto B (prueba A/B, opcional)",
       "SUBJECT_B_PLACEHOLDER": "Otra forma de decirlo: gana el que más contestan",
-      "TOUCH": "Correo {n}",
+      "TOUCH": "Toque {n}",
       "SEND_TEST": "Enviarme una prueba",
       "TEST_SENT": "Te mandamos la prueba a {email}.",
       "TEST_ERROR": "No se pudo mandar la prueba.",
@@ -235,7 +241,8 @@
       "REMOVE": "Quitar",
       "CLICKED": "Si ya dio clic en una liga y no ha contestado (opcional)",
       "CLICKED_PLACEHOLDER": "Hola {{contacto}}, vi que abriste el registro. ¿Pudiste terminarlo?",
-      "CLICKED_HINT": "Sale en lugar del de arriba a quien ya dio clic. Vacío: el de arriba (o, si también está vacío, la IA le pregunta si pudo)."
+      "CLICKED_HINT": "Sale en lugar del de arriba a quien ya dio clic. Vacío: el de arriba (o, si también está vacío, la IA le pregunta si pudo).",
+      "FIRST": "Primer correo"
     },
     "WHEN": {
       "START": "Empieza",
@@ -254,7 +261,7 @@
       "ENDS_BEFORE": "La fecha de fin debe ser después del inicio."
     },
     "REVIEW": {
-      "SUMMARY": "{kind} · se presenta como {seller} · sale por {channel} · {touches} toque(s)",
+      "SUMMARY": "{kind} · se presenta como {seller} · sale por {channel} · apertura + {touches} toque(s)",
       "AUDIENCE": "Le llega a {n} contacto(s).",
       "CHECKING": "Revisando…",
       "CHECK_ERROR": "No se pudo revisar la campaña.",
@@ -263,13 +270,14 @@
       "STARTS_NOW": "Empieza en cuanto la lances",
       "ENDS_AT": "Termina: {at} (los toques que falten ya no salen)",
       "NO_END": "Sin fecha de fin",
-      "PACE": "{n} toque(s), cada {every} {unit} si no contesta; si contesta, ya no salen los que faltan",
+      "PACE": "Apertura y {n} toque(s), cada {every} {unit} si no contesta; si contesta, ya no salen los que faltan",
       "CAP": "Máximo {n} mensajes al día (cuentan todos los toques)",
       "CAP_WARMUP": "Calentando: 50 el primer día y sube hasta {n} al día",
       "NO_CAP": "Sin máximo por día",
       "HOURS_ON": "Solo en horario de atención (sin horario en la bandeja: de 9 a 19 h, lunes a viernes)",
       "HOURS_OFF": "A cualquier hora",
-      "ONE_A_DAY": "Nunca más de un mensaje de campañas al día por contacto"
+      "ONE_A_DAY": "Nunca más de un mensaje de campañas al día por contacto",
+      "PACE_NONE": "Solo la apertura, sin toques si no contesta"
     },
     "PREVIEW": {
       "TITLE": "Así le llega",
@@ -409,7 +417,8 @@
         "SENT": "Les salió",
         "REPLIED": "Contestaron después de este",
         "N": "Toque {n}",
-        "HINT": "Si un toque casi no consigue respuestas, cambia su texto o quítalo."
+        "HINT": "Si un toque casi no consigue respuestas, cambia su texto o quítalo.",
+        "OPENER": "Apertura"
       },
       "OUTCOMES": {
         "relayed": "Pasó al relevo",
@@ -511,7 +520,7 @@
       },
       "FILES": "📎 {names}",
       "OPENER": "Si escribió en las últimas 24 h, en lugar de la plantilla: «{text}»",
-      "INFO": "Mensaje 2 · si pide información, se manda tal cual",
+      "INFO": "Información completa · si pide información, se manda tal cual",
       "GOALS": {
         "confirm": "confirma que va",
         "external": "escribe la palabra clave",
@@ -520,7 +529,8 @@
         "appointment": "agenda la cita",
         "answers": "contesta la encuesta"
       },
-      "LABEL": "Etiqueta: «{label}»."
+      "LABEL": "Etiqueta: «{label}».",
+      "OPENER_TITLE": "Apertura"
     },
     "TEST_RUN": {
       "INTRO": "Manda la campaña de verdad, solo a ti o a tu equipo, con los toques cada pocos minutos. Llegan los mensajes, se crean las conversaciones y el relevo como con un cliente. No cuenta en los resultados.",
@@ -566,11 +576,10 @@
       }
     },
     "FILES": {
-      "TITLE": "Imágenes y archivos de esta oferta",
+      "TITLE": "Imágenes y archivos de esta campaña",
       "HINT": "La foto del producto en promoción, el flyer del evento, el catálogo… Ponle a cada uno qué es (el vendedor no ve la imagen) y cuándo va.",
       "ABOUT_PLACEHOLDER": "Qué es (p. ej. foto del paquete en promoción con su precio)",
       "ABOUT_MISSING": "Sin descripción el vendedor no sabe cuándo mandarla.",
-      "TOUCH": "En el toque {n}",
       "WHEN": {
         "interest": "Cuando muestre interés (una vez)",
         "ask": "Cuando lo pida o le sirva",
@@ -579,7 +588,7 @@
       "ADD": "+ Subir imágenes o archivos",
       "UPLOADING": "Subiendo…",
       "REMOVE": "Quitar",
-      "LIMITS": "Hasta 10. WhatsApp acepta JPG o PNG hasta 5 MB, video hasta 16 MB y PDF hasta 100 MB. En WhatsApp, en un toque solo sale si el contacto escribió en las últimas 24 h (si no, va la plantilla, que puede llevar su imagen en el encabezado). Las de «cuando muestre interés» salen una sola vez, en cuanto muestra interés (pide la información, le interesa, pide cotización o la liga); en correo van adjuntas al primer correo.",
+      "LIMITS": "Hasta 10. WhatsApp acepta JPG o PNG hasta 5 MB, video hasta 16 MB y PDF hasta 100 MB. La apertura y los toques no llevan archivos: en WhatsApp salen como plantilla (si quieres imagen, ponla en el encabezado de la plantilla). Las de «cuando muestre interés» salen una sola vez, en cuanto muestra interés (pide la información, le interesa, pide cotización o la liga); en correo van adjuntas al primer correo.",
       "IMAGE_TYPE": "«{name}»: la imagen debe ser JPG o PNG.",
       "UPLOAD_ERROR": "No se pudo subir el archivo.",
       "UPDATE_ERROR": "No se pudo guardar el cambio."
@@ -604,14 +613,12 @@
       "INSTRUCTIONS_PLACEHOLDER": "Ej. no des precios de instalación; ofrece la visita gratis"
     },
     "FLOW": {
-      "OPENER_TITLE": "Mensaje 1 · Apertura",
-      "OPENER_HINT": "Corto, para que conteste. Si no ha escrito en 24 horas, WhatsApp solo deja mandar una plantilla aprobada: elige cuál y de dónde sale cada variable.",
-      "TEMPLATE_OPENER": "Plantilla de apertura (toque 1)",
-      "TEMPLATE_TOUCH": "Si no contesta · toque {n}",
+      "OPENER_TITLE": "Apertura",
+      "OPENER_HINT": "El primer mensaje (no es toque): corto, para que conteste.",
       "TEMPLATE_PICK": "Elige la plantilla aprobada",
       "FIXED_TEXT": "Texto fijo",
       "TOUCHES_NOTE": "Si contesta en cualquier toque, ya no salen los que faltan.",
-      "OPEN_WINDOW": "Si escribió en las últimas 24 horas, sale este texto (opcional)",
+      "OPEN_WINDOW": "Mensaje fijo si escribió en las últimas 24 horas (opcional)",
       "OPEN_WINDOW_PLACEHOLDER": "Hola {{contacto}}, tenemos {{oferta}}. ¿Te mando la información?",
       "OPEN_WINDOW_HINT": "Con {{contacto}}, {{empresa}} y {{oferta}}. Vacío: lo escribe la IA con la misma idea.",
       "INFO_TITLE": {
@@ -635,13 +642,6 @@
       },
       "INFO_COUNT": "{n} de {max} caracteres",
       "INFO_FILES": "Las imágenes y archivos marcados «Cuando muestre interés» van con este mensaje (primero la imagen y luego el texto). Sin este mensaje, contesta con la ficha.",
-      "FROM_EVENT": "Llenar con los datos del evento",
-      "EVENT_DRAFT": {
-        "TITLE": "{name}",
-        "WHEN": "Cuándo: {when}",
-        "WHERE": "Dónde: {where}",
-        "CLOSE": "¿Te confirmo tu lugar?"
-      },
       "SURVEY_HINT": "Si acepta, se hacen tus preguntas («La ficha») una por mensaje, en este orden:",
       "SURVEY_EMPTY": "Escribe las preguntas en «La ficha».",
       "AFTER": {
@@ -666,18 +666,23 @@
         "due_amount": "Su monto"
       },
       "PREVIEW": {
-        "STEP_1": "Mensaje 1 · Apertura",
+        "STEP_1": "Apertura",
         "REPLY": "Sí, mándame la información",
         "REPLY_SURVEY": "Sí, claro",
-        "STEP_2": "Mensaje 2",
+        "STEP_2": "Información completa",
         "IMAGES": "🖼️ Tus imágenes «con la información»",
-        "AI_WRITES": "(sin Mensaje 2: la información la escribe la IA)",
+        "AI_WRITES": "(sin información completa: la escribe la IA)",
         "AFTER": {
           "sale": "A partir de aquí, el vendedor contesta sus dudas y lo lleva al cierre.",
           "survey": "Sigue con las demás preguntas, una por mensaje."
         }
       },
-      "INSERT_LINK": "Insertar liga…"
+      "TOUCH_TITLE": "Toque {n} · si no contesta",
+      "TOUCH_HINT": "Le vuelve a escribir si no ha contestado. Sin ventana de 24 horas sale su plantilla.",
+      "TEMPLATE": "Plantilla (si no ha escrito en 24 horas)",
+      "TOUCH_PLACEHOLDER": "{{contacto}}, ¿pudiste ver lo de {{oferta}}?",
+      "INFO_PREVIEW": "a la derecha ves cómo le llega",
+      "LINKS_AUTO": "Se agregan solas al final: {names}. Si escribes la liga en el texto, ya no se repite."
     },
     "KNOWLEDGE": {
       "HINT": "Es lo ÚNICO que sabe la IA de esta campaña: si le preguntan algo que no está aquí ni en sus fuentes, dice que no tiene ese dato.",
@@ -929,8 +934,6 @@
         }
       },
       "ENDS_AT_VALIDITY": "Termina sola cuando vence la promoción.",
-      "BUILD_CONTENT": "Armar la información completa con la oferta",
-      "CONTENT_VALID": "Vigente hasta el {date}.",
       "SILENT_TITLE": "Si contestó y luego se calla",
       "SILENT_HINT": "Los toques son para quien nunca contestó; esto es para quien ya platicó y dejó de contestar.",
       "WHO": "A quién se lo ofreces"
@@ -1064,6 +1067,34 @@
         "REPLY_TITLE": "Qué le contesta al cliente",
         "REPLY_HINT": "Sale tal cual al terminar la encuesta si alguna respuesta fue baja. Vacío = el texto en gris."
       }
+    },
+    "DALI_WRITER": {
+      "OPEN": "✨ Redactar con Dali",
+      "TITLE": "✨ Redactar con Dali",
+      "CLOSE": "Cerrar",
+      "WRITE": "Redactar",
+      "AGAIN": "Otra versión",
+      "USE": "Usar este texto",
+      "REPLACE": "Usar este texto (reemplaza el de ahora)",
+      "IMPROVE": "Mejorar el mío",
+      "SHORT": "Corto",
+      "FULL": "Completo",
+      "SUBJECT": "Asunto:",
+      "ASK_PLACEHOLDER": "Pídele algo (opcional): «resalta que es gratis», «más corto», «sin emojis»…",
+      "ERROR": "Dali no pudo redactarlo; intenta de nuevo.",
+      "REVIEW_HINT": "Revísalo antes de usarlo: Dali escribe solo con lo que tiene la campaña.",
+      "TONES": {
+        "cercano": "Cercano",
+        "profesional": "Profesional",
+        "entusiasta": "Entusiasta"
+      },
+      "HINT": {
+        "info": "Arma el copy de WhatsApp con lo que tiene la campaña (evento u oferta, ficha, preguntas, ligas y cómo habla tu empresa): gancho, emojis, viñetas y el cierre según el objetivo. La liga se agrega sola al final.",
+        "opener": "Un mensaje corto para que conteste.",
+        "touch": "Un recordatorio corto con otro ángulo.",
+        "email": "Arma el correo con asunto, asunto B y sus bloques (texto y botón con la liga de la campaña). La firma se agrega sola."
+      },
+      "SUBJECT_B": "· B: {subject}"
     }
   }
 }

@@ -69,10 +69,9 @@ module Motor2::Skills::CampaignNotes
                       "#{link['url']}. Nada más (no ofrezcas la información completa)." }
   end
 
-  # Invitar: la liga de registro (la que va «con la información») sale con ese texto aunque no la hayan escrito en él.
-  def with_registration(text)
-    return text unless function.invite?
-
+  # Las ligas que van «con la información» (registro, compra, pago) salen al final aunque no estén en el texto;
+  # si ya la escribieron en él, no se repite. En todos los tipos.
+  def with_package_links(text)
     missing = Array(function.links).select { |l| l['use'] == 'package' && l['url'].present? && text.exclude?(l['url']) }
     missing.reduce(text.rstrip) { |all, l| "#{all}\n\n#{l['name']}: #{l['url']}" }
   end

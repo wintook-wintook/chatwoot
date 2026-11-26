@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-# Campaña con Vendedor IA — «Imágenes y archivos de esta oferta» (la foto del producto, el flyer del evento…). Van en
+# Campaña con Vendedor IA — «Imágenes y archivos de esta campaña» (la foto del producto, el flyer del evento…). Van en
 # ai_agent_attachments ligados a la campaña, con su regla:
 #   rules { about     de qué es (el vendedor no ve la imagen: solo esto)
-#           attempts  en qué toques va (1..6)
 #           interest  cuando muestre interés · ask cuando lo pida · confirm cuando confirme (Invitar) }
-# Los generales (catálogo, presentación de la empresa) siguen en el vendedor.
+# Los generales (catálogo, presentación de la empresa) siguen en el vendedor. No van por toque: la apertura y los
+# toques en WhatsApp salen como plantilla (la imagen va en su encabezado).
 #
 #   GET    motor2_campaigns/:motor2_campaign_id/files
 #   POST   motor2_campaigns/:motor2_campaign_id/files          { file, about } (multipart) | { catalog_item_id } (Ofrecer:
@@ -33,7 +33,7 @@ class Api::V1::Accounts::Motor2Campaigns::FilesController < Api::V1::Accounts::B
   end
 
   def update
-    @file.update!(rules: rules(params.require(:rules).permit(:about, :interest, :ask, :confirm, attempts: []).to_h))
+    @file.update!(rules: rules(params.require(:rules).permit(:about, :interest, :ask, :confirm).to_h))
     render json: file_json(@file)
   end
 
@@ -52,7 +52,7 @@ class Api::V1::Accounts::Motor2Campaigns::FilesController < Api::V1::Accounts::B
 
   def new_file
     file = @campaign.files.new(account: Current.account, name: unique_name(params[:file].original_filename),
-                               rules: rules(params.permit(:about, :interest, :ask, :confirm, attempts: []).to_h))
+                               rules: rules(params.permit(:about, :interest, :ask, :confirm).to_h))
     file.file.attach(params[:file])
     file
   end
@@ -79,10 +79,7 @@ class Api::V1::Accounts::Motor2Campaigns::FilesController < Api::V1::Accounts::B
   def render_error(message) = render(json: { error: message }, status: :unprocessable_entity)
 
   def rules(raw)
-    max = TrackingCampaigns::Motor2Brief::MAX_TOUCHES
-    { 'about' => raw['about'].to_s.squish.first(300),
-      'attempts' => Array(raw['attempts']).map(&:to_i).select { |n| n.between?(1, max) }.uniq.sort }
-      .merge(FLAGS.index_with { |flag| ActiveModel::Type::Boolean.new.cast(raw[flag]) || false })
+    { 'about' => raw['about'].to_s.squish.first(300) }.merge(FLAGS.index_with { |flag| ActiveModel::Type::Boolean.new.cast(raw[flag]) || false })
   end
 
   # «Promo Noviembre.jpg» → «promo-noviembre» (sin repetir dentro de la campaña).

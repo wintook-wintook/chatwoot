@@ -111,7 +111,10 @@ export default {
     },
     warningText(w) {
       return this.t(`WARNINGS.${w.kind}`, {
-        touches: (w.touches || []).join(', '),
+        // El mensaje 1 es la apertura; los demás, toque 1, 2…
+        touches: (w.touches || [])
+          .map(n => (n === 1 ? this.t('OPENER_TITLE') : n - 1))
+          .join(', '),
       });
     },
     // La decisión del vendedor en el chat → lo que pasaría en la campaña.
@@ -213,7 +216,12 @@ export default {
         >
           <div class="flex items-center justify-between gap-2">
             <span class="text-xs font-medium text-woot-700 dark:text-woot-300">
-              {{ t('TOUCH', { n: touch.n }) }} · {{ waitText(touch) }}
+              {{
+                touch.n === 1
+                  ? t('OPENER_TITLE')
+                  : t('TOUCH', { n: touch.n - 1 })
+              }}
+              · {{ waitText(touch) }}
             </span>
             <button
               v-if="touch.text"

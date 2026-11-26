@@ -156,9 +156,13 @@ class TrackingCampaigns::Motor2Check
   def channel
     inbox = @campaign.inbox
     return item(:channel, 'error', 'Elige la bandeja de WhatsApp o de correo.') unless inbox
+    # WhatsApp de prueba (rake whatsapp:test_inbox): sirve para armar y simular, no envía.
+    return item(:channel, 'error', "«#{inbox.name}» es de prueba: no envía. Elige una bandeja real para lanzar.") if sandbox?(inbox)
 
     item(:channel, 'ok', "Sale por «#{inbox.name}».")
   end
+
+  def sandbox?(inbox) = inbox.whatsapp? && inbox.channel.provider_config.to_h['sandbox'].present?
 
   def touch_items
     return [] unless @campaign.inbox
@@ -171,12 +175,16 @@ class TrackingCampaigns::Motor2Check
     approved = approved_templates
     (1..attempts).map do |n|
       name = Array(@touches['templates'])[n - 1].presence
-      next item(:"touch_#{n}", 'error', "Toque #{n}: elige su plantilla de WhatsApp.") unless name
-      next item(:"touch_#{n}", 'error', "Toque #{n}: la plantilla «#{name}» no está aprobada o ya no existe.") unless approved.include?(name)
+      label = message_label(n)
+      next item(:"touch_#{n}", 'error', "#{label}: elige su plantilla de WhatsApp.") unless name
+      next item(:"touch_#{n}", 'error', "#{label}: la plantilla «#{name}» no está aprobada o ya no existe.") unless approved.include?(name)
 
-      item(:"touch_#{n}", 'ok', "Toque #{n}: plantilla «#{name}».")
+      item(:"touch_#{n}", 'ok', "#{label}: plantilla «#{name}».")
     end
   end
+
+  # El mensaje 1 es la apertura; los demás, los toques a quien no contesta.
+  def message_label(number) = number == 1 ? 'Apertura' : "Toque #{number - 1}"
 
   def email_touches
     subject = if @campaign.email_subject.present?

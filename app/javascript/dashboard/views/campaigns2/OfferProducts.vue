@@ -24,7 +24,6 @@ export default {
     kit: { type: Object, default: null },
     campaignId: { type: Number, default: null },
     save: { type: Function, required: true },
-    attempts: { type: Number, default: 1 },
     filesVersion: { type: Number, default: 0 },
   },
   emits: ['update:brief', 'photo', 'catalog'],
@@ -229,7 +228,6 @@ export default {
       :kit="kit"
       :campaign-id="campaignId"
       :save="save"
-      :attempts="attempts"
       :hidden-facts="hiddenFacts"
       @update:brief="$emit('update:brief', $event)"
     />

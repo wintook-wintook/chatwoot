@@ -36,8 +36,8 @@ export default {
         );
       }
       const text = fillCampaignText(this.brief.content, this.samples);
-      if (this.kind !== 'invite' || !text) return text;
-      // Invitar: la liga de registro sale al final si no está en el texto (Skills::CampaignNotes#with_registration).
+      if (!text) return text;
+      // Las ligas «con la información» salen al final si no están en el texto (Skills::CampaignNotes#with_package_links).
       return (this.brief.links || [])
         .filter(l => l.use === 'package' && l.url && !text.includes(l.url))
         .reduce((all, l) => `${all.trimEnd()}\n\n${l.name}: ${l.url}`, text);
@@ -61,7 +61,10 @@ export default {
       class="self-start max-w-[90%] p-2 text-sm bg-white rounded-lg shadow-sm dark:bg-slate-800 text-slate-800 dark:text-slate-100"
     >
       <p v-if="header" class="m-0 mb-1 font-semibold">{{ header }}</p>
-      <p class="m-0 whitespace-pre-line">{{ opener }}</p>
+      <!-- pre-line solo en el <span>: en el <p>, la sangría del template salía como renglón vacío -->
+      <p class="m-0 [overflow-wrap:anywhere]">
+        <span class="whitespace-pre-line">{{ opener }}</span>
+      </p>
       <p v-if="template.footer" class="m-0 mt-1 text-xs text-slate-500">
         {{ template.footer }}
       </p>
@@ -91,9 +94,10 @@ export default {
       {{ t('IMAGES') }}
     </div>
     <div
-      class="self-start max-w-[90%] p-2 text-sm bg-white rounded-lg shadow-sm dark:bg-slate-800 text-slate-800 dark:text-slate-100 whitespace-pre-line"
+      class="self-start max-w-[90%] p-2 text-sm bg-white rounded-lg shadow-sm dark:bg-slate-800 text-slate-800 dark:text-slate-100 [overflow-wrap:anywhere]"
     >
-      {{ second || t('AI_WRITES') }}
+      <!-- pre-line solo en el <span> (en el div, la sangría salía como renglón vacío) -->
+      <span class="whitespace-pre-line">{{ second || t('AI_WRITES') }}</span>
     </div>
 
     <p class="m-0 text-[10px] text-center text-slate-500">
