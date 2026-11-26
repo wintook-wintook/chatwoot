@@ -97,6 +97,19 @@
       :initial-all-day="createAllDay"
       @close="onModalClose"
       @created="fetchData"
+      @cancelItem="openCancelItem"
+    />
+
+    <!-- fix/calendario_eliminar F2 — cancelar la tarea agendada con motivo (la de Tickets) -->
+    <CancelItemModal
+      :show="!!cancelTarget"
+      :item="cancelTarget"
+      kind="meeting"
+      :busy="cancelBusy"
+      :error="cancelError"
+      @close="cancelTarget = null"
+      @reschedule="rescheduleInstead"
+      @submit="submitCancel"
     />
 
     <ShareAgendaModal
@@ -159,6 +172,8 @@ import CreateEventModal from '../../../../components/GoogleCalendar/CreateEventM
 import ShareAgendaModal from '../../../../components/GoogleCalendar/ShareAgendaModal.vue';
 import ShareCalendarModal from '../../../../components/GoogleCalendar/ShareCalendarModal.vue';
 import AgendaItemsAPI from '../../../../api/agendaItems';
+import CancelItemModal from '../../../../components/cancel/CancelItemModal.vue';
+import { useAlert } from 'dashboard/composables';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -170,6 +185,7 @@ export default {
     CreateEventModal,
     ShareAgendaModal,
     ShareCalendarModal,
+    CancelItemModal,
   },
   data() {
     return {
@@ -183,6 +199,11 @@ export default {
       currentRange: {},
       coworkerEvent: null,
       showShareCalendar: false,
+      // fix/calendario_eliminar F2
+      cancelTarget: null,
+      cancelEvent: null,
+      cancelBusy: false,
+      cancelError: '',
     };
   },
   computed: {
@@ -310,6 +331,46 @@ export default {
     onModalClose() {
       this.showCreateModal = false;
       this.editingEvent = null;
+    },
+    // fix/calendario_eliminar F2 — la ventana del evento se cierra y abre «Cancelar con motivo»
+    // (no una ventana encima de otra). «Reprogramar» la vuelve a abrir para cambiar la hora.
+    openCancelItem(item) {
+      this.cancelEvent = this.editingEvent;
+      this.onModalClose();
+      this.cancelError = '';
+      this.cancelTarget = {
+        ...item,
+        has_client: !!(item.contact || item.organization || item.case_ticket),
+      };
+    },
+    rescheduleInstead() {
+      this.cancelTarget = null;
+      this.editingEvent = this.cancelEvent;
+      this.showCreateModal = !!this.cancelEvent;
+    },
+    async submitCancel(reason) {
+      this.cancelBusy = true;
+      this.cancelError = '';
+      try {
+        const { data } = await AgendaItemsAPI.updateItem(this.cancelTarget.id, {
+          ...reason,
+          status: 'cancelled',
+        });
+        let notice = 'GOOGLE_CALENDAR.EDIT_EVENT.CANCEL_ITEM_DONE';
+        if (data.client_notice) {
+          notice = data.client_notice.sent
+            ? 'CANCEL_ITEM.NOTICE_SENT'
+            : 'CANCEL_ITEM.NOTICE_FAILED';
+        }
+        useAlert(this.$t(notice));
+        this.cancelTarget = null;
+        this.cancelEvent = null;
+        this.fetchData();
+      } catch (e) {
+        this.cancelError = e.response?.data?.error || '';
+      } finally {
+        this.cancelBusy = false;
+      }
     },
     async onEventDropped({ eventId, start_time, end_time, calendar_id, agendaItem, revert }) {
       try {

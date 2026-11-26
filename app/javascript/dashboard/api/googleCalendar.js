@@ -25,6 +25,13 @@ class GoogleCalendarAPI extends ApiClient {
     return axios.patch(`${this.url}/events/${eventId}`, payload);
   }
 
+  // fix/calendario_eliminar F3 — { calendar_id, scope: 'one' | 'all', notify }.
+  deleteEvent(eventId, params = {}) {
+    return axios.delete(`${this.url}/events/${encodeURIComponent(eventId)}`, {
+      params,
+    });
+  }
+
   // fix/calendario_google — compañeros vistos con MI conexión (Google aplica lo compartido).
   getCoworkers() {
     return axios.get(`${this.url}/coworkers`);

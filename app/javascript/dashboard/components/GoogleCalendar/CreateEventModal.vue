@@ -46,7 +46,7 @@ export default {
     initialEnd: { type: String, default: '' },
     initialAllDay: { type: Boolean, default: false },
   },
-  emits: ['close', 'created'],
+  emits: ['close', 'created', 'cancelItem'],
   setup() {
     return { showAlert: useAlert };
   },
@@ -85,6 +85,11 @@ export default {
       toTaskBusy: false,
       // fix/calendario_google F3b — «Agendar a»: '' = para mí; si no, id del compañero.
       scheduleFor: '',
+      // fix/calendario_eliminar F3 — «Eliminar evento»: confirmación en línea.
+      deleteAsk: false,
+      deleteScope: 'one',
+      deleteNotify: true,
+      deleteBusy: false,
     };
   },
   computed: {
@@ -131,8 +136,55 @@ export default {
     isEditing() {
       return !!this.editEvent;
     },
+    // fix/calendario_eliminar D2 — al editar dice «Cerrar» para no confundirse con
+    // «Cancelar tarea agendada».
+    closeLabel() {
+      return this.$t(
+        this.isEditing
+          ? 'GOOGLE_CALENDAR.EDIT_EVENT.CLOSE'
+          : 'GOOGLE_CALENDAR.CREATE_EVENT.CANCEL'
+      );
+    },
     agendaItem() {
       return this.editEvent?.extendedProps?.agendaItem || null;
+    },
+    // fix/calendario_eliminar F3 — solo eventos de Google SIN tarea agendada (esas se cancelan)
+    // y en calendarios donde puedo hacer cambios (festivos y compartidos «ver» no).
+    eventCalendar() {
+      const cid = this.editEvent?.extendedProps?.calendarId || 'primary';
+      return (this.calendars || []).find(
+        c => c.id === cid || (cid === 'primary' && c.primary)
+      );
+    },
+    canDeleteEvent() {
+      if (!this.isGoogleEvent || this.agendaItem) return false;
+      const role = this.eventCalendar && this.eventCalendar.access_role;
+      return !role || ['owner', 'writer'].includes(role);
+    },
+    // Si me invitaron, solo se quita de MI calendario y no se avisa a nadie.
+    isOrganizer() {
+      return this.editEvent?.extendedProps?.organizerSelf !== false;
+    },
+    seriesId() {
+      return this.editEvent?.extendedProps?.recurringEventId || null;
+    },
+    deleteGuests() {
+      return (this.editEvent?.extendedProps?.attendees || []).filter(
+        a => !a.self
+      ).length;
+    },
+    // Textos de «Eliminar evento» (organizador) o «Quitar de mi calendario» (invitado).
+    deleteTexts() {
+      const k = `GOOGLE_CALENDAR.DELETE_EVENT.${
+        this.isOrganizer ? 'DELETE' : 'REMOVE'
+      }`;
+      return {
+        button: this.$t(k),
+        title: this.$t(`${k}_TITLE`, { title: this.form.summary }),
+        desc: this.$t(`${k}_DESC`),
+        confirm: this.$t(`${k}_CONFIRM`),
+        done: this.$t(`${k}_DONE`),
+      };
     },
     // Lo que nació en Kontrolya y no está en Google no se edita por la vía de Google.
     isGoogleEvent() {
@@ -220,6 +272,9 @@ export default {
       this.organization = this.agendaItem?.organization || null;
       this.caseId = '';
       this.scheduleFor = '';
+      this.deleteAsk = false;
+      this.deleteScope = 'one';
+      this.deleteNotify = true;
       if (!this.calendars.length) {
         this.$store.dispatch('googleCalendar/fetchCalendars');
       }
@@ -456,7 +511,37 @@ export default {
     },
     onClose() {
       this.toTaskAsk = false;
+      this.deleteAsk = false;
       this.$emit('close');
+    },
+    async deleteEvent() {
+      this.deleteBusy = true;
+      try {
+        await this.$store.dispatch('googleCalendar/deleteEvent', {
+          eventId: this.editEvent.id,
+          calendar_id: this.editEvent.extendedProps?.calendarId || 'primary',
+          scope: this.seriesId ? this.deleteScope : 'one',
+          notify:
+            this.isOrganizer && this.deleteGuests > 0 && this.deleteNotify,
+          seriesId: this.seriesId,
+        });
+        this.showAlert(this.deleteTexts.done);
+        this.$emit('created');
+        this.onClose();
+      } catch (error) {
+        this.showAlert(
+          error?.response?.data?.error ||
+            this.$t('GOOGLE_CALENDAR.DELETE_EVENT.ERROR')
+        );
+      } finally {
+        this.deleteBusy = false;
+      }
+    },
+    // fix/calendario_eliminar F2 — solo el responsable y mientras siga agendada (realizada,
+    // no asistió o cancelada son de solo lectura). El participante tiene «No puedo ir».
+    canCancelItem() {
+      const item = this.agendaItem;
+      return !!item && item.status === 'scheduled' && !item.participating;
     },
     // Tarea agendada → tarea sin hora (Cases::Conversion): sale del calendario y de Google.
     canConvertToTask() {
@@ -864,19 +949,103 @@ export default {
           </div>
         </div>
 
-        <div class="flex justify-end gap-2 pt-2">
-          <woot-button
-            v-if="canConvertToTask() && !toTaskAsk"
-            type="button"
-            variant="smooth"
-            color-scheme="secondary"
-            class="mr-auto"
-            @click="toTaskAsk = true"
+        <!-- fix/calendario_eliminar F3 — eliminar el evento de Google -->
+        <div
+          v-if="deleteAsk"
+          class="flex flex-col gap-2 p-2 text-sm border rounded-md border-red-200 dark:border-red-800"
+          data-test="delete-ask"
+        >
+          <p class="m-0 font-medium text-slate-800 dark:text-slate-100">
+            {{ deleteTexts.title }}
+          </p>
+          <p class="m-0 text-slate-600 dark:text-slate-300">
+            {{ deleteTexts.desc }}
+          </p>
+          <div v-if="seriesId" class="flex gap-4">
+            <label class="flex items-center gap-2">
+              <input
+                v-model="deleteScope"
+                type="radio"
+                value="one"
+                class="!m-0"
+              />
+              {{ $t('GOOGLE_CALENDAR.DELETE_EVENT.ONLY_THIS') }}
+            </label>
+            <label class="flex items-center gap-2">
+              <input
+                v-model="deleteScope"
+                type="radio"
+                value="all"
+                class="!m-0"
+              />
+              {{ $t('GOOGLE_CALENDAR.DELETE_EVENT.ALL_SERIES') }}
+            </label>
+          </div>
+          <label
+            v-if="isOrganizer && deleteGuests > 0"
+            class="flex items-center gap-2"
           >
-            {{ $t('CONVERT_ITEM.TO_TASK') }}
-          </woot-button>
+            <input v-model="deleteNotify" type="checkbox" class="!m-0" />
+            {{
+              $t('GOOGLE_CALENDAR.DELETE_EVENT.NOTIFY', {
+                count: deleteGuests,
+              })
+            }}
+          </label>
+          <div class="flex justify-end gap-2">
+            <woot-button
+              type="button"
+              variant="clear"
+              @click="deleteAsk = false"
+            >
+              {{ $t('GOOGLE_CALENDAR.DELETE_EVENT.BACK') }}
+            </woot-button>
+            <woot-button
+              type="button"
+              color-scheme="alert"
+              :is-loading="deleteBusy"
+              data-test="delete-confirm"
+              @click="deleteEvent"
+            >
+              {{ deleteTexts.confirm }}
+            </woot-button>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <div v-if="!toTaskAsk && !deleteAsk" class="flex gap-2 mr-auto">
+            <woot-button
+              v-if="canDeleteEvent"
+              type="button"
+              variant="clear"
+              color-scheme="alert"
+              data-test="delete-event"
+              @click="deleteAsk = true"
+            >
+              {{ deleteTexts.button }}
+            </woot-button>
+            <woot-button
+              v-if="canCancelItem()"
+              type="button"
+              variant="clear"
+              color-scheme="alert"
+              data-test="cancel-item"
+              @click="$emit('cancelItem', agendaItem)"
+            >
+              {{ $t('GOOGLE_CALENDAR.EDIT_EVENT.CANCEL_ITEM') }}
+            </woot-button>
+            <woot-button
+              v-if="canConvertToTask()"
+              type="button"
+              variant="smooth"
+              color-scheme="secondary"
+              @click="toTaskAsk = true"
+            >
+              {{ $t('CONVERT_ITEM.TO_TASK') }}
+            </woot-button>
+          </div>
           <woot-button type="button" variant="clear" @click="onClose">
-            {{ $t('GOOGLE_CALENDAR.CREATE_EVENT.CANCEL') }}
+            {{ closeLabel }}
           </woot-button>
           <woot-button
             v-if="!participating"

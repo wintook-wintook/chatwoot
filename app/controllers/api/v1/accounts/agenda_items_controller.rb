@@ -187,6 +187,7 @@ class Api::V1::Accounts::AgendaItemsController < Api::V1::Accounts::BaseControll
   def item_json(meeting)
     { id: meeting.id, title: meeting.title, description: meeting.description, status: meeting.status,
       cancel_reason: meeting.cancel_reason, work_started: Cases::Cancellation.work_started?(meeting),
+      series: meeting.case_meeting_series_id.present?,
       start: meeting.starts_at, end: meeting.ends_at, location: meeting.location,
       google_event_id: meeting.google_event_id, google_calendar_id: meeting.google_calendar_id,
       contact: ref(meeting.client_contact), organization: ref(meeting.client_organization),

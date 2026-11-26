@@ -5,7 +5,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import esLocale from '@fullcalendar/core/locales/es';
-import { agentColor } from './agentColor';
+import { agentColor, agentTextColor, coworkerColorsFrom } from './agentColor';
 
 const COLORS = [
   '#6366f1',
@@ -41,6 +41,10 @@ export default {
     'coworkerEventClicked',
   ],
   computed: {
+    // fix/calendario_eliminar F4 — colores que escogí para mis compañeros (ui_settings).
+    coworkerColors() {
+      return coworkerColorsFrom(this.$store.getters.getUISettings);
+    },
     calendarOptions() {
       return {
         plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
@@ -128,6 +132,10 @@ export default {
   },
   watch: {
     events() {
+      this.syncEvents();
+    },
+    // fix/calendario_eliminar F4 — al escoger un color se repinta al momento.
+    coworkerColors() {
       this.syncEvents();
     },
     agendaItems() {
@@ -219,6 +227,9 @@ export default {
             location: e.location || '',
             attendees: e.attendees || [],
             agendaItem,
+            // fix/calendario_eliminar F3 — para «Eliminar evento» / «Quitar de mi calendario».
+            organizerSelf: !e.organizer || e.organizer.self === true,
+            recurringEventId: e.recurringEventId || null,
           },
         });
       });
@@ -229,7 +240,7 @@ export default {
       const shownCoworkers = new Set(this.coworkerEvents.map(c => c.agent_id));
       this.availability.forEach(agent => {
         if (shownCoworkers.has(agent.agent_id)) return;
-        const color = agentColor(agent.agent_id);
+        const color = agentColor(agent.agent_id, this.coworkerColors);
         (agent.busy || []).forEach((period, i) => {
           api.addEvent({
             id: `busy-${agent.agent_id}-${i}`,
@@ -248,7 +259,8 @@ export default {
     // (solo libre/ocupado, o evento privado). No se arrastran ni se editan.
     addCoworkerEvents(api) {
       this.coworkerEvents.forEach(row => {
-        const color = agentColor(row.agent_id);
+        const color = agentColor(row.agent_id, this.coworkerColors);
+        const textColor = agentTextColor(row.agent_id, this.coworkerColors);
         (row.events || []).forEach(e => {
           const summary =
             e.summary || this.$t('GOOGLE_CALENDAR.COWORKERS.BUSY');
@@ -263,6 +275,7 @@ export default {
             durationEditable: false,
             backgroundColor: color,
             borderColor: color,
+            textColor,
             classNames: ['fc-coworker'],
             extendedProps: {
               coworker: {

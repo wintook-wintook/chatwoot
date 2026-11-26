@@ -1072,7 +1072,7 @@ Rails.application.routes.draw do
 
           namespace :google_calendar do
             resource :authorization, only: [:create, :destroy]
-            resources :events, only: [:index, :create, :update]
+            resources :events, only: [:index, :create, :update, :destroy]
             # fix/calendario_google — calendario de compañeros visto con la conexión de quien mira.
             resources :coworkers, only: [:index] do
               collection do

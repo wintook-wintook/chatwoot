@@ -49,6 +49,23 @@ class Api::V1::Accounts::GoogleCalendar::EventsController < Api::V1::Accounts::B
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
+  # fix/calendario_eliminar F1 — DELETE /google_calendar/events/:id?calendar_id=&scope=one|all&notify=
+  # Solo eventos de Google sin tarea agendada (las tareas se cancelan). Ver GoogleCalendarEventDeleter.
+  DELETE_STATUS = { 'linked_to_agenda_item' => :conflict, 'no_permission' => :forbidden }.freeze
+
+  def destroy
+    result = GoogleCalendarEventDeleter.new(
+      account: Current.account, user: current_user, service: calendar_service, event_id: params[:id],
+      options: { calendar_id: params[:calendar_id], scope: params[:scope], notify: params[:notify].to_s != 'false' }
+    ).call
+    return render json: { deleted: true, scope: result.scope } if result.ok
+
+    render json: { error: I18n.t("google_calendar_delete.#{result.reason}"), reason: result.reason },
+           status: DELETE_STATUS.fetch(result.reason, :unprocessable_entity)
+  rescue StandardError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
   private
 
   # F3b «Agendar a» (fix/calendario_google): con `agent_id` de un compañero, el evento va a SU

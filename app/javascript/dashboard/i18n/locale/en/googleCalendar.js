@@ -144,6 +144,23 @@ export default {
       CLOSE: 'Close',
     },
     COWORKERS: {
+      // fix/calendario_eliminar F4 — teammate colors (only the person who picks sees them).
+      COLOR: {
+        OPEN: 'Color settings',
+        TITLE: '{name} color',
+        BACKGROUND: 'Background',
+        TEXT: 'Text',
+        TEXT_AUTO: 'Automatic',
+        TEXT_WHITE: 'White',
+        TEXT_BLACK: 'Black',
+        SAMPLE: '{name} · Meeting 10:00',
+        DESCRIPTION:
+          'This is how their events look in your calendar. Only you see this color; nothing changes in Google.',
+        PREVIEW: 'Preview',
+        RESET: 'Reset',
+        CANCEL: 'Cancel',
+        SAVE: 'Save',
+      },
       TITLE: 'Teammates',
       HINT: 'Check a teammate to see their schedule. You only see what they shared with you in Google.',
       EMPTY: 'There are no other agents in this account.',
@@ -230,6 +247,29 @@ export default {
       SUBMIT: 'Save Changes',
       SUCCESS: 'Event updated successfully',
       ERROR: 'Could not update event. Please try again.',
+      // fix/calendario_eliminar F2
+      CLOSE: 'Close',
+      CANCEL_ITEM: 'Cancel scheduled task',
+      CANCEL_ITEM_DONE: 'Scheduled task cancelled',
+    },
+    // fix/calendario_eliminar F3
+    DELETE_EVENT: {
+      DELETE: 'Delete event',
+      DELETE_TITLE: 'Delete "{title}"?',
+      DELETE_DESC: 'It will be deleted from your Google Calendar.',
+      DELETE_CONFIRM: 'Delete',
+      DELETE_DONE: 'Event deleted',
+      REMOVE: 'Remove from my calendar',
+      REMOVE_TITLE: 'Remove "{title}" from your calendar?',
+      REMOVE_DESC:
+        'You were invited to this event: it is only removed from your calendar. The organizer and the others keep it.',
+      REMOVE_CONFIRM: 'Remove',
+      REMOVE_DONE: 'Removed from your calendar',
+      ONLY_THIS: 'Only this one',
+      ALL_SERIES: 'The whole series',
+      NOTIFY: 'Notify guests ({count})',
+      BACK: 'Back',
+      ERROR: 'Could not delete the event. Please try again.',
     },
     CREATE_FROM_CONVERSATION: 'Create Calendar Event',
     SHARE_AGENDA: {
