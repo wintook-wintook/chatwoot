@@ -31,7 +31,8 @@ class ContactTrackings::Ficha::Presenter
     { keyword_actions: t.keyword_actions || [], file_rules: t.file_rules, attempts: t.follow_up_attempts,
       agenda: t.slice(:calendar_event_duration, :timezone, :slots_presentation, :booking_calendar_ids),
       follow: { inbox_id: t.inbox_id, retry_interval_value: t.retry_interval_value, retry_interval_unit: t.retry_interval_unit,
-                attempts: t.follow_up_attempts, whatsapp_templates: Array(t.whatsapp_templates), email_signature: t.email_signature },
+                attempts: t.follow_up_attempts, whatsapp_templates: Array(t.whatsapp_templates), email_signature: t.email_signature,
+                group_seconds: ContactTrackings::MessageBurst.seconds(t.resources) },
       profile: t.slice(:name, :customer_display_name, :objective, :ai_context) }.merge(prompt_settings)
   end
 

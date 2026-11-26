@@ -1,6 +1,6 @@
 # Plan — Motor 1.0: imágenes, condiciones opcionales, ruteo y mensajes seguidos
 
-> Solo plan (25/11/2026). Rama `fix/motor_ruteo_imagenes_hoja`, desde `develop` (b322eb2c).
+> Plan (25/11/2026) e implementación (26/11/2026), todo en un solo PR a pedido del usuario. Rama `fix/motor_ruteo_imagenes_hoja`, desde `develop` (b322eb2c).
 > Salió de pruebas con un agente de ventas de autos (inventario en Google Sheets, rutas con
 > `{{hoja_buscar}}` y respuestas predefinidas), pero todos los cambios son del motor y sirven a
 > cualquier agente 1.0 con rutas. Motor 2.0 no se toca.
@@ -22,7 +22,7 @@ Cada cambio es de uno de estos dos tipos:
 | M6 | Condición opcional en `{{hoja_buscar}}` | Opcional | Solo a quien escriba la sintaxis nueva |
 | M4 | `@buscar_predefinidas(GRUPO)` con una sola predefinida no aplica umbral | Opcional | Solo rutas que usan grupo |
 | M3 | Un saludo o un mensaje después de horas no hereda la rama anterior | General, acotado | Rutas: solo saludos y pláticas retomadas |
-| M5 | Plurales y sinónimos declarados para buscar en la hoja | Plurales: general, acotado · sinónimos: opcional | Columnas buscadas con `=?` / `~?` |
+| M5 | Sinónimos (y sus plurales) declarados para buscar en la hoja | Opcional | Solo agentes con sección `[SINÓNIMOS]` |
 | M2 | Esperar y contestar juntos los mensajes seguidos | Opcional, por agente | Solo agentes que lo activen |
 
 ## M1 · Imágenes y videos
@@ -50,7 +50,7 @@ menos que hubo una imagen. No cambia mensajes con texto ni con documentos.
 **Problema.** Cada `?` es obligatorio. Con `S,P,H,S=?; MODELO>=?`, a «¿tienen SUV?» el motor pide el
 año en vez de dar todas las SUV.
 
-**Cambio.** Sintaxis nueva para un `?` opcional (propuesta: `MODELO>=?opcional`): si el cliente dio
+**Cambio.** Sintaxis nueva para un `?` opcional: `MODELO>=?opcional`: si el cliente dio
 el dato, filtra; si no, esa condición no se aplica. El `?` de siempre sigue siendo obligatorio, así
 que las grúas siguen preguntando la capacidad.
 
@@ -74,7 +74,7 @@ días» al día siguiente cae en la rama de la plática de ayer.
 
 **Cambio (acotado).**
 1. Si el mensaje es solo un saludo, no se aplica «conservá la rama».
-2. Los mensajes de hace más de N horas (propuesta: 12) no entran al contexto del clasificador.
+2. Los mensajes de hace más de 12 horas no entran al contexto del clasificador (`ContextLine::STALE_AFTER`).
 
 La regla de conservar la rama no se toca para lo demás.
 
@@ -86,23 +86,24 @@ La regla de conservar la rama no se toca para lo demás.
 **Problema.** «pickup», «pick-up» y «Pick Up» ya empatan; «pickups», «suvs», «picop» o «troca» no.
 
 **Cambio.**
-- (a) Plurales simples (s/es) al comparar con `=?` y `~?`.
-- (b) Sinónimos declarados por agente en su prompt, por ejemplo una sección
-  `[SINÓNIMOS]` con `PICK UP = picop, pik up, troca, camioneta de carga`. Sin la sección, nada cambia.
+- Sinónimos declarados por agente en su prompt, en una sección `[SINÓNIMOS]` con
+  `PICK UP = picop, pik up, troca, camioneta de carga`. Sin la sección, nada cambia.
+- Plurales (s/es) **solo de lo declarado** («pickups», «suvs»). Al implementarlo se vio que el
+  plural general rompía cosas: «unos» empataba con el modelo «Uno» y «derechos» con la carrera
+  «Derecho». Por eso M5 quedó 100 % opcional.
 - No se tolera 1–2 letras de diferencia: con valores cortos («Rio», «Uno», «Note») confunde unos con
   otros.
 
 **Dónde.** `sheet_numbers.rb` (`names?`), `sheet_lookup.rb` y `sheet_lookup/contains.rb`.
 
-**Riesgo.** El plural cambia la comparación para todos: se valida que «Trabajo Social» / «servicio
-social» (Universidad) y los remolques de Grúas den lo mismo que hoy.
 
 ## M2 · Mensajes seguidos, por agente
 
 **Problema.** Cada mensaje dispara su propio análisis: «El sbaa» + «Sábado», o foto + «¿sigue
 disponible?», dan dos respuestas.
 
-**Cambio.** Opción por agente (apagada por defecto): esperar N segundos y contestar solo el último
+**Cambio.** Opción por agente (apagada por defecto, `resources['group_seconds']`, de 0 a 30, en
+Recursos › Canal y seguimiento): esperar N segundos y contestar solo el último
 mensaje con el texto de todos juntos. Es el mismo patrón que ya usa Motor 2.0 (`Motor2::ReplyJob`,
 `Motor2::WAIT`). Los agentes que no lo activen contestan sin espera, como hoy.
 
@@ -128,3 +129,23 @@ del agente.
 
 Cada PR: specs, rubocop sin ofensas nuevas, corrida en seco de otros agentes, y tras el merge
 desplegar y reiniciar Puma y Sidekiq en dev (pidiendo permiso: lo usa todo el equipo).
+
+## Resultados (26/11/2026)
+
+**Ruteo en seco** (clasificador real, 33 casos × 3: los de las pláticas que fallaron, sus variantes y
+13 de regresión de lo que ya funcionaba): **60/99 con el prompt anterior → 99/99** con el nuevo y
+este motor. Ninguno de regresión cambió de rama.
+
+**En vivo** en el Probador local:
+- «¿tienes alguna suv 2020?» → las SUV de 2020 en adelante (`?opcional`); «¿tienen pik up?» → las
+  pick up (sinónimos); «Me mandas inventario» → el catálogo.
+- Foto + «¿sigue disponible?» seguidos → **una** respuesta: «No puedo ver imágenes, ¿me dices el
+  nombre o el modelo?». En la primera versión de la regla el modelo todavía adivinaba con las filas
+  consultadas («si te refieres al KIA RIO…»); la regla ahora lo prohíbe explícitamente.
+- «El sbaa» + «Sábado» → **una** respuesta, pasa con el asesor.
+- «Hola buen día» a media plática → saludo, sin retomar el tema anterior.
+
+**Specs:** 1806 de contact_trackings, knowledge_base, motor2, ai_follow_ups, agent_tester, message y el
+job: 1 falla que también falla sin estos cambios (prueba de calendario que depende de la fecha:
+`contact_tracking_response_analyzer_job_spec.rb:816`, un doble sin `working_day?`).
+

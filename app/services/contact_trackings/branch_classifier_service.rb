@@ -98,10 +98,12 @@ module ContactTrackings
         - Si quiere RESOLVER una falla, error o problema de algo que ya usa, es la rama
           técnica o de soporte, aunque mencione una factura, una cotización o un vendedor.
         - Si el mensaje continúa un tema que ya se venía tratando, conservá esa misma rama.
+        - Un saludo solo (hola, buenos días, buenas tardes) sin ninguna pregunta NO continúa el
+          tema anterior: elegí la rama de saludo si existe; si no, null.
         - Si ninguna encaja con claridad, devolvé null.
 
         #{contexto}Mensaje actual del cliente:
-        "#{ContactTrackings::AttachmentText.message_text(@message).strip.truncate(600)}"
+        "#{ContactTrackings::MediaNote.with_marks(ContactTrackings::AttachmentText.message_text(@message), @message).truncate(600)}"
 
         Respondé SOLO un JSON: {"rama": "<uno de: #{@route_map.names.join(' | ')} | null>"}
       PROMPT

@@ -615,6 +615,8 @@
       "REQUIRED_MARK": "*",
       "INBOX_CHOOSE": "Choose the channel",
       "RETRY_VALUE": "Time between attempts",
+      "GROUP_SECONDS": "Wait for back-to-back messages (seconds)",
+      "GROUP_SECONDS_HELP": "If the customer sends several messages in a row, the agent waits this long and answers them together in one reply. 0 = answer each message right away, as before.",
       "RETRY_UNIT": "Interval",
       "ATTEMPTS": "Attempts",
       "UNIT_MINUTES": "Minutes",

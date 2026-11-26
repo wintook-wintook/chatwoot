@@ -7,7 +7,7 @@
 //   Canal*  ·  Tiempo entre intentos · Intervalo · Núm. intentos
 //   WhatsApp: plantilla por intento (obligatoria)  ·  Correo: firma
 // Los canales: las bandejas con el bot de seguimiento activo (como EditTemplate).
-// v-model: { inboxId, retryValue, retryUnit, attempts, whatsappTemplates: [], emailSignature }
+// v-model: { inboxId, retryValue, retryUnit, attempts, groupSeconds, whatsappTemplates: [], emailSignature }
 //
 // fix/campanas (punto 3): a la derecha, siempre a la vista, la plantilla del intento
 // seleccionado como la verá el cliente (TemplatePreview de Configuración › Plantillas de
@@ -161,6 +161,10 @@ export default {
       });
       if (this.previewIndex >= n) this.previewIndex = n - 1;
     },
+    // Mensajes seguidos (ContactTrackings::MessageBurst): 0 = sin espera, hasta 30 s.
+    setGroupSeconds(valor) {
+      this.set('groupSeconds', Math.min(30, Math.max(0, Number(valor) || 0)));
+    },
     setTemplate(indice, nombre) {
       const plantillas = [...(this.value.whatsappTemplates || [])];
       plantillas[indice] = nombre;
@@ -244,6 +248,20 @@ export default {
           :value="value.attempts"
           @input="setAttempts($event.target.value)"
         />
+      </label>
+      <label class="!m-0 sm:col-span-3">
+        {{ t('GROUP_SECONDS') }}
+        <input
+          type="number"
+          min="0"
+          max="30"
+          class="!mb-0 sm:!w-32"
+          :value="value.groupSeconds || 0"
+          @input="setGroupSeconds($event.target.value)"
+        />
+        <span class="block text-xs text-slate-500 dark:text-slate-400">
+          {{ t('GROUP_SECONDS_HELP') }}
+        </span>
       </label>
     </div>
 

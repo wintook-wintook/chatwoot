@@ -13,6 +13,8 @@
 # · buscar:   columna=valores. Varias condiciones con «;». Valores separados por coma;
 #             se comparan sin mayúsculas, acentos, espacios ni guiones («tp 63» = «TP-63»).
 #             «?» = el valor sale de la conversación (ver #mentioned_values).
+#             «?opcional» (25/11/2026) = igual, pero si el cliente no lo dijo la condición no
+#             se aplica: «tipo=?; año>=?opcional» da todas las SUV si no dijo año.
 #             columna~? = la celda CONTIENE la palabra que dijo («gris» → GRIS PLATA;
 #             21/11/2026, ver Contains). También columna!=valores, y con números columna>=, <=, >, < (pieza 1,
 #             26/09/2026): «capacidad_t>=?» = las grúas que aguantan lo que dijo el
@@ -41,6 +43,8 @@ class ContactTrackings::SheetLookup
   extend ContactTrackings::SheetLookup::Describe
   DIRECTIVE_RE = /\{\{\s*hoja_buscar\s*:([^{}]*)\}\}/i
   ASK = '?'
+  # «columna>=?opcional»: si el cliente no dio el dato, la condición no se aplica (no se pregunta).
+  ASK_OPTIONAL = '?opcional'
   # Cuántos mensajes atrás se buscan los valores del «?». Los últimos bastan: es lo que
   # se está hablando ahora, no lo que se dijo hace media conversación.
   RECENT_MESSAGES = 6
@@ -51,7 +55,8 @@ class ContactTrackings::SheetLookup
   NUMERIC_OPS = %w[>= <= > <].freeze
 
   # op: '=', '!=', '~' (contiene la palabra, ver Contains) o una comparación numérica. wanted: ASK, textos, o [número].
-  Filter = Struct.new(:column, :op, :wanted, keyword_init: true) do
+  # optional: el «?» no se pregunta si el cliente no lo dijo (ASK_OPTIONAL).
+  Filter = Struct.new(:column, :op, :wanted, :optional, keyword_init: true) do
     def ask?
       wanted == ASK
     end
@@ -110,13 +115,15 @@ class ContactTrackings::SheetLookup
 
   # text: (pieza 5) en vez de los mensajes, los «?» se buscan en este texto — el de UN servicio
   # («hiab 12 t»), porque en un mensaje con grúa y hiab cada uno busca su propio equipo.
-  # variables: las del Agente IA en la conversación (ver SheetLookup::VariableValues).
-  def initialize(account, spec, conversation: nil, text: nil, variables: nil)
+  # extra[:variables]: las del Agente IA en la conversación (ver SheetLookup::VariableValues).
+  # extra[:synonyms]: los de la sección [SINÓNIMOS] del agente (ver SheetSynonyms); sin ella, {}.
+  def initialize(account, spec, conversation: nil, text: nil, **extra)
     @account = account
     @spec = spec
     @conversation = conversation
     @text = text
-    @variables = variables.to_h
+    @variables = extra[:variables].to_h
+    @synonyms = extra[:synonyms].to_h
   end
 
   def call
@@ -180,14 +187,19 @@ class ContactTrackings::SheetLookup
   def filter_values(filter, rows)
     wanted = filter.ask? ? asked_values(filter, rows) : filter.wanted
     return :skip if wanted == :skip
+    return unanswered(filter) if wanted.empty?
 
-    if wanted.empty?
-      @unanswered = filter.column
-      return nil
-    end
     @asked ||= wanted if filter.ask? && !filter.numeric?
     @criteria << criterion(filter, wanted)
     wanted
+  end
+
+  # Un «?» que nadie contestó: se pregunta (nil), salvo que sea opcional (:skip).
+  def unanswered(filter)
+    return :skip if filter.optional
+
+    @unanswered = filter.column
+    nil
   end
 
   def asked_values(filter, rows)
@@ -267,7 +279,7 @@ class ContactTrackings::SheetLookup
   # «TP-64», «tp 64» y «TP64» son el mismo remolque; «TP-6» no es «TP-64». Sin acentos:
   # el cliente escribe «grua» y la hoja dice «Grúa».
   def mentions?(text, value)
-    ContactTrackings::SheetNumbers.names?(text, value)
+    ContactTrackings::SheetNumbers.names?(with_synonyms(text), value)
   end
 
   def cell(row, column)

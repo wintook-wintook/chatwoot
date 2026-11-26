@@ -485,6 +485,13 @@ class Message < ApplicationRecord
   #    AutoAcknowledgmentJob.perform_later(id)
   # end
 
+  # Espera del análisis: la de la automatización que va a crear el seguimiento y la de mensajes
+  # seguidos (opcional por agente, ContactTrackings::MessageBurst: espera y contesta el último).
+  def tracking_analysis_wait
+    automation = will_trigger_tracking_automation? ? 5.seconds : 0.seconds
+    [automation, ContactTrackings::MessageBurst.seconds_for(conversation_id).seconds].max
+  end
+
   # ⭐ SENTIMENT ANALYSIS - proyecto@contact_tracking
   # Analiza respuestas del cliente y ajusta seguimientos activos según sentimiento
   # Para revertir: Eliminar este método completo
@@ -506,8 +513,7 @@ class Message < ApplicationRecord
     # §11.11). El 1.0 sigue igual para los demás.
     return Motor2::ReplyJob.set(wait: Motor2::WAIT).perform_later(id) if Motor2.takes?(self)
 
-    wait = will_trigger_tracking_automation? ? 5.seconds : 0.seconds
-    ContactTrackingResponseAnalyzerJob.set(wait: wait).perform_later(id)
+    ContactTrackingResponseAnalyzerJob.set(wait: tracking_analysis_wait).perform_later(id)
   rescue StandardError => e
     Rails.logger.error "[Message] Error queueing sentiment analysis: #{e.message}"
   end
