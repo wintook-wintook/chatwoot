@@ -107,6 +107,7 @@
       kind="meeting"
       :busy="cancelBusy"
       :error="cancelError"
+      :allow-reschedule="!cancelCoworkerRef"
       @close="cancelTarget = null"
       @reschedule="rescheduleInstead"
       @submit="submitCancel"
@@ -131,7 +132,7 @@
     >
       <woot-modal-header
         :header-title="coworkerEventTitle"
-        :header-content="$t('GOOGLE_CALENDAR.COWORKERS.EVENT_MODAL.READ_ONLY')"
+        :header-content="coworkerEventHeader"
       />
       <div class="px-8 pb-8 pt-2 space-y-3">
         <p class="text-sm font-medium text-slate-800 dark:text-slate-100">
@@ -154,7 +155,96 @@
           <span class="font-medium">{{ eventLabels.where }}:</span>
           {{ coworkerEventLocation }}
         </div>
-        <div class="flex justify-end">
+        <!-- feat/ventana_evento_calendario F5 (D7) — con su «Hacer cambios» -->
+        <div
+          v-if="coworkerDeleteAsk"
+          class="flex flex-col gap-2 p-2 text-sm border rounded-md border-red-200 dark:border-red-800"
+          data-test="coworker-delete-ask"
+        >
+          <p class="m-0 font-medium text-slate-800 dark:text-slate-100">
+            {{
+              $t('GOOGLE_CALENDAR.DELETE_EVENT.DELETE_TITLE', {
+                title: coworkerEventSummary,
+              })
+            }}
+          </p>
+          <p class="m-0 text-slate-600 dark:text-slate-300">
+            {{
+              $t('GOOGLE_CALENDAR.COWORKERS.EVENT_MODAL.DELETE_DESC', {
+                name: coworkerEvent.name,
+              })
+            }}
+          </p>
+          <div v-if="coworkerEvent.recurringEventId" class="flex gap-4">
+            <label class="flex items-center gap-2">
+              <input
+                v-model="coworkerDeleteScope"
+                type="radio"
+                value="one"
+                class="!m-0"
+              />
+              {{ $t('GOOGLE_CALENDAR.DELETE_EVENT.ONLY_THIS') }}
+            </label>
+            <label class="flex items-center gap-2">
+              <input
+                v-model="coworkerDeleteScope"
+                type="radio"
+                value="all"
+                class="!m-0"
+              />
+              {{ $t('GOOGLE_CALENDAR.DELETE_EVENT.ALL_SERIES') }}
+            </label>
+          </div>
+          <label
+            v-if="coworkerEvent.guests > 0"
+            class="flex items-center gap-2"
+          >
+            <input
+              v-model="coworkerDeleteNotify"
+              type="checkbox"
+              class="!m-0"
+            />
+            {{
+              $t('GOOGLE_CALENDAR.DELETE_EVENT.NOTIFY', {
+                count: coworkerEvent.guests,
+              })
+            }}
+          </label>
+          <div class="flex justify-end gap-2">
+            <woot-button variant="clear" @click="coworkerDeleteAsk = false">
+              {{ $t('GOOGLE_CALENDAR.DELETE_EVENT.BACK') }}
+            </woot-button>
+            <woot-button
+              color-scheme="alert"
+              :is-loading="coworkerDeleteBusy"
+              data-test="coworker-delete-confirm"
+              @click="deleteCoworkerEvent"
+            >
+              {{ $t('GOOGLE_CALENDAR.DELETE_EVENT.DELETE_CONFIRM') }}
+            </woot-button>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2">
+          <div v-if="!coworkerDeleteAsk" class="flex gap-2 mr-auto">
+            <woot-button
+              v-if="coworkerCanCancel"
+              variant="clear"
+              color-scheme="alert"
+              data-test="coworker-cancel-item"
+              @click="cancelCoworkerItem"
+            >
+              {{ $t('GOOGLE_CALENDAR.EDIT_EVENT.CANCEL_ITEM') }}
+            </woot-button>
+            <woot-button
+              v-if="coworkerCanDelete"
+              variant="clear"
+              color-scheme="alert"
+              data-test="coworker-delete"
+              @click="coworkerDeleteAsk = true"
+            >
+              {{ $t('GOOGLE_CALENDAR.DELETE_EVENT.DELETE') }}
+            </woot-button>
+          </div>
           <woot-button variant="clear" @click="closeCoworkerEvent">
             {{ $t('GOOGLE_CALENDAR.COWORKERS.EVENT_MODAL.CLOSE') }}
           </woot-button>
@@ -204,6 +294,12 @@ export default {
       cancelEvent: null,
       cancelBusy: false,
       cancelError: '',
+      // feat/ventana_evento_calendario F5 — evento de un compañero
+      cancelCoworkerRef: null,
+      coworkerDeleteAsk: false,
+      coworkerDeleteScope: 'one',
+      coworkerDeleteNotify: true,
+      coworkerDeleteBusy: false,
     };
   },
   computed: {
@@ -234,6 +330,23 @@ export default {
         .map(r => ({ ...r, name: names[r.agent_id] }));
     },
     // Ventanita de solo lectura (computed: en <template> no se puede usar ?. con webpack 4).
+    // F5 (D7) — con su «Hacer cambios»: tarea agendada → cancelar; solo Google → eliminar.
+    coworkerCanEdit() {
+      return !!(this.coworkerEvent && this.coworkerEvent.canSchedule);
+    },
+    coworkerCanCancel() {
+      return this.coworkerCanEdit && !!this.coworkerEvent.agendaItem;
+    },
+    coworkerCanDelete() {
+      return this.coworkerCanEdit && !this.coworkerEvent.agendaItem;
+    },
+    coworkerEventHeader() {
+      return this.$t(
+        this.coworkerCanEdit
+          ? 'GOOGLE_CALENDAR.COWORKERS.EVENT_MODAL.CAN_EDIT'
+          : 'GOOGLE_CALENDAR.COWORKERS.EVENT_MODAL.READ_ONLY'
+      );
+    },
     coworkerEventTitle() {
       const name = this.coworkerEvent ? this.coworkerEvent.name : '';
       return this.$t('GOOGLE_CALENDAR.COWORKERS.EVENT_MODAL.TITLE', { name });
@@ -303,6 +416,40 @@ export default {
     },
     closeCoworkerEvent() {
       this.coworkerEvent = null;
+      this.coworkerDeleteAsk = false;
+      this.coworkerDeleteScope = 'one';
+      this.coworkerDeleteNotify = true;
+    },
+    // F5 — cancelar la tarea agendada del compañero (sin «reprogramar»: no se edita aquí).
+    cancelCoworkerItem() {
+      const ev = this.coworkerEvent;
+      this.closeCoworkerEvent();
+      this.cancelEvent = null;
+      this.cancelError = '';
+      this.cancelCoworkerRef = { agentId: ev.agentId, eventId: ev.eventId };
+      this.cancelTarget = { ...ev.agendaItem };
+    },
+    async deleteCoworkerEvent() {
+      const ev = this.coworkerEvent;
+      this.coworkerDeleteBusy = true;
+      try {
+        await this.$store.dispatch('googleCalendar/deleteCoworkerEvent', {
+          agentId: ev.agentId,
+          eventId: ev.eventId,
+          scope: ev.recurringEventId ? this.coworkerDeleteScope : 'one',
+          notify: ev.guests > 0 && this.coworkerDeleteNotify,
+          seriesId: ev.recurringEventId,
+        });
+        useAlert(this.$t('GOOGLE_CALENDAR.DELETE_EVENT.DELETE_DONE'));
+        this.closeCoworkerEvent();
+      } catch (e) {
+        useAlert(
+          e?.response?.data?.error ||
+            this.$t('GOOGLE_CALENDAR.DELETE_EVENT.ERROR')
+        );
+      } finally {
+        this.coworkerDeleteBusy = false;
+      }
     },
     connectAccount() {
       this.$store.dispatch('googleCalendar/connectAccount');
@@ -335,6 +482,7 @@ export default {
     // fix/calendario_eliminar F2 — la ventana del evento se cierra y abre «Cancelar con motivo»
     // (no una ventana encima de otra). «Reprogramar» la vuelve a abrir para cambiar la hora.
     openCancelItem(item) {
+      this.cancelCoworkerRef = null;
       this.cancelEvent = this.editingEvent;
       this.onModalClose();
       this.cancelError = '';
@@ -363,6 +511,13 @@ export default {
             : 'CANCEL_ITEM.NOTICE_FAILED';
         }
         useAlert(this.$t(notice));
+        if (this.cancelCoworkerRef) {
+          this.$store.dispatch(
+            'googleCalendar/removeCoworkerEvent',
+            this.cancelCoworkerRef
+          );
+          this.cancelCoworkerRef = null;
+        }
         this.cancelTarget = null;
         this.cancelEvent = null;
         this.fetchData();

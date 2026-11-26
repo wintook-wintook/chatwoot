@@ -25,6 +25,18 @@ RSpec.describe 'Agenda Items API' do
   end
 
   describe 'POST alta' do
+    # feat/ventana_evento_calendario F3
+    it 'con un correo invitado mal escrito no la crea' do
+      expect { create_item(meeting_params(contact_id: contact.id, attendee_emails: ['ok@x.com', 'mal@'])) }
+        .not_to change(CaseMeeting, :count)
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it 'guarda los invitados limpios y los devuelve' do
+      body = create_item(meeting_params(contact_id: contact.id, attendee_emails: [' Ok@X.com ', 'ok@x.com']))
+      expect(body['agenda_item']['attendee_emails']).to eq(['ok@x.com'])
+    end
+
     it 'crea la tarea agendada solo con su contacto, le pone la organización y la manda a Google' do
       expect { create_item(meeting_params(contact_id: contact.id)) }.to have_enqueued_job(Cases::MeetingSyncJob)
 
@@ -163,6 +175,38 @@ RSpec.describe 'Agenda Items API' do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(meeting.reload.status).to eq('scheduled')
+    end
+
+    # feat/ventana_evento_calendario F3 — invitados por correo también al editar.
+    it 'cambia sus invitados por correo (limpios y sin repetir) y lo lleva a Google' do
+      meeting = cita(attendee_emails: ['viejo@cliente.com'])
+
+      expect do
+        patch "#{base}/#{meeting.id}", params: { attendee_emails: [' Jefe@Empresa.com', 'jefe@empresa.com', 'b@y.com'] },
+                                       headers: headers, as: :json
+      end.to have_enqueued_job(Cases::MeetingSyncJob)
+
+      expect(response).to have_http_status(:success)
+      expect(meeting.reload.attendee_emails).to eq(['jefe@empresa.com', 'b@y.com'])
+      expect(response.parsed_body['agenda_item']['attendee_emails']).to eq(['jefe@empresa.com', 'b@y.com'])
+    end
+
+    it 'un correo mal escrito no se guarda: responde cuál' do
+      meeting = cita(attendee_emails: ['a@x.com'])
+
+      patch "#{base}/#{meeting.id}", params: { attendee_emails: ['b@y.com', 'jefe@empresa,com'] }, headers: headers, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to include('jefe@empresa,com')
+      expect(meeting.reload.attendee_emails).to eq(['a@x.com'])
+    end
+
+    it 'sin attendee_emails en la petición no toca los invitados' do
+      meeting = cita(attendee_emails: ['a@x.com'])
+
+      patch "#{base}/#{meeting.id}", params: { title: 'Otro' }, headers: headers, as: :json
+
+      expect(meeting.reload.attendee_emails).to eq(['a@x.com'])
     end
 
     it 'la liga a un caso y toma el consecutivo del caso' do

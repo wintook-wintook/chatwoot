@@ -25,10 +25,28 @@ class Api::V1::Accounts::GoogleCalendar::CoworkersController < Api::V1::Accounts
     ids = Array(params[:agent_ids]).map(&:to_i) & coworker_users.map(&:id)
     integrations = integrations_by_user.values_at(*ids).compact
     results = @coworker_service.fetch_many(integrations, time_min: time_min, time_max: time_max)
-    render json: { coworkers: results.map { |r| r.except(:google_email) } }
+    render json: { coworkers: with_agenda_items(results).map { |r| r.except(:google_email) } }
   end
 
   private
+
+  # feat/ventana_evento_calendario F5 — si el evento del compañero es una tarea agendada (sigue
+  # agendada), lo mínimo para «Cancelar tarea agendada» con la ventana de motivo.
+  def with_agenda_items(results)
+    ids = results.flat_map { |r| Array(r[:events]).pluck(:id) }
+    meetings = Current.account.case_meetings.scheduled.where(google_event_id: ids).index_by(&:google_event_id)
+    return results if meetings.empty?
+
+    results.map do |r|
+      r.merge(events: Array(r[:events]).map { |e| meetings[e[:id]] ? e.merge(agenda_item: agenda_item_ref(meetings[e[:id]])) : e })
+    end
+  end
+
+  def agenda_item_ref(meeting)
+    { id: meeting.id, title: meeting.title, series: meeting.case_meeting_series_id.present?,
+      work_started: Cases::Cancellation.work_started?(meeting),
+      has_client: (meeting.client_contact || meeting.client_organization || meeting.case_ticket).present? }
+  end
 
   def require_integration
     @integration = current_user.user_calendar_integrations.find_by(account: Current.account)

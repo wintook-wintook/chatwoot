@@ -25,6 +25,8 @@ class GoogleCalendarEventDeleter
     @calendar_id = options[:calendar_id].presence || 'primary'
     @whole_series_asked = options[:scope].to_s == 'all'
     @notify = options.fetch(:notify, true)
+    # F5 — calendario de un compañero: su correo de Google (él es el organizador de lo suyo).
+    @owner_email = options[:owner_email].to_s.downcase.presence
   end
 
   def call
@@ -36,7 +38,7 @@ class GoogleCalendarEventDeleter
 
     whole_series = whole_series?(series_id)
     remove(series_id, whole_series, send_updates(event))
-    release_bot_appointments([@event_id, (series_id if whole_series)].compact)
+    after_delete([@event_id, (series_id if whole_series)].compact)
     done(whole_series ? 'all' : 'one')
   rescue StandardError => e
     Rails.logger.warn "[GoogleCalendarEventDeleter] user #{@user.id} event #{@event_id}: #{e.message}"
@@ -57,8 +59,19 @@ class GoogleCalendarEventDeleter
     end
   end
 
+  def after_delete(ids)
+    release_bot_appointments(ids)
+    GoogleCalendarCoworkerService.clear_cache_for(@owner_email) if @owner_email
+  end
+
   def send_updates(event)
-    event.dig('organizer', 'self') == true && @notify ? 'all' : 'none'
+    organizer?(event) && @notify ? 'all' : 'none'
+  end
+
+  def organizer?(event)
+    return true if event.dig('organizer', 'self') == true
+
+    @owner_email.present? && event.dig('organizer', 'email').to_s.downcase == @owner_email
   end
 
   def linked_to_agenda_item?(ids)

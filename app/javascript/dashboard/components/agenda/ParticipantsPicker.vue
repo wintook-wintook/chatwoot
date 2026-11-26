@@ -21,6 +21,8 @@ export default {
     excludeId: { type: [Number, String], default: null },
     // Estado de cada uno al editar: [{ id, status, note }].
     current: { type: Array, default: () => [] },
+    // feat/ventana_evento_calendario — título propio (en el calendario dice «Agentes»).
+    label: { type: String, default: '' },
   },
   data() {
     return { busy: [], timer: null };
@@ -103,7 +105,9 @@ export default {
 
 <template>
   <div class="block">
-    <span class="field-label">{{ $t('AGENDA_PARTICIPANTS.LABEL') }}</span>
+    <span class="field-label">
+      {{ label || $t('AGENDA_PARTICIPANTS.LABEL') }}
+    </span>
     <div class="flex flex-wrap gap-1.5">
       <button
         v-for="agent in options"

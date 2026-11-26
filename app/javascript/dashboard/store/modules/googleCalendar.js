@@ -297,6 +297,46 @@ const actions = {
     await GoogleCalendarAPI.updateEvent(eventId, { start_time, end_time, summary, description, attendees, calendar_id });
   },
 
+  // feat/ventana_evento_calendario F5 — quitar un evento (o su serie) de un compañero.
+  removeCoworkerEvent: (
+    { commit, state: s },
+    { agentId, eventId, seriesId }
+  ) => {
+    const gone = e =>
+      e.id === eventId || (!!seriesId && e.recurring_event_id === seriesId);
+    commit(
+      'SET_COWORKER_EVENTS',
+      s.coworkerEvents.map(row =>
+        row.agent_id === agentId
+          ? { ...row, events: (row.events || []).filter(e => !gone(e)) }
+          : row
+      )
+    );
+  },
+
+  // F5 (D7) — eliminar en el calendario de un compañero que me dio «Hacer cambios».
+  deleteCoworkerEvent: async (
+    { dispatch, commit, state: s },
+    { agentId, eventId, scope, notify, seriesId }
+  ) => {
+    const before = s.coworkerEvents;
+    dispatch('removeCoworkerEvent', {
+      agentId,
+      eventId,
+      seriesId: scope === 'all' ? seriesId : null,
+    });
+    try {
+      await GoogleCalendarAPI.deleteEvent(eventId, {
+        agent_id: agentId,
+        scope,
+        notify,
+      });
+    } catch (error) {
+      commit('SET_COWORKER_EVENTS', before);
+      throw error;
+    }
+  },
+
   // fix/calendario_eliminar F3 — se quita de la pantalla al momento; si Google falla, regresa.
   deleteEvent: async (
     { commit, state: s },

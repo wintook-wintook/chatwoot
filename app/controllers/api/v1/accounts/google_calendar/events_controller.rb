@@ -54,9 +54,11 @@ class Api::V1::Accounts::GoogleCalendar::EventsController < Api::V1::Accounts::B
   DELETE_STATUS = { 'linked_to_agenda_item' => :conflict, 'no_permission' => :forbidden }.freeze
 
   def destroy
+    target = delete_target
+    return if performed?
+
     result = GoogleCalendarEventDeleter.new(
-      account: Current.account, user: current_user, service: calendar_service, event_id: params[:id],
-      options: { calendar_id: params[:calendar_id], scope: params[:scope], notify: params[:notify].to_s != 'false' }
+      account: Current.account, user: current_user, service: calendar_service, event_id: params[:id], options: delete_options(target)
     ).call
     return render json: { deleted: true, scope: result.scope } if result.ok
 
@@ -67,6 +69,23 @@ class Api::V1::Accounts::GoogleCalendar::EventsController < Api::V1::Accounts::B
   end
 
   private
+
+  def delete_options(target)
+    target.merge(scope: params[:scope], notify: params[:notify].to_s != 'false')
+  end
+
+  # feat/ventana_evento_calendario F5 (D7) — con `agent_id` de un compañero se borra en SU
+  # calendario, solo si me dio «Hacer cambios» (lo pregunta el guardián a Google).
+  def delete_target
+    agent_id = params[:agent_id].presence
+    return { calendar_id: params[:calendar_id] } if agent_id.nil? || agent_id.to_i == current_user.id
+
+    guard = GoogleCalendarScheduleGuard.new(account: Current.account, viewer: current_user, agent_id: agent_id).call
+    return render(json: { error: guard.error }, status: :forbidden) && {} unless guard.ok?
+
+    email = guard.coworker_integration.google_email
+    { calendar_id: email, owner_email: email }
+  end
 
   # F3b «Agendar a» (fix/calendario_google): con `agent_id` de un compañero, el evento va a SU
   # calendario principal, creado con MI conexión y solo si me dio «Hacer cambios» en Google.

@@ -95,8 +95,15 @@ class GoogleCalendarCoworkerService
       start: start['dateTime'] || start['date'],
       end: finish['dateTime'] || finish['date'],
       all_day: start['dateTime'].blank? && start['date'].present?,
-      private: event['summary'].blank?
+      private: event['summary'].blank?,
+      # feat/ventana_evento_calendario F5 — para «Eliminar evento» en el calendario del compañero.
+      recurring_event_id: event['recurringEventId'],
+      guests: guests_count(event)
     }
+  end
+
+  def guests_count(event)
+    Array(event['attendees']).count { |a| !a['organizer'] && !a['resource'] }
   end
 
   def base(coworker)

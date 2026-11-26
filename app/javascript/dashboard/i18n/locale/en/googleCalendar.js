@@ -185,6 +185,10 @@ export default {
       EVENT_MODAL: {
         TITLE: "{name}'s schedule",
         READ_ONLY: "Read only: this event is on your teammate's calendar.",
+        // feat/ventana_evento_calendario F5
+        CAN_EDIT:
+          'It is on your teammate\'s calendar. They gave you "Make changes": you can cancel or delete it.',
+        DELETE_DESC: "It will be deleted from {name}'s calendar.",
         PRIVATE: "Your teammate doesn't share the details of this event.",
         WHEN: 'When',
         WHERE: 'Where',
@@ -242,8 +246,37 @@ export default {
         'Google is not connected: what you schedule stays in Kontrolya only.',
       LEGEND_NO_TASK: 'Dashed border: event without a task',
     },
+    // feat/ventana_evento_calendario F2 — one search for participants.
+    PEOPLE: {
+      LABEL: 'Add agents or guests',
+      LABEL_AGENTS: 'Add agents',
+      LABEL_GUESTS: 'Guests',
+      PLACEHOLDER_GUESTS: 'Search a contact or type an email',
+      AGENTS: 'Agents',
+      PLACEHOLDER: 'Type a name or an email',
+      PLACEHOLDER_AGENTS: 'Type an agent name',
+      HINT: 'Separate several emails with commas. You can also paste them all at once.',
+      AGENT: 'Agent',
+      GUEST: 'Guest',
+      CONTACT: 'contact',
+      INVITE_EMAIL: 'Invite "{email}" by email',
+      INVITE_CLIENT: 'Invite the client: {name} · {email}',
+      INVITE: 'Invite',
+      INVALID: '"{text}" is not a valid email',
+      INVALID_SUBMIT:
+        'There is a mistyped email in Participants: fix it or remove it.',
+      BUSY: '● busy: {what}',
+      DECLINED: 'Cannot go',
+      REMOVE: 'Remove',
+    },
+    // feat/ventana_evento_calendario F1
+    EVENT_TABS: {
+      CLIENT: 'Client',
+      PEOPLE: 'Participants',
+    },
     EDIT_EVENT: {
-      TITLE: 'Edit Event',
+      TITLE: 'Edit event',
+      TITLE_ITEM: 'Edit scheduled task',
       SUBMIT: 'Save Changes',
       SUCCESS: 'Event updated successfully',
       ERROR: 'Could not update event. Please try again.',

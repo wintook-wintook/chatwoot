@@ -573,6 +573,7 @@ es:
     bot_note: '🗑️ %{name} eliminó la cita desde el calendario. El cliente no fue avisado.'
   agenda_items:
     already_linked: 'Ese evento ya tiene una tarea agendada'
+    invalid_emails: 'Correo no válido en invitados: %{emails}'
     all_day: 'Un evento de todo el día no tiene hora: se queda solo en Google'
     untitled: 'Sin título'
   access_roles:

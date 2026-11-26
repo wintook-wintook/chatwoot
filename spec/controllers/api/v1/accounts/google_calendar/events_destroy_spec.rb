@@ -107,6 +107,41 @@ RSpec.describe 'Google Calendar delete event API', type: :request do
     expect(note.sender).to eq(agent)
   end
 
+  # feat/ventana_evento_calendario F5 (D7) — en el calendario de un compañero.
+  describe 'con agent_id de un compañero' do
+    let(:beto) { create(:user, account: account, role: :agent, name: 'Beto') }
+    let(:guard) { instance_double(GoogleCalendarScheduleGuard) }
+    let(:beto_integration) do
+      UserCalendarIntegration.create!(user: beto, account: account, google_email: 'beto@gmail.com', tokens: { 'access_token' => 't' })
+    end
+
+    before do
+      allow(GoogleCalendarScheduleGuard).to receive(:new).and_return(guard)
+      allow(guard).to receive(:call).and_return(guard)
+      allow(GoogleCalendarCoworkerService).to receive(:clear_cache_for)
+    end
+
+    it 'con su «Hacer cambios» borra en SU calendario y avisa como organizador' do
+      allow(guard).to receive_messages(ok?: true, coworker_integration: beto_integration)
+      allow(google).to receive(:get_event).and_return(mine.merge('organizer' => { 'email' => 'Beto@gmail.com' }))
+      delete_event('ev1', agent_id: beto.id)
+
+      expect(response).to have_http_status(:success)
+      expect(google).to have_received(:get_event).with('ev1', calendar_id: 'beto@gmail.com')
+      expect(google).to have_received(:delete_event).with('ev1', calendar_id: 'beto@gmail.com', send_updates: 'all')
+      expect(GoogleCalendarCoworkerService).to have_received(:clear_cache_for).with('beto@gmail.com')
+    end
+
+    it 'sin su permiso responde 403 con el motivo y no borra' do
+      allow(guard).to receive_messages(ok?: false, error: 'Tu compañero no te dio permiso')
+      delete_event('ev1', agent_id: beto.id)
+
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body['error']).to eq('Tu compañero no te dio permiso')
+      expect(google).not_to have_received(:delete_event)
+    end
+  end
+
   it 'no toca citas del bot de otra cuenta' do
     other = create(:contact_tracking, appointment_event_id: 'ev1', appointment_at: 1.day.from_now)
     delete_event
