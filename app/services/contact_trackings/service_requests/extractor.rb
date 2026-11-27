@@ -198,6 +198,12 @@ class ContactTrackings::ServiceRequests::Extractor
       CLIENTE que se va a mover («equipo 1: plataforma articulada Haulotte HA20», «mi
       excavadora», «equipo de izaje con certificados») es CARGA o requisito, NUNCA equipo.tipo.
       Si el cliente no dice con qué unidad (p. ej. «flete de maquinaria»), equipo.tipo = null.
+    - peso_t: lo que PESA la carga del cliente, en toneladas. Acepta «t», «tn», «tns», «ton»,
+      «tons», «toneladas»; kilos entre 1000 («8,800 kg» = 8.8). Si el agente pidió el peso y el
+      cliente contesta con toneladas («20 tons», «1. 50 tons 20 x 20 x 10 metros»), eso es
+      peso_t de ese servicio, aunque el equipo pedido tenga capacidad. equipo.capacidad_t es solo
+      lo que el cliente pide que AGUANTE el equipo («grúa de 50 t»).
+    - medidas: largo × ancho × alto de la pieza mayor, tal cual («20 x 20 x 10 metros», «12 mts»).
     - paradas: en orden. «Presentarse en» / «origen» / «carga en» = origen. «Entregar en» /
       «destino» = destino. Un viaje redondo repite el origen al final.
     - fecha: SOLO el día, copiado como lo escribió el cliente («mañana», «el lunes 01 de junio»,

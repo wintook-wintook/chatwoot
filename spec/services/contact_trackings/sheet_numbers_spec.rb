@@ -15,6 +15,11 @@ RSpec.describe ContactTrackings::SheetNumbers do
       expect(described_class.in_text('plana de 12 mts y torton de 7 m', 'largo_m')).to eq([12.0, 7.0])
     end
 
+    it 'abreviaturas que también escriben los clientes: tns, tn, mt, mtrs (27/11/2026)' do
+      expect(described_class.in_text('una carga de 20 tns y otra de 3 tn', 'peso_max_t')).to eq([20.0, 3.0])
+      expect(described_class.in_text('mide 9 mtrs, la otra 4 mt', 'largo_m')).to eq([9.0, 4.0])
+    end
+
     it 'otra columna: el número que va con la palabra de la columna' do
       expect(described_class.in_text('hiab 12 ton con 5 extensiones', 'extensiones')).to eq([5.0])
     end

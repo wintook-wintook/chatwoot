@@ -9,9 +9,9 @@
 #
 #   columna                         acepta                          ejemplo → valor
 #   ─────────────────────────────── ─────────────────────────────── ─────────────────────
-#   toneladas (_t, ton, peso,       t, ton, tons, toneladas, kg     «26 toneladas» → 26
+#   toneladas (_t, ton, peso,       t, tn, tns, ton, tons, toneladas, kg  «26 toneladas» → 26
 #   capacidad)                      (÷ 1000)                        «8,800 kg»     → 8.8
-#   metros (_m, largo, ancho,       m, mts, metros                  «plana de 12 mts» → 12
+#   metros (_m, largo, ancho,       m, mt, mts, mtr, mtrs, metros   «plana de 12 mts» → 12
 #   alto, altura)
 #   año (año, anio, year, modelo)   un año de 4 dígitos, sin unidad «del 2020 en adelante» → 2020
 #                                                                   «2022 para arriba» → 2022
@@ -31,9 +31,9 @@
 
 module ContactTrackings::SheetNumbers
   NUMBER = '(\d{1,3}(?:[.,]\d{3})+(?![.,]?\d)|\d+(?:[.,]\d+)?)'
-  TONS_RE   = /#{NUMBER}\s*(toneladas?|tons?|tn|t)(?![[:alnum:]])/i
+  TONS_RE   = /#{NUMBER}\s*(toneladas?|tons?|tns|tn|t)(?![[:alnum:]])/i
   KILOS_RE  = /#{NUMBER}\s*(kilogramos?|kilos?|kgs?)(?![[:alnum:]])/i
-  METERS_RE = /#{NUMBER}\s*(metros?|mts?|m)(?![[:alnum:]])/i
+  METERS_RE = /#{NUMBER}\s*(metros?|mtrs?|mts?|m)(?![[:alnum:]])/i
   MONEY_UNIT_RE = /#{NUMBER}\s*(mil(?:l[oó]n(?:es)?)?|k|millones|mdp)(?![[:alnum:]])/i
   MONEY_SIGN_RE = /\$\s*#{NUMBER}/
   MONEY_PLAIN_RE = /(?<![\d.,$])(\d{1,3}(?:[,. ]\d{3})+|\d{5,8})(?![.,]?\d)(?!\s*(?:mil|k|millones|mdp)\b)/i
