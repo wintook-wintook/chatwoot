@@ -1643,6 +1643,463 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_29_100000) do
     t.index ["waiting_since"], name: "index_conversations_on_waiting_since"
   end
 
+  create_table "crm_article_components", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "article_id", null: false
+    t.bigint "component_id", null: false
+    t.decimal "quantity", precision: 18, scale: 5, default: "1.0", null: false
+    t.boolean "replaceable", default: false, null: false
+    t.boolean "units_editable", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_article_components_on_account_id"
+    t.index ["article_id", "component_id"], name: "index_crm_article_components_on_article_id_and_component_id", unique: true
+    t.index ["article_id"], name: "index_crm_article_components_on_article_id"
+    t.index ["component_id"], name: "index_crm_article_components_on_component_id"
+  end
+
+  create_table "crm_article_lines", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 50, null: false
+    t.string "key", limit: 20
+    t.bigint "group_id"
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_crm_article_lines_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_article_lines_on_account_id"
+    t.index ["group_id"], name: "index_crm_article_lines_on_group_id"
+  end
+
+  create_table "crm_article_prices", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "article_id", null: false
+    t.bigint "price_list_id", null: false
+    t.decimal "price", precision: 18, scale: 6, default: "0.0", null: false
+    t.bigint "currency_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_article_prices_on_account_id"
+    t.index ["article_id", "price_list_id"], name: "index_crm_article_prices_on_article_id_and_price_list_id", unique: true
+    t.index ["article_id"], name: "index_crm_article_prices_on_article_id"
+    t.index ["currency_id"], name: "index_crm_article_prices_on_currency_id"
+    t.index ["price_list_id"], name: "index_crm_article_prices_on_price_list_id"
+  end
+
+  create_table "crm_article_taxes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "article_id", null: false
+    t.bigint "tax_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_article_taxes_on_account_id"
+    t.index ["article_id", "tax_id"], name: "index_crm_article_taxes_on_article_id_and_tax_id", unique: true
+    t.index ["article_id"], name: "index_crm_article_taxes_on_article_id"
+    t.index ["tax_id"], name: "index_crm_article_taxes_on_tax_id"
+  end
+
+  create_table "crm_articles", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.integer "catalog_status", default: 2, null: false
+    t.string "key", limit: 20
+    t.string "name", limit: 200, null: false
+    t.string "normalized_name", limit: 200, null: false
+    t.bigint "line_id"
+    t.bigint "unit_id"
+    t.string "status", limit: 1, default: "A", null: false
+    t.boolean "is_stockable", default: true, null: false
+    t.boolean "is_kit", default: false, null: false
+    t.date "suspended_on"
+    t.string "suspension_reason", limit: 250
+    t.string "purchase_unit", limit: 20
+    t.decimal "purchase_unit_content", precision: 18, scale: 5, default: "1.0", null: false
+    t.decimal "unit_weight", precision: 18, scale: 5, default: "0.0", null: false
+    t.text "notes"
+    t.datetime "cataloged_at"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((key)::text)", name: "index_crm_articles_unique_key", unique: true, where: "(key IS NOT NULL)"
+    t.index ["account_id", "catalog_status"], name: "index_crm_articles_on_account_id_and_catalog_status"
+    t.index ["account_id", "normalized_name"], name: "index_crm_articles_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_articles_on_account_id"
+    t.index ["created_by_id"], name: "index_crm_articles_on_created_by_id"
+    t.index ["line_id"], name: "index_crm_articles_on_line_id"
+    t.index ["unit_id"], name: "index_crm_articles_on_unit_id"
+    t.index ["updated_by_id"], name: "index_crm_articles_on_updated_by_id"
+  end
+
+  create_table "crm_cities", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "state_id", null: false
+    t.string "name", limit: 50, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "state_id, lower((name)::text)", name: "index_crm_cities_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_cities_on_account_id"
+    t.index ["state_id"], name: "index_crm_cities_on_state_id"
+  end
+
+  create_table "crm_countries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 50, null: false
+    t.string "abbreviation", limit: 10
+    t.string "iso_code", limit: 3
+    t.boolean "is_default", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_crm_countries_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_countries_on_account_id"
+  end
+
+  create_table "crm_currencies", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 50, null: false
+    t.string "iso_code", limit: 3
+    t.string "symbol", limit: 10
+    t.string "amount_in_words", limit: 50
+    t.boolean "is_local", default: false, null: false
+    t.decimal "fixed_exchange_rate", precision: 14, scale: 6
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_crm_currencies_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_currencies_on_account_id"
+  end
+
+  create_table "crm_lookups", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.integer "kind", null: false
+    t.string "name", limit: 100, null: false
+    t.boolean "is_default", default: false, null: false
+    t.integer "position", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, kind, lower((name)::text)", name: "index_crm_lookups_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_lookups_on_account_id"
+  end
+
+  create_table "crm_organization_addresses", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "organization_id", null: false
+    t.string "consignee_name", limit: 100, null: false
+    t.string "street", limit: 100
+    t.string "exterior_number", limit: 10
+    t.string "interior_number", limit: 10
+    t.string "neighborhood", limit: 100
+    t.string "town", limit: 100
+    t.string "reference", limit: 100
+    t.bigint "city_id"
+    t.string "postal_code", limit: 10
+    t.string "tax_id", limit: 18
+    t.string "phone", limit: 35
+    t.string "phone2", limit: 35
+    t.string "email"
+    t.string "contact_name", limit: 100
+    t.boolean "is_primary", default: false, null: false
+    t.boolean "for_billing", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_organization_addresses_on_account_id"
+    t.index ["city_id"], name: "index_crm_organization_addresses_on_city_id"
+    t.index ["organization_id"], name: "index_crm_organization_addresses_on_organization_id"
+    t.index ["organization_id"], name: "index_crm_organization_addresses_one_billing", unique: true, where: "for_billing"
+    t.index ["organization_id"], name: "index_crm_organization_addresses_one_primary", unique: true, where: "is_primary"
+  end
+
+  create_table "crm_organization_contacts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "organization_id", null: false
+    t.integer "contact_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_organization_contacts_on_account_id"
+    t.index ["contact_id"], name: "index_crm_organization_contacts_on_contact_id", unique: true
+    t.index ["organization_id"], name: "index_crm_organization_contacts_on_organization_id"
+  end
+
+  create_table "crm_organizations", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.integer "organization_type", default: 2, null: false
+    t.string "key", limit: 20
+    t.string "legal_name", limit: 100, null: false
+    t.string "trade_name", limit: 100, null: false
+    t.string "phone", limit: 35
+    t.string "email"
+    t.string "tax_id", limit: 18
+    t.bigint "customer_type_id"
+    t.bigint "rating_id"
+    t.bigint "industry_id"
+    t.bigint "origin_id"
+    t.bigint "zone_id"
+    t.bigint "collector_id"
+    t.bigint "seller_id"
+    t.bigint "payment_term_id"
+    t.bigint "currency_id"
+    t.boolean "respect_seller", default: false, null: false
+    t.decimal "credit_limit", precision: 14, scale: 2, default: "0.0", null: false
+    t.string "status", limit: 1, default: "A", null: false
+    t.date "suspended_on"
+    t.string "suspension_reason", limit: 250
+    t.boolean "charge_taxes", default: true, null: false
+    t.boolean "withholds_taxes", default: false, null: false
+    t.string "cfdi_use", limit: 4
+    t.string "sat_payment_form", limit: 3
+    t.string "invoice_email"
+    t.text "notes"
+    t.datetime "converted_at"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((key)::text)", name: "index_crm_organizations_unique_key", unique: true, where: "(key IS NOT NULL)"
+    t.index "account_id, lower((legal_name)::text)", name: "index_crm_organizations_unique_legal_name", unique: true
+    t.index "account_id, lower((trade_name)::text)", name: "index_crm_organizations_unique_trade_name", unique: true
+    t.index ["account_id", "organization_type"], name: "index_crm_organizations_on_account_id_and_organization_type"
+    t.index ["account_id"], name: "index_crm_organizations_on_account_id"
+    t.index ["collector_id"], name: "index_crm_organizations_on_collector_id"
+    t.index ["created_by_id"], name: "index_crm_organizations_on_created_by_id"
+    t.index ["currency_id"], name: "index_crm_organizations_on_currency_id"
+    t.index ["customer_type_id"], name: "index_crm_organizations_on_customer_type_id"
+    t.index ["industry_id"], name: "index_crm_organizations_on_industry_id"
+    t.index ["origin_id"], name: "index_crm_organizations_on_origin_id"
+    t.index ["payment_term_id"], name: "index_crm_organizations_on_payment_term_id"
+    t.index ["rating_id"], name: "index_crm_organizations_on_rating_id"
+    t.index ["seller_id"], name: "index_crm_organizations_on_seller_id"
+    t.index ["updated_by_id"], name: "index_crm_organizations_on_updated_by_id"
+    t.index ["zone_id"], name: "index_crm_organizations_on_zone_id"
+  end
+
+  create_table "crm_payment_term_installments", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "payment_term_id", null: false
+    t.integer "days", default: 0, null: false
+    t.decimal "percent", precision: 5, scale: 2, default: "100.0", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_payment_term_installments_on_account_id"
+    t.index ["payment_term_id"], name: "index_crm_payment_term_installments_on_payment_term_id"
+  end
+
+  create_table "crm_payment_terms", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 100, null: false
+    t.decimal "early_payment_discount_percent", precision: 5, scale: 2, default: "0.0", null: false
+    t.integer "early_payment_days", default: 0, null: false
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_crm_payment_terms_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_payment_terms_on_account_id"
+  end
+
+  create_table "crm_quote_item_taxes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "item_id", null: false
+    t.bigint "tax_id"
+    t.string "name", limit: 30, null: false
+    t.integer "tax_type", null: false
+    t.decimal "percent", precision: 9, scale: 6, default: "0.0", null: false
+    t.decimal "base_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "amount", precision: 18, scale: 6, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "gross_base_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "gross_amount", precision: 18, scale: 6, default: "0.0", null: false
+    t.index ["account_id"], name: "index_crm_quote_item_taxes_on_account_id"
+    t.index ["item_id", "tax_id"], name: "index_crm_quote_item_taxes_on_item_id_and_tax_id", unique: true
+    t.index ["item_id"], name: "index_crm_quote_item_taxes_on_item_id"
+    t.index ["tax_id"], name: "index_crm_quote_item_taxes_on_tax_id"
+  end
+
+  create_table "crm_quote_items", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "quote_id", null: false
+    t.bigint "parent_item_id"
+    t.integer "position", default: 0, null: false
+    t.string "role", limit: 1, default: "N", null: false
+    t.bigint "article_id"
+    t.string "key", limit: 20
+    t.string "description", limit: 200, null: false
+    t.string "unit", limit: 20
+    t.bigint "price_list_id"
+    t.decimal "quantity", precision: 18, scale: 5, default: "1.0", null: false
+    t.decimal "unit_price", precision: 18, scale: 6, default: "0.0", null: false
+    t.decimal "discount_percent", precision: 9, scale: 6, default: "0.0", null: false
+    t.decimal "gross_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "discount_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "net_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "tax_amount", precision: 18, scale: 6, default: "0.0", null: false
+    t.decimal "withholding_amount", precision: 18, scale: 6, default: "0.0", null: false
+    t.text "notes"
+    t.text "extra_notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_quote_items_on_account_id"
+    t.index ["article_id"], name: "index_crm_quote_items_on_article_id"
+    t.index ["parent_item_id"], name: "index_crm_quote_items_on_parent_item_id"
+    t.index ["price_list_id"], name: "index_crm_quote_items_on_price_list_id"
+    t.index ["quote_id"], name: "index_crm_quote_items_on_quote_id"
+  end
+
+  create_table "crm_quote_series", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.string "series", limit: 8, null: false
+    t.integer "last_number", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, upper((series)::text)", name: "index_crm_quote_series_unique_series", unique: true
+    t.index ["account_id", "user_id"], name: "index_crm_quote_series_on_account_id_and_user_id", unique: true
+    t.index ["account_id"], name: "index_crm_quote_series_on_account_id"
+    t.index ["user_id"], name: "index_crm_quote_series_on_user_id"
+  end
+
+  create_table "crm_quote_taxes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "quote_id", null: false
+    t.bigint "tax_id"
+    t.string "name", limit: 30, null: false
+    t.integer "tax_type", null: false
+    t.decimal "percent", precision: 9, scale: 6, default: "0.0", null: false
+    t.decimal "base_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "gross_base_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "amount", precision: 18, scale: 6, default: "0.0", null: false
+    t.decimal "gross_amount", precision: 18, scale: 6, default: "0.0", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_quote_taxes_on_account_id"
+    t.index ["quote_id", "tax_id"], name: "index_crm_quote_taxes_on_quote_id_and_tax_id", unique: true
+    t.index ["quote_id"], name: "index_crm_quote_taxes_on_quote_id"
+    t.index ["tax_id"], name: "index_crm_quote_taxes_on_tax_id"
+  end
+
+  create_table "crm_quotes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "series", limit: 8, null: false
+    t.integer "number", null: false
+    t.string "folio", limit: 20, null: false
+    t.string "status", limit: 1, default: "N", null: false
+    t.bigint "organization_id", null: false
+    t.integer "contact_id"
+    t.bigint "shipping_address_id"
+    t.bigint "seller_id"
+    t.bigint "currency_id"
+    t.bigint "payment_term_id"
+    t.decimal "exchange_rate", precision: 18, scale: 6, default: "1.0", null: false
+    t.date "quote_date", null: false
+    t.date "valid_until"
+    t.date "delivery_date"
+    t.string "cfdi_use", limit: 4
+    t.string "sat_payment_method", limit: 3
+    t.string "purchase_order", limit: 35
+    t.date "purchase_order_date"
+    t.text "header_notes"
+    t.text "footer_notes"
+    t.string "extra_discount_type", limit: 1, default: "P", null: false
+    t.decimal "extra_discount_value", precision: 15, scale: 6, default: "0.0", null: false
+    t.decimal "extra_discount_percent", precision: 9, scale: 6, default: "0.0", null: false
+    t.decimal "extra_discount_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "freight", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "other_charges", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "subtotal", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "discount_total", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "net_amount", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "tax_total", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "withholding_total", precision: 15, scale: 2, default: "0.0", null: false
+    t.decimal "total", precision: 15, scale: 2, default: "0.0", null: false
+    t.datetime "status_changed_at"
+    t.bigint "status_changed_by_id"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "public_token", null: false
+    t.index ["account_id", "folio"], name: "index_crm_quotes_on_account_id_and_folio", unique: true
+    t.index ["account_id", "status", "quote_date"], name: "index_crm_quotes_on_account_id_and_status_and_quote_date"
+    t.index ["account_id"], name: "index_crm_quotes_on_account_id"
+    t.index ["contact_id"], name: "index_crm_quotes_on_contact_id"
+    t.index ["created_by_id"], name: "index_crm_quotes_on_created_by_id"
+    t.index ["currency_id"], name: "index_crm_quotes_on_currency_id"
+    t.index ["organization_id"], name: "index_crm_quotes_on_organization_id"
+    t.index ["payment_term_id"], name: "index_crm_quotes_on_payment_term_id"
+    t.index ["public_token"], name: "index_crm_quotes_on_public_token", unique: true
+    t.index ["seller_id"], name: "index_crm_quotes_on_seller_id"
+    t.index ["shipping_address_id"], name: "index_crm_quotes_on_shipping_address_id"
+    t.index ["status_changed_by_id"], name: "index_crm_quotes_on_status_changed_by_id"
+    t.index ["updated_by_id"], name: "index_crm_quotes_on_updated_by_id"
+  end
+
+  create_table "crm_sellers", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 100, null: false
+    t.text "notes"
+    t.bigint "user_id"
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_crm_sellers_unique_name", unique: true
+    t.index ["account_id", "user_id"], name: "index_crm_sellers_unique_user", unique: true, where: "(user_id IS NOT NULL)"
+    t.index ["account_id"], name: "index_crm_sellers_on_account_id"
+    t.index ["user_id"], name: "index_crm_sellers_on_user_id"
+  end
+
+  create_table "crm_settings", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.boolean "require_delivery_date", default: false, null: false
+    t.boolean "show_article_notes", default: true, null: false
+    t.boolean "show_kit_components", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_settings_on_account_id", unique: true
+  end
+
+  create_table "crm_states", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "country_id", null: false
+    t.string "name", limit: 50, null: false
+    t.string "abbreviation", limit: 10
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "country_id, lower((name)::text)", name: "index_crm_states_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_states_on_account_id"
+    t.index ["country_id"], name: "index_crm_states_on_country_id"
+  end
+
+  create_table "crm_taxes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 30, null: false
+    t.integer "tax_type", default: 1, null: false
+    t.decimal "percent", precision: 9, scale: 6, default: "0.0", null: false
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_crm_taxes_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_taxes_on_account_id"
+  end
+
+  create_table "crm_units", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", limit: 20, null: false
+    t.string "sat_key", limit: 3
+    t.boolean "is_default", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "account_id, lower((name)::text)", name: "index_crm_units_unique_name", unique: true
+    t.index ["account_id"], name: "index_crm_units_on_account_id"
+  end
+
   create_table "csat_survey_responses", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "conversation_id", null: false
@@ -3330,6 +3787,79 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_29_100000) do
   add_foreign_key "contracts", "users", column: "assignee_id", on_delete: :nullify
   add_foreign_key "conversations", "kanban_processes"
   add_foreign_key "conversations", "kanban_type_processes"
+  add_foreign_key "crm_article_components", "accounts"
+  add_foreign_key "crm_article_components", "crm_articles", column: "article_id", on_delete: :cascade
+  add_foreign_key "crm_article_components", "crm_articles", column: "component_id"
+  add_foreign_key "crm_article_lines", "accounts"
+  add_foreign_key "crm_article_lines", "crm_lookups", column: "group_id", on_delete: :nullify
+  add_foreign_key "crm_article_prices", "accounts"
+  add_foreign_key "crm_article_prices", "crm_articles", column: "article_id", on_delete: :cascade
+  add_foreign_key "crm_article_prices", "crm_currencies", column: "currency_id", on_delete: :nullify
+  add_foreign_key "crm_article_prices", "crm_lookups", column: "price_list_id", on_delete: :cascade
+  add_foreign_key "crm_article_taxes", "accounts"
+  add_foreign_key "crm_article_taxes", "crm_articles", column: "article_id", on_delete: :cascade
+  add_foreign_key "crm_article_taxes", "crm_taxes", column: "tax_id", on_delete: :cascade
+  add_foreign_key "crm_articles", "accounts"
+  add_foreign_key "crm_articles", "crm_article_lines", column: "line_id", on_delete: :nullify
+  add_foreign_key "crm_articles", "crm_units", column: "unit_id", on_delete: :nullify
+  add_foreign_key "crm_articles", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "crm_articles", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "crm_cities", "accounts"
+  add_foreign_key "crm_cities", "crm_states", column: "state_id", on_delete: :cascade
+  add_foreign_key "crm_countries", "accounts"
+  add_foreign_key "crm_currencies", "accounts"
+  add_foreign_key "crm_lookups", "accounts"
+  add_foreign_key "crm_organization_addresses", "accounts"
+  add_foreign_key "crm_organization_addresses", "crm_cities", column: "city_id", on_delete: :nullify
+  add_foreign_key "crm_organization_addresses", "crm_organizations", column: "organization_id", on_delete: :cascade
+  add_foreign_key "crm_organization_contacts", "accounts"
+  add_foreign_key "crm_organization_contacts", "contacts", on_delete: :cascade
+  add_foreign_key "crm_organization_contacts", "crm_organizations", column: "organization_id", on_delete: :cascade
+  add_foreign_key "crm_organizations", "accounts"
+  add_foreign_key "crm_organizations", "crm_currencies", column: "currency_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_lookups", column: "collector_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_lookups", column: "customer_type_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_lookups", column: "industry_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_lookups", column: "origin_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_lookups", column: "rating_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_lookups", column: "zone_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_payment_terms", column: "payment_term_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "crm_sellers", column: "seller_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "crm_organizations", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "crm_payment_term_installments", "accounts"
+  add_foreign_key "crm_payment_term_installments", "crm_payment_terms", column: "payment_term_id", on_delete: :cascade
+  add_foreign_key "crm_payment_terms", "accounts"
+  add_foreign_key "crm_quote_item_taxes", "accounts"
+  add_foreign_key "crm_quote_item_taxes", "crm_quote_items", column: "item_id", on_delete: :cascade
+  add_foreign_key "crm_quote_item_taxes", "crm_taxes", column: "tax_id", on_delete: :nullify
+  add_foreign_key "crm_quote_items", "accounts"
+  add_foreign_key "crm_quote_items", "crm_articles", column: "article_id", on_delete: :nullify
+  add_foreign_key "crm_quote_items", "crm_lookups", column: "price_list_id", on_delete: :nullify
+  add_foreign_key "crm_quote_items", "crm_quote_items", column: "parent_item_id", on_delete: :cascade
+  add_foreign_key "crm_quote_items", "crm_quotes", column: "quote_id", on_delete: :cascade
+  add_foreign_key "crm_quote_series", "accounts"
+  add_foreign_key "crm_quote_series", "users", on_delete: :cascade
+  add_foreign_key "crm_quote_taxes", "accounts"
+  add_foreign_key "crm_quote_taxes", "crm_quotes", column: "quote_id", on_delete: :cascade
+  add_foreign_key "crm_quote_taxes", "crm_taxes", column: "tax_id", on_delete: :nullify
+  add_foreign_key "crm_quotes", "accounts"
+  add_foreign_key "crm_quotes", "contacts", on_delete: :nullify
+  add_foreign_key "crm_quotes", "crm_currencies", column: "currency_id", on_delete: :nullify
+  add_foreign_key "crm_quotes", "crm_organization_addresses", column: "shipping_address_id", on_delete: :nullify
+  add_foreign_key "crm_quotes", "crm_organizations", column: "organization_id"
+  add_foreign_key "crm_quotes", "crm_payment_terms", column: "payment_term_id", on_delete: :nullify
+  add_foreign_key "crm_quotes", "crm_sellers", column: "seller_id", on_delete: :nullify
+  add_foreign_key "crm_quotes", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "crm_quotes", "users", column: "status_changed_by_id", on_delete: :nullify
+  add_foreign_key "crm_quotes", "users", column: "updated_by_id", on_delete: :nullify
+  add_foreign_key "crm_sellers", "accounts"
+  add_foreign_key "crm_sellers", "users", on_delete: :nullify
+  add_foreign_key "crm_settings", "accounts"
+  add_foreign_key "crm_states", "accounts"
+  add_foreign_key "crm_states", "crm_countries", column: "country_id", on_delete: :cascade
+  add_foreign_key "crm_taxes", "accounts"
+  add_foreign_key "crm_units", "accounts"
   add_foreign_key "customer_assets", "accounts"
   add_foreign_key "customer_assets", "contacts", on_delete: :cascade
   add_foreign_key "customer_assets", "organizations", on_delete: :nullify

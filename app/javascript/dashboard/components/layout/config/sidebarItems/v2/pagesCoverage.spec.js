@@ -19,12 +19,16 @@ const menuPaths = () => {
       walk(item.children);
     });
   // Ventas y Servicio cambian de menú según la ruta: se recorren las dos.
+  // Los botones `hidden` (CrmZeus, se entra con Ctrl+L) y su submenú no van a
+  // pages.json: Dali no debe ligar ni mencionar lo que está oculto.
   ['home', 'tickets_list'].forEach(name => {
     const route = { name, params: {} };
-    walk(primaryMenuV2(ACCOUNT, route));
-    getSidebarItemsV2(ACCOUNT, route).secondaryMenu.forEach(menu =>
-      walk(menu.menuItems)
-    );
+    const primary = primaryMenuV2(ACCOUNT, route);
+    const hidden = new Set(primary.filter(i => i.hidden).map(i => i.key));
+    walk(primary.filter(i => !i.hidden));
+    getSidebarItemsV2(ACCOUNT, route)
+      .secondaryMenu.filter(menu => !hidden.has(menu.parentNav))
+      .forEach(menu => walk(menu.menuItems));
   });
   return [...paths];
 };

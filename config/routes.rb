@@ -172,6 +172,47 @@ Rails.application.routes.draw do
               post :deliver
             end
           end
+          # CrmZeus O1 — organizaciones (clientes / prospectos), consignatarios y catálogos
+          namespace :crm do
+            resources :organizations, only: [:index, :show, :create, :update, :destroy] do
+              post :convert, on: :member
+              resources :consignees, only: [:index, :create, :update, :destroy]
+              # CrmZeus C1 — contactos de Wintook ligados (:id = contact_id)
+              resources :contacts, only: [:index, :create, :destroy], controller: 'organization_contacts' do
+                get :search, on: :collection
+              end
+            end
+            resource :catalogs, only: [:show]
+            resources :lookups, only: [:index, :create, :update, :destroy]
+            resources :sellers, only: [:index, :create, :update, :destroy]
+            resources :currencies, only: [:index, :create, :update, :destroy]
+            resources :payment_terms, only: [:index, :create, :update, :destroy]
+            resources :countries, only: [:index, :create, :update, :destroy]
+            resources :states, only: [:index, :create, :update, :destroy]
+            # CrmZeus A1 — artículos y sus catálogos
+            resources :articles, only: [:index, :show, :create, :update, :destroy] do
+              member do
+                post :catalog
+                post :image
+                delete :image
+              end
+            end
+            resources :article_lines, only: [:index, :create, :update, :destroy]
+            resources :units, only: [:index, :create, :update, :destroy]
+            resources :taxes, only: [:index, :create, :update, :destroy]
+            resources :cities, only: [:index, :create]
+            # CrmZeus Q1 — cotizaciones y series de folio por agente
+            resources :quotes, only: [:index, :new, :show, :create, :update] do
+              post :calculate, on: :collection
+              member do
+                post :status
+                post :duplicate
+              end
+            end
+            resources :quote_series, only: [:index, :create, :update, :destroy]
+            # CrmZeus Q3.1 — parámetros de la cuenta
+            resource :settings, only: [:show, :update]
+          end
           # Productos y servicios › Parámetros: categorías, impuestos y unidades
           get 'catalog_parameters', to: 'catalog_parameters#index'
           post 'catalog_parameters/:list', to: 'catalog_parameters#create'
@@ -1352,6 +1393,8 @@ Rails.application.routes.draw do
   get  'reporte/:token',             to: 'public/service_reports#show', as: :public_service_report # Plan-Trabajo-Campo R1
   get  'cotizacion/:token/pdf',      to: 'public/quotes#pdf', as: :public_quote_pdf # Cotizaciones › Formatos
   post 'cotizacion/:token/aceptar',  to: 'public/quotes#accept', as: :public_quote_accept
+  # CrmZeus Q4.1 — la cotización de CrmZeus que ve el cliente por su enlace (solo ver e imprimir).
+  get  'cotizacion-crm/:token',      to: 'public/crm_quotes#show', as: :public_crm_quote
   post 'cotizacion/:token/rechazar', to: 'public/quotes#reject', as: :public_quote_reject
   # prospeccion V4 — baja desde el enlace de un correo del Agente IA (GET confirma, POST da de baja)
   get  'baja/:token', to: 'public/opt_outs#show', as: :public_opt_out

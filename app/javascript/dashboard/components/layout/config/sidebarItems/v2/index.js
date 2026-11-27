@@ -286,6 +286,17 @@ export const primaryMenuV2 = (accountId, route) => {
       toState: url(`tickets/${serviceClass(route, accountId)}/${serviceView}`),
       toStateName: CLASS_VIEW_ROUTES[serviceView],
     },
+    // CrmZeus — lo traído de CRMZeus (sin feature flag: lo filtra el área de Ventas).
+    // `hidden`: no se pinta el botón; se entra con Ctrl+L (atajo en Sidebar.vue).
+    // Sigue en la lista para que el submenú y el área de acceso funcionen igual.
+    {
+      icon: 'briefcase',
+      key: 'crmzeus',
+      label: 'CRM_ZEUS',
+      hidden: true,
+      toState: url('crm-zeus/organizations'),
+      toStateName: 'crmzeus_organizations',
+    },
     {
       icon: 'book-contacts',
       key: 'contacts',
@@ -861,6 +872,49 @@ const ajustes = accountId => {
   };
 };
 
+// CrmZeus — organizaciones, artículos, cotizaciones y catálogos.
+const crmZeus = accountId => ({
+  parentNav: 'crmzeus',
+  routes: [
+    'crmzeus_organizations',
+    'crmzeus_organization_new',
+    'crmzeus_organization_edit',
+    'crmzeus_articles',
+    'crmzeus_article_new',
+    'crmzeus_article_edit',
+    'crmzeus_quotes',
+    'crmzeus_quote_new',
+    'crmzeus_quote_edit',
+    'crmzeus_catalogs',
+  ],
+  menuItems: [
+    {
+      icon: 'briefcase',
+      label: 'CRM_ZEUS_ORGANIZATIONS',
+      toState: frontendURL(`accounts/${accountId}/crm-zeus/organizations`),
+      toStateName: 'crmzeus_organizations',
+    },
+    {
+      icon: 'tag',
+      label: 'CRM_ZEUS_ARTICLES',
+      toState: frontendURL(`accounts/${accountId}/crm-zeus/articles`),
+      toStateName: 'crmzeus_articles',
+    },
+    {
+      icon: 'receipt',
+      label: 'CRM_ZEUS_QUOTES',
+      toState: frontendURL(`accounts/${accountId}/crm-zeus/quotes`),
+      toStateName: 'crmzeus_quotes',
+    },
+    {
+      icon: 'library',
+      label: 'CRM_ZEUS_CATALOGS',
+      toState: frontendURL(`accounts/${accountId}/crm-zeus/catalogs`),
+      toStateName: 'crmzeus_catalogs',
+    },
+  ],
+});
+
 // El orden importa: gana el primer menú cuya ruta coincide (los de `matches`
 // van antes que los de lista de rutas).
 export const getSidebarItemsV2 = (accountId, route) => ({
@@ -875,6 +929,7 @@ export const getSidebarItemsV2 = (accountId, route) => ({
     informes(accountId, route),
     agentesIa(accountId),
     campanas(accountId),
+    crmZeus(accountId),
     agenda(accountId),
     catalogos(accountId),
     ajustes(accountId),

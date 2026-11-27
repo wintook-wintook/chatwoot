@@ -1,0 +1,494 @@
+[
+ {
+  "DOCTO_PV_ID": 2583,
+  "CASO": "Descuento extra por porcentaje (5 %)",
+  "TIPO_DSCTO": "P",
+  "DSCTO_PCTJE": 5,
+  "DSCTO_IMPORTE": 2.72,
+  "IMPORTE_NETO": 51.69,
+  "TOTAL_IMPUESTOS": 12.41,
+  "TOTAL_RETENCIONES": 0,
+  "FLETES": 0,
+  "OTROS_CARGOS": 0,
+  "IMPUESTOS": [
+   {
+    "IMPUESTO_ID": 10892,
+    "PCTJE_IMPUESTO": 16,
+    "VENTA_BRUTA": 57.27,
+    "VENTA_NETA": 54.41,
+    "IMPORTE_IMPUESTO": 8.27
+   },
+   {
+    "IMPUESTO_ID": 366383,
+    "PCTJE_IMPUESTO": 8,
+    "VENTA_BRUTA": 57.27,
+    "VENTA_NETA": 54.41,
+    "IMPORTE_IMPUESTO": 4.14
+   }
+  ],
+  "PARTIDAS": [
+   {
+    "ROL": "N",
+    "UNIDADES": 1,
+    "PRECIO_UNITARIO": 57.27,
+    "PCTJE_DSCTO": 5,
+    "PRECIO_TOTAL_NETO": 54.41,
+    "PCTJE_IMPUESTO": 24,
+    "PCTJE_RET": 0,
+    "DESCUENTOS": [],
+    "IMPUESTOS": [
+     {
+      "IMPUESTO_ID": 10892,
+      "PCTJE_IMPUESTO": 16,
+      "VENTA_BRUTA": 57.27,
+      "VENTA_NETA": 54.41,
+      "IMPORTE_IMPUESTO": 8.27032,
+      "IMPORTE_IMPUESTO_BRUTO": 8.71
+     },
+     {
+      "IMPUESTO_ID": 366383,
+      "PCTJE_IMPUESTO": 8,
+      "VENTA_BRUTA": 57.27,
+      "VENTA_NETA": 54.41,
+      "IMPORTE_IMPUESTO": 4.13516,
+      "IMPORTE_IMPUESTO_BRUTO": 4.35
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "DOCTO_PV_ID": 2230,
+  "CASO": "Descuento extra por porcentaje (10 %)",
+  "TIPO_DSCTO": "P",
+  "DSCTO_PCTJE": 10,
+  "DSCTO_IMPORTE": 135,
+  "IMPORTE_NETO": 1215,
+  "TOTAL_IMPUESTOS": 194.4,
+  "TOTAL_RETENCIONES": 0,
+  "FLETES": 0,
+  "OTROS_CARGOS": 0,
+  "IMPUESTOS": [],
+  "PARTIDAS": [
+   {
+    "ROL": "N",
+    "UNIDADES": 1,
+    "PRECIO_UNITARIO": 1500,
+    "PCTJE_DSCTO": 10,
+    "PRECIO_TOTAL_NETO": 1350,
+    "PCTJE_IMPUESTO": 16,
+    "PCTJE_RET": 0,
+    "DESCUENTOS": [],
+    "IMPUESTOS": []
+   }
+  ]
+ },
+ {
+  "DOCTO_PV_ID": 1704,
+  "CASO": "Descuento extra por importe (135.00)",
+  "TIPO_DSCTO": "I",
+  "DSCTO_PCTJE": 10,
+  "DSCTO_IMPORTE": 135,
+  "IMPORTE_NETO": 1215,
+  "TOTAL_IMPUESTOS": 194.4,
+  "TOTAL_RETENCIONES": 0,
+  "FLETES": 0,
+  "OTROS_CARGOS": 0,
+  "IMPUESTOS": [],
+  "PARTIDAS": [
+   {
+    "ROL": "N",
+    "UNIDADES": 1,
+    "PRECIO_UNITARIO": 1500,
+    "PCTJE_DSCTO": 10,
+    "PRECIO_TOTAL_NETO": 1350,
+    "PCTJE_IMPUESTO": 16,
+    "PCTJE_RET": 0,
+    "DESCUENTOS": [],
+    "IMPUESTOS": []
+   }
+  ]
+ },
+ {
+  "DOCTO_PV_ID": 286,
+  "CASO": "Descuento extra por importe (30.00)",
+  "TIPO_DSCTO": "I",
+  "DSCTO_PCTJE": 3.33,
+  "DSCTO_IMPORTE": 30,
+  "IMPORTE_NETO": 870,
+  "TOTAL_IMPUESTOS": 139.2,
+  "TOTAL_RETENCIONES": 0,
+  "FLETES": 0,
+  "OTROS_CARGOS": 0,
+  "IMPUESTOS": [],
+  "PARTIDAS": [
+   {
+    "ROL": "N",
+    "UNIDADES": 2,
+    "PRECIO_UNITARIO": 500,
+    "PCTJE_DSCTO": 10,
+    "PRECIO_TOTAL_NETO": 900,
+    "PCTJE_IMPUESTO": 16,
+    "PCTJE_RET": 0,
+    "DESCUENTOS": [],
+    "IMPUESTOS": []
+   }
+  ]
+ },
+ {
+  "DOCTO_PV_ID": 3150,
+  "CASO": "Retenciones + moneda extranjera (tipo de cambio 17.46)",
+  "TIPO_DSCTO": "P",
+  "DSCTO_PCTJE": 0,
+  "DSCTO_IMPORTE": 0,
+  "IMPORTE_NETO": 1000,
+  "TOTAL_IMPUESTOS": 150,
+  "TOTAL_RETENCIONES": 260,
+  "FLETES": 0,
+  "OTROS_CARGOS": 0,
+  "IMPUESTOS": [],
+  "PARTIDAS": [
+   {
+    "ROL": "N",
+    "UNIDADES": 1,
+    "PRECIO_UNITARIO": 1000,
+    "PCTJE_DSCTO": 0,
+    "PRECIO_TOTAL_NETO": 1000,
+    "PCTJE_IMPUESTO": 15,
+    "PCTJE_RET": 26,
+    "DESCUENTOS": [],
+    "IMPUESTOS": []
+   }
+  ]
+ },
+ {
+  "DOCTO_PV_ID": 3161,
+  "CASO": "Impuesto incluido en el precio (IMPUESTO_INCLUIDO = S)",
+  "TIPO_DSCTO": "P",
+  "DSCTO_PCTJE": 0,
+  "DSCTO_IMPORTE": 0,
+  "IMPORTE_NETO": 168.58,
+  "TOTAL_IMPUESTOS": 26.97,
+  "TOTAL_RETENCIONES": 0,
+  "FLETES": 0,
+  "OTROS_CARGOS": 0,
+  "IMPUESTOS": [
+   {
+    "IMPUESTO_ID": 1638,
+    "PCTJE_IMPUESTO": 16,
+    "VENTA_BRUTA": 177.45,
+    "VENTA_NETA": 168.58,
+    "IMPORTE_IMPUESTO": 26.97
+   }
+  ],
+  "PARTIDAS": [
+   {
+    "ROL": "N",
+    "UNIDADES": 3,
+    "PRECIO_UNITARIO": 59.15,
+    "PCTJE_DSCTO": 5,
+    "PRECIO_TOTAL_NETO": 168.58,
+    "PCTJE_IMPUESTO": 16,
+    "PCTJE_RET": 0,
+    "DESCUENTOS": [
+     5
+    ],
+    "IMPUESTOS": [
+     {
+      "IMPUESTO_ID": 1638,
+      "PCTJE_IMPUESTO": 16,
+      "VENTA_BRUTA": 177.45,
+      "VENTA_NETA": 168.58,
+      "IMPORTE_IMPUESTO": 26.9728,
+      "IMPORTE_IMPUESTO_BRUTO": 28.39
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "DOCTO_PV_ID": 3159,
+  "CASO": "Kit con componentes (ROL J / C)",
+  "TIPO_DSCTO": "P",
+  "DSCTO_PCTJE": 0,
+  "DSCTO_IMPORTE": 0,
+  "IMPORTE_NETO": 26207.46,
+  "TOTAL_IMPUESTOS": 8124.31,
+  "TOTAL_RETENCIONES": 0,
+  "FLETES": 0,
+  "OTROS_CARGOS": 0,
+  "IMPUESTOS": [
+   {
+    "IMPUESTO_ID": 10892,
+    "PCTJE_IMPUESTO": 16,
+    "VENTA_BRUTA": 26207.46,
+    "VENTA_NETA": 26207.46,
+    "IMPORTE_IMPUESTO": 4193.19
+   },
+   {
+    "IMPUESTO_ID": 342788,
+    "PCTJE_IMPUESTO": 15,
+    "VENTA_BRUTA": 26207.46,
+    "VENTA_NETA": 26207.46,
+    "IMPORTE_IMPUESTO": 3931.12
+   }
+  ],
+  "PARTIDAS": [
+   {
+    "ROL": "N",
+    "UNIDADES": 1,
+    "PRECIO_UNITARIO": 26207.46,
+    "PCTJE_DSCTO": 0,
+    "PRECIO_TOTAL_NETO": 26207.46,
+    "PCTJE_IMPUESTO": 31,
+    "PCTJE_RET": 0,
+    "DESCUENTOS": [
+     0
+    ],
+    "IMPUESTOS": [
+     {
+      "IMPUESTO_ID": 10892,
+      "PCTJE_IMPUESTO": 16,
+      "VENTA_BRUTA": 26207.46,
+      "VENTA_NETA": 26207.46,
+      "IMPORTE_IMPUESTO": 4193.1936,
+      "IMPORTE_IMPUESTO_BRUTO": 4193.19
+     },
+     {
+      "IMPUESTO_ID": 342788,
+      "PCTJE_IMPUESTO": 15,
+      "VENTA_BRUTA": 26207.46,
+      "VENTA_NETA": 26207.46,
+      "IMPORTE_IMPUESTO": 3931.119,
+      "IMPORTE_IMPUESTO_BRUTO": 3931.12
+     }
+    ]
+   },
+   {
+    "ROL": "J",
+    "UNIDADES": 1,
+    "PRECIO_UNITARIO": 0,
+    "PCTJE_DSCTO": 0,
+    "PRECIO_TOTAL_NETO": 0,
+    "PCTJE_IMPUESTO": 16,
+    "PCTJE_RET": 0,
+    "DESCUENTOS": [],
+    "IMPUESTOS": [
+     {
+      "IMPUESTO_ID": 10892,
+      "PCTJE_IMPUESTO": 16,
+      "VENTA_BRUTA": 0,
+      "VENTA_NETA": 0,
+      "IMPORTE_IMPUESTO": 0,
+      "IMPORTE_IMPUESTO_BRUTO": 0
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "DOCTO_PV_ID": 3158,
+  "CASO": "Artículo con características (ROL K)",
+  "TIPO_DSCTO": "P",
+  "DSCTO_PCTJE": 0,
+  "DSCTO_IMPORTE": 0,
+  "IMPORTE_NETO": 500,
+  "TOTAL_IMPUESTOS": 80,
+  "TOTAL_RETENCIONES": 0,
+  "FLETES": 0,
+  "OTROS_CARGOS": 0,
+  "IMPUESTOS": [
+   {
+    "IMPUESTO_ID": 10892,
+    "PCTJE_IMPUESTO": 16,
+    "VENTA_BRUTA": 100,
+    "VENTA_NETA": 100,
+    "IMPORTE_IMPUESTO": 16
+   },
+   {
+    "IMPUESTO_ID": 375059,
+    "PCTJE_IMPUESTO": 16,
+    "VENTA_BRUTA": 400,
+    "VENTA_NETA": 400,
+    "IMPORTE_IMPUESTO": 64
+   }
+  ],
+  "PARTIDAS": [
+   {
+    "ROL": "N",
+    "UNIDADES": 1,
+    "PRECIO_UNITARIO": 100,
+    "PCTJE_DSCTO": 0,
+    "PRECIO_TOTAL_NETO": 100,
+    "PCTJE_IMPUESTO": 16,
+    "PCTJE_RET": 0,
+    "DESCUENTOS": [
+     0
+    ],
+    "IMPUESTOS": [
+     {
+      "IMPUESTO_ID": 10892,
+      "PCTJE_IMPUESTO": 16,
+      "VENTA_BRUTA": 100,
+      "VENTA_NETA": 100,
+      "IMPORTE_IMPUESTO": 16,
+      "IMPORTE_IMPUESTO_BRUTO": 16
+     }
+    ]
+   },
+   {
+    "ROL": "N",
+    "UNIDADES": 2,
+    "PRECIO_UNITARIO": 200,
+    "PCTJE_DSCTO": 0,
+    "PRECIO_TOTAL_NETO": 400,
+    "PCTJE_IMPUESTO": 16,
+    "PCTJE_RET": 0,
+    "DESCUENTOS": [],
+    "IMPUESTOS": [
+     {
+      "IMPUESTO_ID": 375059,
+      "PCTJE_IMPUESTO": 16,
+      "VENTA_BRUTA": 400,
+      "VENTA_NETA": 400,
+      "IMPORTE_IMPUESTO": 64,
+      "IMPORTE_IMPUESTO_BRUTO": 64
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "DOCTO_PV_ID": 3162,
+  "CASO": "Fletes, otros cargos, descuento de partida 10 %, descuento extra 5 % y dos impuestos",
+  "TIPO_DSCTO": "P",
+  "DSCTO_PCTJE": 5,
+  "DSCTO_IMPORTE": 1179.34,
+  "IMPORTE_NETO": 22407.37,
+  "TOTAL_IMPUESTOS": 6946.29,
+  "TOTAL_RETENCIONES": 0,
+  "FLETES": 100,
+  "OTROS_CARGOS": 150,
+  "IMPUESTOS": [
+   {
+    "IMPUESTO_ID": 10892,
+    "PCTJE_IMPUESTO": 16,
+    "VENTA_BRUTA": 26207.46,
+    "VENTA_NETA": 23586.71,
+    "IMPORTE_IMPUESTO": 3585.18
+   },
+   {
+    "IMPUESTO_ID": 342788,
+    "PCTJE_IMPUESTO": 15,
+    "VENTA_BRUTA": 26207.46,
+    "VENTA_NETA": 23586.71,
+    "IMPORTE_IMPUESTO": 3361.11
+   }
+  ],
+  "PARTIDAS": [
+   {
+    "ROL": "N",
+    "UNIDADES": 1,
+    "PRECIO_UNITARIO": 26207.46,
+    "PCTJE_DSCTO": 10,
+    "PRECIO_TOTAL_NETO": 23586.71,
+    "PCTJE_IMPUESTO": 31,
+    "PCTJE_RET": 0,
+    "DESCUENTOS": [
+     10
+    ],
+    "IMPUESTOS": [
+     {
+      "IMPUESTO_ID": 10892,
+      "PCTJE_IMPUESTO": 16,
+      "VENTA_BRUTA": 26207.46,
+      "VENTA_NETA": 23586.71,
+      "IMPORTE_IMPUESTO": 3585.17992,
+      "IMPORTE_IMPUESTO_BRUTO": 3983.53
+     },
+     {
+      "IMPUESTO_ID": 342788,
+      "PCTJE_IMPUESTO": 15,
+      "VENTA_BRUTA": 26207.46,
+      "VENTA_NETA": 23586.71,
+      "IMPORTE_IMPUESTO": 3361.106175,
+      "IMPORTE_IMPUESTO_BRUTO": 3734.56
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "DOCTO_PV_ID": 3040,
+  "CASO": "Ejemplo del contrato §8: dos partidas, una con descuento 28 %",
+  "TIPO_DSCTO": "P",
+  "DSCTO_PCTJE": 0,
+  "DSCTO_IMPORTE": 0,
+  "IMPORTE_NETO": 172,
+  "TOTAL_IMPUESTOS": 27.52,
+  "TOTAL_RETENCIONES": 0,
+  "FLETES": 0,
+  "OTROS_CARGOS": 0,
+  "IMPUESTOS": [
+   {
+    "IMPUESTO_ID": 375059,
+    "PCTJE_IMPUESTO": 16,
+    "VENTA_BRUTA": 200,
+    "VENTA_NETA": 172,
+    "IMPORTE_IMPUESTO": 27.52
+   }
+  ],
+  "PARTIDAS": [
+   {
+    "ROL": "N",
+    "UNIDADES": 1,
+    "PRECIO_UNITARIO": 100,
+    "PCTJE_DSCTO": 28,
+    "PRECIO_TOTAL_NETO": 72,
+    "PCTJE_IMPUESTO": 16,
+    "PCTJE_RET": 0,
+    "DESCUENTOS": [
+     28
+    ],
+    "DESCUENTOS_IMPORTE": [
+     28
+    ],
+    "IMPUESTOS": [
+     {
+      "IMPUESTO_ID": 375059,
+      "PCTJE_IMPUESTO": 16,
+      "VENTA_BRUTA": 100,
+      "VENTA_NETA": 72,
+      "IMPORTE_IMPUESTO": 11.52,
+      "IMPORTE_IMPUESTO_BRUTO": 16
+     }
+    ]
+   },
+   {
+    "ROL": "N",
+    "UNIDADES": 1,
+    "PRECIO_UNITARIO": 100,
+    "PCTJE_DSCTO": 0,
+    "PRECIO_TOTAL_NETO": 100,
+    "PCTJE_IMPUESTO": 16,
+    "PCTJE_RET": 0,
+    "DESCUENTOS": [
+     0
+    ],
+    "DESCUENTOS_IMPORTE": [
+     0
+    ],
+    "IMPUESTOS": [
+     {
+      "IMPUESTO_ID": 375059,
+      "PCTJE_IMPUESTO": 16,
+      "VENTA_BRUTA": 100,
+      "VENTA_NETA": 100,
+      "IMPORTE_IMPUESTO": 16,
+      "IMPORTE_IMPUESTO_BRUTO": 16
+     }
+    ]
+   }
+  ]
+ }
+]

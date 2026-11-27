@@ -72,6 +72,15 @@ export default {
       'Alt+KeyS': {
         action: () => navigateToRoute('agent_list'),
       },
+      // CrmZeus — su botón está oculto; Ctrl+L equivale a darle clic. El acceso
+      // lo sigue cuidando el área de Ventas (areaRedirect en routeHelpers).
+      'Control+KeyL': {
+        allowOnFocusedInput: true,
+        action: e => {
+          e.preventDefault(); // que el navegador no mande el foco a la barra de direcciones
+          navigateToRoute('crmzeus_organizations');
+        },
+      },
     };
     useKeyboardEvents(keyboardEvents);
 
@@ -204,6 +213,10 @@ export default {
         }
         return true;
       });
+    },
+    // Los botones `hidden` (CrmZeus) no se pintan, pero siguen en primaryMenuItems.
+    visiblePrimaryMenuItems() {
+      return this.primaryMenuItems.filter(item => !item.hidden);
     },
     activeSecondaryMenu() {
       const { secondaryMenu } = this.sideMenuConfig;
@@ -353,7 +366,7 @@ export default {
     <PrimarySidebar
       :logo-source="brandLogo"
       :installation-name="globalConfig.installationName"
-      :menu-items="primaryMenuItems"
+      :menu-items="visiblePrimaryMenuItems"
       :active-menu-item="activePrimaryMenu.key"
       @toggleAccounts="toggleAccountModal"
       @openKeyShortcutModal="toggleKeyShortcutModal"

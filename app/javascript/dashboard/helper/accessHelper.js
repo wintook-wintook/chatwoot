@@ -12,6 +12,7 @@ export const PRIMARY_AREAS = {
   agenda: 'agenda',
   ventas: 'sales',
   servicio: 'service',
+  crmzeus: 'sales', // CrmZeus — sin feature flag: lo ve quien tiene Ventas
   contacts: 'clients',
   campaigns: 'campaigns',
   agentes: 'ai_agents',

@@ -36,6 +36,7 @@ import datePicker from './datePicker.json';
 // Importar todos los archivos JSON de inglés
 import kanban from './kanban.json';
 import contracts from './contracts.json'; // Plan-Contratos R1
+import crmZeus from './crmZeus.json'; // CrmZeus
 import organizations from './organizations.json'; // Plan-Organizaciones O1
 import events from './events.json'; // Plan-Eventos E1
 
@@ -115,5 +116,6 @@ export default {
   ...whatsappCalls, // diag/llamadas_whatsapp
   ...whatsappHealth, // diag/waba
   ...internalChat, // feat/chat_interno
+  ...crmZeus, // CrmZeus
   ...academy, // Academia Kontrolya
 };

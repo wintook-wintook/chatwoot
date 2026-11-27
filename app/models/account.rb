@@ -22,13 +22,14 @@
 
 # KANBAN0725-MODEL
 
-class Account < ApplicationRecord
+class Account < ApplicationRecord # rubocop:disable Metrics/ClassLength -- develop ya estaba en el tope (175)
   # used for single column multi flags
   include FlagShihTzu
   include Reportable
   include Featurable
   include CacheKeys
   include InternalChatToggle # feat/chat_interno
+  include CrmZeusAccount # CrmZeus — tablas crm_* (app/models/concerns/crm_zeus_account.rb)
 
   has_many :scheduled_messages, dependent: :destroy
 

@@ -1,0 +1,156 @@
+# CrmZeus — nombres de los campos en los mensajes de error («Razón social ya está dado de alta…»).
+es:
+  activerecord:
+    attributes:
+      crm_organization:
+        organization_type: Tipo
+        key: Clave
+        legal_name: Razón social
+        trade_name: Nombre comercial
+        phone: Teléfono
+        email: Correo
+        tax_id: RFC
+        customer_type: Tipo de cliente
+        rating: Calificación
+        industry: Giro
+        origin: Origen
+        zone: Zona
+        collector: Cobrador
+        seller: Vendedor
+        payment_term: Condición de pago
+        currency: Moneda
+        credit_limit: Límite de crédito
+        status: Estatus
+        suspension_reason: Causa de suspensión
+      crm_organization_address:
+        consignee_name: Consignatario
+        street: Calle
+        exterior_number: No. exterior
+        interior_number: No. interior
+        neighborhood: Colonia
+        town: Población
+        reference: Referencia
+        city: Ciudad
+        postal_code: Código postal
+        tax_id: RFC
+        phone: Teléfono
+        phone2: Teléfono 2
+        contact_name: Contacto
+        is_primary: Domicilio
+      crm_lookup:
+        name: Nombre
+        kind: Catálogo
+      crm_seller:
+        name: Nombre
+        user: Agente
+      crm_currency:
+        name: Nombre
+        iso_code: Clave ISO
+        fixed_exchange_rate: Tipo de cambio fijo
+      crm_payment_term:
+        name: Nombre
+        installments: Plazos
+        early_payment_discount_percent: Descuento por pronto pago
+        early_payment_days: Días de pronto pago
+      crm_payment_term_installment:
+        days: Días
+        percent: Porcentaje
+      crm_city:
+        name: Nombre
+      crm_state:
+        name: Nombre
+        country: País
+      crm_country:
+        name: Nombre
+        iso_code: Clave ISO
+      # CrmZeus A1 — artículos y sus catálogos
+      crm_article:
+        catalog_status: Tipo
+        key: Clave
+        name: Nombre
+        line: Línea
+        unit: Unidad
+        status: Estatus
+        purchase_unit: Unidad de compra
+        purchase_unit_content: Contenido
+        unit_weight: Peso
+        image: Imagen
+        prices: Precios
+        components: Componentes
+        is_kit: Juego (kit)
+        suspension_reason: Motivo
+      crm_article/prices:
+        price_list: Lista de precios
+        price: Precio
+        currency: Moneda
+      crm_article/components:
+        component: Componente
+        quantity: Unidades
+      crm_article_component:
+        component: Componente
+        quantity: Unidades
+      crm_article_price:
+        price_list: Lista de precios
+        price: Precio
+        currency: Moneda
+      crm_article_tax:
+        tax: Impuesto
+      crm_article_line:
+        name: Nombre
+        key: Clave
+        group: Grupo de líneas
+      crm_unit:
+        name: Nombre
+        sat_key: Clave SAT
+      crm_tax:
+        name: Nombre
+        tax_type: Tipo
+        percent: Porcentaje
+      crm_quote:
+        series: Serie
+        number: Número
+        folio: Folio
+        status: Estatus
+        organization: Organización
+        contact: Contacto
+        shipping_address: Enviar mercancía a
+        seller: Vendedor
+        currency: Moneda
+        payment_term: Condición de pago
+        exchange_rate: Tipo de cambio
+        quote_date: Fecha
+        valid_until: Vigencia
+        delivery_date: Fecha de entrega
+        cfdi_use: Uso CFDI
+        sat_payment_method: Método de pago SAT
+        purchase_order: Orden de compra
+        purchase_order_date: Fecha de la OC
+        header_notes: Observaciones de encabezado
+        footer_notes: Observaciones de pie
+        extra_discount_value: Descuento extra
+        freight: Fletes
+        other_charges: Otros cargos
+        items: Partidas
+      crm_quote/items: &crm_quote_item
+        parent_item: Kit
+        article: Artículo
+        key: Clave
+        description: Descripción
+        unit: Unidad
+        price_list: Lista de precios
+        quantity: Cantidad
+        unit_price: Precio unitario
+        discount_percent: "% de descuento"
+        tax_ids: Impuestos
+        item_taxes: Impuestos
+      crm_quote_item: *crm_quote_item
+      crm_quote/items/item_taxes: &crm_quote_item_tax
+        name: Impuesto
+        percent: Porcentaje
+      crm_quote_item_tax: *crm_quote_item_tax
+      crm_quote_series:
+        series: Serie
+        user: Agente
+        last_number: Último folio
+      crm_setting:
+        require_delivery_date: Fecha de entrega obligatoria

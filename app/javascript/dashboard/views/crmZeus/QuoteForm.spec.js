@@ -1,0 +1,285 @@
+import { shallowMount } from '@vue/test-utils';
+import CrmQuotes from 'dashboard/api/crmQuotes';
+import CrmOrganizations from 'dashboard/api/crmOrganizations';
+import CrmCatalogs from 'dashboard/api/crmCatalogs';
+import QuoteForm from './QuoteForm.vue';
+import { addDays } from './crmHelpers';
+
+vi.mock('dashboard/api/crmQuotes', () => ({
+  default: {
+    show: vi.fn(),
+    draft: vi.fn(),
+    duplicate: vi.fn(),
+    calculate: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    changeStatus: vi.fn(),
+  },
+}));
+vi.mock('dashboard/api/crmOrganizations', () => ({
+  default: { contacts: vi.fn(), consignees: vi.fn() },
+}));
+vi.mock('dashboard/api/crmCatalogs', () => ({ default: { fetch: vi.fn() } }));
+vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+
+const flushPromises = () =>
+  new Promise(resolve => {
+    setTimeout(resolve);
+  });
+
+const ACEROS = { id: 7, name: 'Aceros', organization_type: 'customer' };
+const DRAFT = {
+  organization_id: 7,
+  organization: ACEROS,
+  seller_id: 3,
+  payment_term_id: 4,
+  currency_id: 1,
+  cfdi_use: 'G03',
+  quote_date: '2026-11-10',
+  extra_discount_type: 'percent',
+  extra_discount_value: 0,
+  freight: 0,
+  other_charges: 0,
+  items: [],
+  tax_summary: [],
+  total: 0,
+};
+
+const montar = ({ quoteId = '', query = { organization_id: '7' } } = {}) =>
+  shallowMount(QuoteForm, {
+    propsData: { quoteId },
+    mocks: {
+      $t: (clave, args) => (args ? `${clave} ${JSON.stringify(args)}` : clave),
+      $route: { params: { accountId: '2' }, query, fullPath: '/x' },
+      $router: { push: vi.fn(), replace: vi.fn() },
+    },
+    stubs: ['woot-button', 'woot-confirm-modal'],
+  });
+
+describe('CrmZeusQuoteForm', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    CrmCatalogs.fetch.mockResolvedValue({
+      data: {
+        sellers: [],
+        payment_terms: [],
+        currencies: [{ id: 1, iso_code: 'MXN', name: 'Peso' }],
+        taxes: [{ id: 16, name: 'IVA 16%', tax_type: 'vat', percent: 16 }],
+        lookups: { price_list: [] },
+        settings: { require_delivery_date: false },
+      },
+    });
+    CrmQuotes.draft.mockResolvedValue({
+      data: {
+        quote: DRAFT,
+        series: { series: 'LAU', next_folio: 'LAU000125' },
+      },
+    });
+    CrmOrganizations.contacts.mockResolvedValue({ data: { contacts: [] } });
+    CrmOrganizations.consignees.mockResolvedValue({ data: { consignees: [] } });
+  });
+
+  it('arranca como «Cotización NUEVA» con los defaults del cliente, sin anunciar folio', async () => {
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(CrmQuotes.draft).toHaveBeenCalledWith('7');
+    expect(wrapper.vm.quote).toMatchObject({ seller_id: 3, cfdi_use: 'G03' });
+    expect(wrapper.vm.editable).toBe(true);
+    expect(wrapper.text()).toContain('CRM_ZEUS.QUOTE_FORM.NEW_TITLE');
+    expect(wrapper.text()).not.toContain('LAU000125');
+  });
+
+  it('al elegir la organización toma el contacto y el consignatario por omisión', async () => {
+    const wrapper = montar({ query: {} });
+    await flushPromises();
+    CrmQuotes.draft.mockResolvedValue({
+      data: {
+        quote: { ...DRAFT, contact_id: 21, shipping_address_id: 31 },
+        series: null,
+      },
+    });
+
+    await wrapper.vm.pickOrganization({ id: 7 });
+
+    expect(CrmQuotes.draft).toHaveBeenLastCalledWith(7);
+    expect(wrapper.vm.quote).toMatchObject({
+      organization_id: 7,
+      contact_id: 21,
+      shipping_address_id: 31,
+    });
+  });
+
+  it('bloquea el vendedor si la organización lo respeta (RESPETAR_VENDEDOR)', async () => {
+    const wrapper = montar();
+    await flushPromises();
+    const sellerSelect = () =>
+      wrapper.find('select[title="CRM_ZEUS.QUOTE_FORM.SELLER_LOCKED"]');
+    expect(wrapper.vm.sellerLocked).toBe(false);
+    expect(sellerSelect().exists()).toBe(false);
+
+    await wrapper.setData({
+      organization: { ...ACEROS, seller_id: 3, respect_seller: true },
+    });
+
+    expect(wrapper.vm.sellerLocked).toBe(true);
+    expect(sellerSelect().attributes('disabled')).toBeDefined();
+  });
+
+  it('manda las partidas sin importes y pinta los que calcula el servidor', async () => {
+    CrmQuotes.calculate.mockResolvedValue({
+      data: {
+        quote: {
+          ...DRAFT,
+          net_amount: 855,
+          total: 991.8,
+          items: [{ net_amount: 855, tax_amount: 136.8 }],
+        },
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+    wrapper.vm.newItem();
+    wrapper.vm.saveItem({
+      ...wrapper.vm.itemForm,
+      description: 'Tornillo',
+      quantity: 10,
+      unit_price: 100,
+      discount_percent: 14.5,
+      tax_ids: [16],
+      net_amount: 1,
+    });
+
+    const [item] = wrapper.vm.payload().items;
+    expect(item).toMatchObject({ description: 'Tornillo', tax_ids: [16] });
+    expect(item).not.toHaveProperty('net_amount');
+    expect(item).not.toHaveProperty('id');
+
+    await wrapper.vm.recalculate();
+    expect(wrapper.vm.totals.total).toBe(991.8);
+    expect(wrapper.vm.quote.items[0].net_amount).toBe(855);
+  });
+
+  it('una cotización ganada, o de otro agente, no se edita', async () => {
+    CrmQuotes.show.mockResolvedValue({
+      data: {
+        quote: {
+          ...DRAFT,
+          id: 9,
+          folio: 'LAU000125',
+          status: 'won',
+          can_edit: true,
+          transitions: ['lost', 'cancelled'],
+        },
+      },
+    });
+    const wrapper = montar({ quoteId: '9', query: {} });
+    await flushPromises();
+
+    expect(wrapper.vm.title).toBe(
+      'CRM_ZEUS.QUOTE_FORM.EDIT_TITLE {"folio":"LAU000125"}'
+    );
+    expect(wrapper.vm.editable).toBe(false);
+    expect(wrapper.vm.statusActions.map(a => a.status)).toEqual([
+      'lost',
+      'cancelled',
+    ]);
+  });
+
+  it('sin organización no deja agregar partidas (openModalArticle de CRMZeus)', async () => {
+    CrmQuotes.draft.mockResolvedValue({
+      data: {
+        quote: { ...DRAFT, organization_id: null, organization: null },
+        series: { series: 'LAU', next_folio: 'LAU000125' },
+      },
+    });
+    const wrapper = montar({ query: {} });
+    await flushPromises();
+
+    expect(wrapper.vm.organization).toBeFalsy();
+    wrapper.vm.newItem();
+    expect(wrapper.vm.itemForm).toBeFalsy();
+
+    await wrapper.setData({ organization: ACEROS });
+    wrapper.vm.newItem();
+    expect(wrapper.vm.itemForm).toBeTruthy();
+  });
+
+  it('toma de la respuesta del cálculo los impuestos de cada partida', async () => {
+    const wrapper = montar();
+    await flushPromises();
+    wrapper.vm.quote.items = [
+      { uid: 1, description: 'Tornillo', tax_ids: [16] },
+    ];
+
+    wrapper.vm.applyTotals({ items: [{ net_amount: 100, tax_ids: [] }] });
+
+    expect(wrapper.vm.quote.items[0].tax_ids).toEqual([]);
+  });
+
+  it('Duplicar avisa qué artículos no se copian y pide confirmación (master2)', async () => {
+    CrmQuotes.show.mockResolvedValue({
+      data: { quote: { ...DRAFT, id: 9, folio: 'LAU000125', can_edit: true } },
+    });
+    CrmQuotes.duplicate.mockResolvedValue({
+      data: { quote: DRAFT, removed_items: ['Casco', 'Guantes'], series: null },
+    });
+    const wrapper = montar({ quoteId: '9', query: {} });
+    await flushPromises();
+    const confirmar = vi.fn().mockResolvedValue(false);
+    wrapper.vm.$refs.duplicateDialog.showConfirmation = confirmar;
+
+    await wrapper.vm.duplicate();
+
+    expect(CrmQuotes.duplicate).toHaveBeenCalledWith(
+      '9',
+      expect.objectContaining({ organization_id: 7, items: [] })
+    );
+    expect(wrapper.vm.duplicateMessage).toBe(
+      'CRM_ZEUS.QUOTE_FORM.DUPLICATE_REMOVED {"names":"Casco, Guantes"} CRM_ZEUS.QUOTE_FORM.DUPLICATE_CONFIRM'
+    );
+    expect(wrapper.vm.$router.push).not.toHaveBeenCalled();
+
+    confirmar.mockResolvedValue(true);
+    CrmQuotes.duplicate.mockResolvedValue({
+      data: { quote: DRAFT, removed_items: [], series: null },
+    });
+    await wrapper.vm.duplicate();
+
+    expect(wrapper.vm.duplicateMessage).toBe(
+      'CRM_ZEUS.QUOTE_FORM.DUPLICATE_CONFIRM'
+    );
+    expect(wrapper.vm.$router.push).toHaveBeenCalledWith({
+      name: 'crmzeus_quote_new',
+      query: { from: '9' },
+    });
+
+    // La ruta nueva usa el borrador de pantalla, sin volver a pedirlo.
+    CrmQuotes.duplicate.mockClear();
+    const copia = montar({ query: { from: '9' } });
+    await flushPromises();
+    expect(CrmQuotes.duplicate).not.toHaveBeenCalled();
+    expect(copia.vm.quote.organization_id).toBe(7);
+  });
+
+  it('muestra la cantidad en letra que manda el servidor', async () => {
+    CrmQuotes.draft.mockResolvedValue({
+      data: {
+        quote: {
+          ...DRAFT,
+          total: 100,
+          amount_in_words: 'Cien PESOS 00/100 M.N.',
+        },
+        series: null,
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.vm.totals.amount_in_words).toBe('Cien PESOS 00/100 M.N.');
+  });
+
+  it('los días de entrega ponen la fecha', () => {
+    expect(addDays('2026-11-28', 7)).toBe('2026-12-05');
+  });
+});

@@ -13,6 +13,7 @@ import { routes as kanbanRoutes } from './kanban/routes'; // Añade esta línea
 // @tickets_cases
 import { routes as gestorTicketsRoutes } from './gestorTickets/routes';
 import { routes as contractsRoutes } from './contracts/routes'; // Plan-Contratos R1
+import { routes as crmZeusRoutes } from './crmZeus/routes'; // CrmZeus
 import { routes as organizationsRoutes } from './organizations/routes'; // Plan-Organizaciones O1
 import { routes as eventsRoutes } from './events/routes'; // Plan-Eventos E1
 // proyecto@contact_tracking — Dashboard de Seguimientos
@@ -55,6 +56,7 @@ export default {
         // @tickets_cases
         ...gestorTicketsRoutes,
         ...contractsRoutes,
+        ...crmZeusRoutes, // CrmZeus
         ...organizationsRoutes,
         ...eventsRoutes,
         // proyecto@contact_tracking — Dashboard de Seguimientos
