@@ -2,18 +2,19 @@
 
 # «Atención a clientes» — las etiquetas con las que la IA catalogó cada mensaje (van a la conversación:
 # Motor2::Labels; y al chat de prueba), para que el equipo vea qué pidió el cliente y qué se hizo:
-#   qué pidió:  soporte-duda | soporte-falla | soporte-critico | informacion | cotizacion | demo | visita |
+#   qué pidió:  soporte-duda | soporte-falla | soporte-critico | informacion | cotizacion | demo | visita | cita |
 #               vendedor | contratar | comercial | administrativo | otra-area | humano
 #   qué se hizo: respondida | info-relacionada | sin-respuesta | caso-levantado | canalizada |
-#               gestion-registrada | resuelto
+#               gestion-registrada | cita-agendada | resuelto
 # Lo usa Motor2::Skills::Areas (por Motor2::Skills::SupportFlow).
 module Motor2::Skills::SupportLabels
-  SALES_LABELS = { 'info' => 'informacion', 'cotizacion' => 'cotizacion', 'demo' => 'demo', 'visita' => 'visita',
+  SALES_LABELS = { 'info' => 'informacion', 'cotizacion' => 'cotizacion', 'demo' => 'demo', 'visita' => 'visita', 'cita' => 'cita',
                    'vendedor' => 'vendedor', 'contratar' => 'contratar', 'otra' => 'comercial' }.freeze
   SUPPORT_LABELS = { 1 => 'soporte-critico', 2 => 'soporte-falla' }.freeze
   MATCH_LABELS = { 'exacta' => 'respondida', 'relacionada' => 'info-relacionada', 'ninguna' => 'sin-respuesta' }.freeze
   TOOL_LABELS = { 'crear_caso' => 'caso-levantado', 'canalizar' => 'canalizada', 'pasar_a_humano' => 'canalizada',
-                  'registrar_gestion' => 'gestion-registrada' }.freeze
+                  'registrar_gestion' => 'gestion-registrada', 'agendar_cita' => 'cita-agendada',
+                  'cotizar' => 'cotizacion' }.freeze
 
   # Qué pidió y qué se hizo en este mensaje.
   def labels

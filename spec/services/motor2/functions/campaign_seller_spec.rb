@@ -124,6 +124,26 @@ RSpec.describe Motor2::Functions::CampaignSeller do
     expect(contact.label_list).not_to include('avisar-promociones')
   end
 
+  it '«ya no quiero nada de ustedes»: la IA lo marca como baja de todo (etiqueta «baja», ninguna campaña)' do
+    tracking = campaign_tracking
+    stub_model(tool_call('no_contactar', { motivo: 'No quiere nada', de_todo: true }), answer('Listo, ya no te escribiremos.'))
+    reply_to(incoming('ya no quiero saber nada de ustedes'))
+    expect(tracking.reload.status).to eq('cancelled')
+    expect(contact.reload).to be_opted_out
+    expect(contact.label_list).to include('baja')
+    expect(contact.label_list).not_to include('no-ofrecer')
+    expect(conversation.reload.label_list).to include('baja')
+  end
+
+  it '«No me manden nada»: baja de todo antes de la IA, con la etiqueta «baja» en el contacto y la conversación' do
+    tracking = campaign_tracking
+    stub_model(answer('No debería salir'))
+    reply_to(incoming('No me manden nada, por favor'))
+    expect(tracking.reload.status).to eq('cancelled')
+    expect(contact.reload.label_list).to include('baja')
+    expect(conversation.reload.label_list).to include('baja')
+  end
+
   it 'invitar: confirma su lugar en el evento' do
     event = account.events.create!(name: 'Presentación', starts_at: 3.days.from_now)
     invite = save_agent({ 'purpose' => 'invite', 'event_id' => event.id }, name: 'Invitación')

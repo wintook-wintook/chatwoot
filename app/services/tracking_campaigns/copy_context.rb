@@ -78,7 +78,7 @@ class TrackingCampaigns::CopyContext
   end
 
   def opener_rows
-    [template_text(0) && "Apertura: #{template_text(0)}", @brief['opener'].presence && "Apertura (fijo): #{@brief['opener']}"].compact
+    [template_text(0) && "Apertura: #{template_text(0)}"].compact
   end
 
   def numbered(texts, label) = texts.each_with_index.filter_map { |t, i| "#{label} #{i + 1}: #{t.to_s.first(600)}" if t.present? }

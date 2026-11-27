@@ -15,10 +15,11 @@ module Motor2::AreaChecks
   private
 
   # «Atención a clientes»: dice que ya levantó, registró, agendó o lo pasó sin haber llamado la herramienta.
-  CLAIMED = /(levant[eé]|registr[eé]|agend[eé]|cre[eé])\s+(tu|su|el|la|una?)\b|tu\s+folio|n[uú]mero\s+de\s+(caso|folio)|
+  # Solo en pasado («agendé la cita»): «¿quieres que te agende la cita?» no es decir que ya lo hizo.
+  CLAIMED = /(levanté|registré|agendé|creé)\s+(tu|su|el|la|una?)\b|tu\s+folio|n[uú]mero\s+de\s+(caso|folio)|
              ya\s+(qued[oó]|est[aá])\s+(registrad|levantad|agendad)|te\s+(paso|pasé|canalicé)\s+con/xi
-  ACTION_TOOLS = %w[crear_caso registrar_gestion canalizar pasar_a_humano agendar_cita estado_caso le_interesa
-                    confirmar_asistencia guardar_respuesta].freeze
+  ACTION_TOOLS = %w[crear_caso registrar_gestion canalizar pasar_a_humano agendar_cita mover_cita cancelar_cita estado_caso
+                    le_interesa confirmar_asistencia guardar_respuesta cotizar agregar_a_cuenta quitar_de_cuenta ver_cuenta].freeze
   # «Vendedor de campaña»: dice que ya confirmó su lugar, lo agendó o lo pasó sin hacerlo.
   CAMPAIGN_CLAIMED = /(confirm[eé]\s+tu\s+(lugar|asistencia)|qued[oó]\s+confirmad|ya\s+est[aá]s\s+(confirmad|registrad|inscrit)|
                       \bagendé|te\s+(paso|pasé)\s+con|ya\s+le\s+(pasé|avisé))/xi
@@ -30,9 +31,9 @@ module Motor2::AreaChecks
   OFFER_HANDOFF = /\s*¿[^¿?]*\bte\s+(pase|paso|comunique)\s+con[^?]*\?/i
 
   NOT_CONFIRMED = 'Revisé tu respuesta contra lo que trajeron tus fuentes: %<falta>s no está confirmado. Reescríbela diciendo ' \
-                  'SOLO lo que sí confirman las fuentes y, de lo demás, que no lo puedes confirmar (ofrece que un vendedor se lo ' \
-                  'confirme). No ofrezcas otra cosa en lugar de lo que pidió.'
-  FALLBACK = 'No te lo puedo confirmar por aquí. Si quieres, un vendedor te lo confirma.'
+                  'SOLO lo que sí confirman las fuentes y, de lo demás, que no lo puedes confirmar (ofrece que alguien del equipo se ' \
+                  'lo confirme). No ofrezcas otra cosa en lugar de lo que pidió.'
+  FALLBACK = 'No te lo puedo confirmar por aquí. Si quieres, alguien del equipo te lo confirma.'
 
   def ensure_evidence(messages, text)
     return text unless evidence_needed?
@@ -64,7 +65,13 @@ module Motor2::AreaChecks
     (areas.now['gestion'].presence || 'info') == 'info'
   end
 
-  def evidence_text = @evidence.join("\n---\n").first(6000)
+  # Lo que trajeron las fuentes, lo que la empresa escribió de su negocio (horario, dirección, pagos) y lo que el agente ya
+  # le dijo en mensajes anteriores (ya pasó esta revisión): «caballero» después de «Corte de caballero $200» no se bloquea.
+  def evidence_text
+    business = @config.function.respond_to?(:business_evidence) ? @config.function.business_evidence : nil
+    before = Array(@said_before).compact_blank.presence&.then { |list| "LO QUE YA LE DIJISTE (revisado): #{list.join(' | ')}" }
+    [*@evidence, business, before].compact_blank.join("\n---\n").first(8000)
+  end
 
   FILE_CLAIM = /\b(te|le)\s+(env[ií]o|mando|comparto|adjunto|dejo)\s+(aqu[ií]\s+)?(la|el|las|los|una|un|nuestr[oa]s?)?\s*
                 (fotos?|im[aá]gen(es)?|archivos?|flyers?|cat[aá]logos?|pdf|fichas?|mapas?|videos?|documentos?|folletos?|brochures?)/xi

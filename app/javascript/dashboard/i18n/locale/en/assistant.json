@@ -539,7 +539,9 @@
       "NO_TEMPLATE_OPTION": "No template",
       "TEMPLATE_WARN": "Without a template, after 24 h since their last message it can't ask (WhatsApp doesn't allow it): the seller is notified to write.",
       "TEMPLATE_NONE": "Your WhatsApp inbox has no approved templates: create one in Settings › Inboxes › Templates (or «Create with Dali»). Without it, after 24 h it can't ask.",
-      "TEMPLATE_HINT": "Within 24 h it writes in its own voice; after that, with this template. Separate from the Follow-up ones."
+      "TEMPLATE_HINT": "Within 24 h it writes in its own voice; after that, with this template. Separate from the Follow-up ones.",
+      "CART": "Build the customer's tab in the chat",
+      "CART_HINT": "While they ask prices it offers «Shall I add it to your tab?» and shows the list with its total (the system does the math, with each product's tax). With «send it», the quote comes from the tab; if there's one already, it's updated."
     },
     "SOURCE_ORDER": {
       "TITLE": "Lookup order",
@@ -560,7 +562,9 @@
       "SUMMARY": {
         "prospects": "Served {total} in the last {days} days: {conversion}% qualified or booked.",
         "customers": "Handled {total} conversations in the last {days} days: {conversion}% solved without handing over.",
-        "campaign_seller": "{total} replied in the last {days} days: {conversion}% were interested."
+        "campaign_seller": "{total} replied in the last {days} days: {conversion}% were interested.",
+        "customers_appointment": "Handled {total} conversations in the last {days} days: {conversion}% booked an appointment.",
+        "customers_quote": "Handled {total} conversations in the last {days} days: {conversion}% left with a quote."
       },
       "RESULTS": {
         "qualified": "Qualified",
@@ -635,7 +639,9 @@
       "REQUIRED_CONTACT": "Details to collect before handing off",
       "DISPLAY_NAME": "Name the customer sees (optional)",
       "DISPLAY_NAME_PLACEHOLDER": "E.g. Ana",
-      "APPOINTMENT_NOTICE_NO_TEMPLATE": "Without a template, if 24 h have passed since their last message the reminder can't be sent (WhatsApp doesn't allow it): whoever handles the appointment is notified to write."
+      "APPOINTMENT_NOTICE_NO_TEMPLATE": "Without a template, if 24 h have passed since their last message the reminder can't be sent (WhatsApp doesn't allow it): whoever handles the appointment is notified to write.",
+      "APPOINTMENT_SERVICES": "Service appointments (salon, clinic, workshop…)",
+      "APPOINTMENT_SERVICES_HINT": "Asks which service they want and the appointment lasts each service's «Duration (minutes)» in Products and services (several add up). They can ask for a person. Books as soon as they want a service, without waiting to qualify."
     },
     "TONES": {
       "cercano": "Friendly",
@@ -684,7 +690,11 @@
       "le_interesa": "Interested: hands over",
       "no_le_interesa": "Not interested",
       "confirmar_asistencia": "Confirmed or declined the event",
-      "enviar_archivo": "Sent a file"
+      "enviar_archivo": "Sent a file",
+      "agregar_a_cuenta": "Added to their tab",
+      "quitar_de_cuenta": "Removed from their tab",
+      "ver_cuenta": "Checked their tab",
+      "cotizar": "Quoted"
     },
     "DECISIONS": {
       "prospecto_calificado": "Qualified prospect",
@@ -983,6 +993,12 @@
           "handoff": "The salesperson arranges it",
           "appointment": "Schedules it"
         },
+        "booking": {
+          "LABEL": "If they want an appointment for a service (salon, clinic, workshop…)",
+          "handoff": "It is logged and someone confirms it",
+          "appointment": "Books it with the duration of each service",
+          "HINT": "Asks which service they want, finds a time in the calendar of whoever you choose below (or whoever they ask for), and the appointment lasts the «Duration» of each service in the Catalog (no duration: 30 minutes)."
+        },
         "EVIDENCE": "It only states what your sources confirm; the rest it says it can't confirm. It never offers a demo instead of a visit."
       },
       "ADMIN": {
@@ -1053,7 +1069,19 @@
       "AREA_ON": "Handle this area",
       "AREA_OFF": "(off)",
       "QUOTE_NEEDS_SALES": "It only quotes when the Sales area is on (in «What it handles»).",
-      "QUOTE_HINT": "When the customer asks Sales for a quote and the products and quantities are known, it builds it with Catalog prices."
+      "QUOTE_HINT": "When the customer asks Sales for a quote and the products and quantities are known, it builds it with Catalog prices.",
+      "GOAL": {
+        "LABEL": "What should it achieve?",
+        "none": "Just serve (solve and route)",
+        "appointment": "Book an appointment",
+        "quote": "Leave with a quote",
+        "MODE": "How much it invites",
+        "soft": "Soft (after prices or info)",
+        "active": "Active (also when greeting)",
+        "HINT_none": "Answers, solves and routes; doesn't push anything.",
+        "HINT_appointment": "After giving information it invites once to book («Shall I find a time?»). If they say no it stops; once booked it only moves or cancels. Never in support, admin, complaints or when they ask for a person. Needs appointments on in Sales.",
+        "HINT_quote": "After giving information it invites once to get a quote. If they say no it stops. Needs «Quotes» on."
+      }
     },
     "CAMPAIGN": {
       "SUBTITLE": "Knocks on the door in your campaigns: the campaign sends the first message and it follows up when they reply. It sparks interest, answers the first questions and hands the interested ones over.",

@@ -50,9 +50,9 @@ RSpec.describe TrackingCampaigns::CopyWriter do
   end
 
   it 'el toque no repite lo anterior y sin respuesta de la IA avisa' do
-    campaign.update!(brief: campaign.brief.merge('opener' => 'Hola {{contacto}}, ¿te cuento de la promo?'))
-    w = writer({ target: 'touch', number: 1 }, nil)
+    campaign.update!(brief: campaign.brief.merge('touch_texts' => ['{{contacto}}, ¿pudiste ver la promo?']))
+    w = writer({ target: 'touch', number: 2 }, nil)
     expect(w.call).to eq(error: 'Dali no pudo redactarlo; intenta de nuevo.')
-    expect(w).to have_received(:chat) { |user:, **| expect(user).to include('Apertura (fijo): Hola {{contacto}}, ¿te cuento de la promo?') }
+    expect(w).to have_received(:chat) { |user:, **| expect(user).to include('Toque 1: {{contacto}}, ¿pudiste ver la promo?') }
   end
 end

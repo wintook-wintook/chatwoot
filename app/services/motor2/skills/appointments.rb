@@ -1,25 +1,37 @@
 # frozen_string_literal: true
 
-# «Citas» — agendar, mover o cancelar la cita del cliente en las agendas de la ficha
+# «Citas» — agendar, mover o cancelar las citas del cliente en las agendas de la ficha
 # (tracking_templates.calendar_integration_ids, con Google conectado). Copia adaptada de
 # ReadyAgents::Appointments (que no se toca), con lo que el 1.0 ya aprendió:
 #   - los días de la semana los da el código (lecciones df8098b5 / 15668007: el modelo se equivoca);
 #   - no se confirma si la cita no se creó (83ea3b9a); se revisa otra vez que el horario siga libre;
-#   - con cita agendada no vuelve a ofrecer horarios (be6c32cb); moverla mueve el evento (29c38a2e);
-#   - la cita se guarda estructurada en la memoria, no como texto en el prompt (ac88ccd6).
-# Sin agenda legible pasa a una persona con el motivo. En el chat de prueba lee horarios reales
-# pero no crea nada.
+#   - moverla mueve el evento (29c38a2e); la cita se guarda estructurada en la memoria (ac88ccd6).
+# Puede tener varias citas en la plática (otro servicio, otro día o para otra persona: Motor2::Skills::AppointmentList).
+# El horario que elige de los ofrecidos («10», «el primero», «el de John») lo entiende el código (Motor2::SlotPick).
+# Al agendar regresa lo que hay que confirmarle: día, hora, con quién, dónde y, en citas de servicio, total y duración.
+# Sin agenda legible pasa a una persona con el motivo. En el chat de prueba lee horarios reales pero no crea nada.
 #
 #   skills.appointments = { 'on' => true, 'kind' => 'visita', 'location' => 'Av. Juárez 10', 'when' => 'quiere conocer el plantel' }
 # Una función (§11.14) puede dar con quién y cuánto dura: 'user_ids' (personas con Google
 # conectado; si no, las agendas de la ficha) y 'minutes'. Al agendar, la función hace lo suyo
 # (Motor2::Outcomes#booked: en «Atención a prospectos», etiqueta, nota y a quién se asigna).
+# Citas de servicio ('services' => true): Motor2::Skills::AppointmentServices.
+#
+#   memoria: state['appointments'] (AppointmentList), state['offered_slots'] (los últimos horarios que se le dieron)
 class Motor2::Skills::Appointments < Motor2::Skills::Base
+  include Motor2::Skills::AppointmentServices
+  include Motor2::Skills::ServiceCart
+  include Motor2::Skills::AppointmentList
+  include Motor2::Skills::AppointmentChanges
+
   DAYS = %w[domingo lunes martes miércoles jueves viernes sábado].freeze
   MONTHS = %w[enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre].freeze
   KINDS = %w[llamada videollamada visita oficina].freeze
   OFFER = 3
+  SYNC_WAIT = 30.seconds
   DATE = { type: 'string', description: 'YYYY-MM-DDTHH:MM' }.freeze
+  WHICH = { type: 'string', description: 'Cuál cita (día, hora, servicio o para quién), si tiene varias' }.freeze
+  FOR = { type: 'string', description: 'Para quién es, si no es para quien escribe (su nombre y quién es: «Laura, su esposa»)' }.freeze
 
   def self.key = 'appointments'
 
@@ -29,34 +41,50 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
 
   def tools
     [fn('ver_horarios', 'Horarios libres para la cita (3). Sin «desde», los más próximos; con un día (YYYY-MM-DD) desde ' \
-                        'ese día; con día y hora (YYYY-MM-DDTHH:MM) dice si ese horario exacto está libre.', { desde: STR }),
+                        'ese día; con día y hora (YYYY-MM-DDTHH:MM) dice si ese horario exacto está libre.', { desde: STR }.merge(service_params)),
      fn('agendar_cita', 'Agenda la cita en el horario que el cliente eligió (uno que salió en ver_horarios).',
-        { inicio: DATE, notas: STR }, %w[inicio]),
-     fn('mover_cita', 'Cambia la cita del cliente a otro horario libre.', { inicio: DATE }, %w[inicio]),
-     fn('cancelar_cita', 'Cancela la cita del cliente.', { motivo: STR }, %w[motivo])]
+        { inicio: DATE, notas: STR, para: FOR }.merge(service_params), book_required),
+     fn('mover_cita', 'Cambia una cita del cliente a otro horario libre.', { inicio: DATE, cita: WHICH }, %w[inicio]),
+     fn('cancelar_cita', 'Cancela una cita del cliente.', { motivo: STR, cita: WHICH }, %w[motivo])]
   end
 
   def instructions
     <<~TEXT.strip
       - CITAS (#{kind}): ofrécela cuando #{setting(:when).presence || 'el cliente quiera avanzar o la pida'}. Los horarios salen
         solo de ver_horarios; si dice un día sin número («el lunes»), usa la fecha de la lista de días y confírmasela completa.
-        Solo di que quedó agendada si agendar_cita regresó ok.
+        Si le diste horarios y dice que sí sin escoger, pregúntale cuál. Solo di que quedó agendada si agendar_cita regresó ok
+        y confírmale lo que regrese (día, hora, con quién, dónde#{', total y duración' if services?}); pídele avisar con
+        tiempo si no puede llegar. Después de agendar puedes ofrecerle UNA vez si quiere algo más.
+        No le preguntes «¿algo más?» antes de darle horarios: primero los horarios. Cada persona lleva su propia cita (la
+        de su esposa no va dentro de la suya): agéndala aparte, con «para».
+        Puede tener varias citas (otro día, otro servicio o para otra persona: pregúntale su nombre y qué servicio quiere —no
+        supongas el de la cita anterior— y pásalo en «para»; si la quiere a la misma hora que la suya, busca ese horario
+        exacto).#{services_instructions}
     TEXT
   end
 
   def memory
     days = (0..7).map { |i| (now + i.days).then { |d| "#{DAYS[d.wday]} #{d.strftime('%Y-%m-%d')}" } }
-    lines = ["DÍAS: #{days.join(', ')}"]
-    lines << "CITA AGENDADA: #{local(meeting.starts_at)} (no ofrezcas otra; puedes moverla o cancelarla)" if meeting&.scheduled?
-    lines.join("\n")
+    ["DÍAS: #{days.join(', ')}", booked_lines].compact.join("\n")
   end
+
+  # Contestó con uno de los horarios que se le dieron: el código ya sabe cuál.
+  def prepare(history)
+    last = Array(history).last
+    return unless last && last[:role].to_s == 'user'
+
+    @picked = Motor2::SlotPick.call(last[:content], state['offered_slots'])
+    @service_said = service_said(last[:content]) unless @picked
+  end
+
+  def turn_note = @service_said ? service_note : picked_note.to_s
 
   def call(name, args)
     case name
-    when 'ver_horarios' then missing_contact || slots(args['desde'])
-    when 'agendar_cita' then missing_contact || book(args['inicio'], args['notas'])
-    when 'mover_cita' then move(args['inicio'])
-    else cancel(args['motivo'])
+    when 'ver_horarios' then before_slots(args) || slots(args['desde'])
+    when 'agendar_cita' then before_slots(args) || book(args['inicio'], args['notas'], args['para'])
+    when 'mover_cita' then move(args['inicio'], args['cita'])
+    else cancel(args['motivo'], args['cita'])
     end
   end
 
@@ -84,17 +112,9 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
 
   def kind = setting(:kind).presence_in(KINDS) || 'llamada'
 
-  def minutes = (setting(:minutes).presence || config.template.calendar_event_duration).to_i.clamp(15, 240)
-
   def zone = config.zone
 
   def now = Time.current.in_time_zone(zone)
-
-  def meeting
-    return @meeting if defined?(@meeting)
-
-    @meeting = state.dig('appointment', 'meeting_id') && CaseMeeting.find_by(id: state.dig('appointment', 'meeting_id'))
-  end
 
   def service
     @service ||= ContactTrackings::AvailabilitySlotService.new(calendar_integration_ids: integration_ids, timezone: zone.tzinfo.name,
@@ -109,13 +129,27 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
   def local(time) = self.class.label(time.in_time_zone(zone))
 
   def slots(from)
-    return { nota: 'Ya tiene cita agendada: no ofrezcas otra; si quiere cambiarla usa mover_cita.' } if meeting&.scheduled?
-
     exact = exact_slot(from)
-    list = exact ? [exact] : service.call(from: parse(from))
+    list = (exact ? [exact] : service.call(from: parse(from))).reject { |s| test_taken(s) }
     return none_free if list.empty?
 
-    { horarios: list.first(OFFER).map { |s| slot_row(s) }, duracion_minutos: minutes, nota: exact ? 'Ese horario está libre.' : nil }.compact
+    rows = list.first(OFFER).map { |s| slot_row(s) }
+    offered!(rows)
+    sourced({ horarios: rows, duracion_minutos: minutes, servicios: services_detail, total: services_total,
+              nota: exact ? 'Ese horario está libre.' : nil }.compact)
+  end
+
+  # Precios, total y duración salieron de la herramienta: se pueden decir (Motor2::Runner#unsourced?, AreaChecks).
+  def sourced(result)
+    @turn.seen << result.to_json
+    @turn.evidence << "Citas: #{result.to_json}"
+    result
+  end
+
+  # Los que se le dieron: si contesta «10» o «el primero», el código sabe cuál (Motor2::SlotPick).
+  def offered!(rows)
+    state['offered_slots'] = rows.map { |r| r.transform_keys(&:to_s) }
+    state['offered_services'] = chosen_names
   end
 
   # Con día y hora, si ese horario exacto está libre.
@@ -124,58 +158,26 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
     start && from.to_s.include?('T') ? service.slot_for(start) : nil
   end
 
-  def book(from, notes)
-    return { error: 'Ya tiene cita agendada: usa mover_cita o cancelar_cita.' } if meeting&.scheduled?
-
+  def book(from, notes, for_whom)
     slot = free_slot(from)
     return slot if slot[:error]
-    return { ok: true, prueba: true, cita: local(slot[:slot]), con: slot[:agent_name] } if test?
+
+    @for_whom = for_whom.to_s.squish.first(80).presence
+    return test_taken(slot) || test_booking(slot) if test?
 
     created = create_meeting(slot, notes)
     after_booking(created)
-    { ok: true, cita: local(created.starts_at), con: created.organizer&.name }
+    confirmation(created.starts_at, created.organizer&.name, created.ends_at - created.starts_at)
   end
 
   # Después de mandar el mensaje: los archivos de la cita, la nota y etiqueta, y el recordatorio.
   def after_booking(created)
     trace.event(:cita, local(created.starts_at))
+    # Campaña: los archivos de «Al agendar o comprar» (mapa de la sucursal, qué traer) van con este mensaje.
+    Motor2::Skills::Files.attach_unsent(@turn, config, state, 'confirm') if config.function.respond_to?(:reply_text)
     @turn.after_send { booked_files }
     @turn.after_send { Motor2::Outcomes.new(@turn.tracking, @turn.conversation, config).booked(created) }
     notice(created)
-  end
-
-  def move(from)
-    return { error: 'No tiene cita agendada.' } unless meeting&.scheduled?
-
-    slot = free_slot(from)
-    return slot if slot[:error]
-    return { ok: true, prueba: true, cita: local(slot[:slot]) } if test?
-
-    reschedule(slot)
-    { ok: true, cita: local(meeting.starts_at) }
-  end
-
-  def reschedule(slot)
-    meeting.update!(starts_at: slot[:slot], ends_at: slot[:end_time])
-    Cases::MeetingSyncJob.perform_later(meeting.id, 'update', meeting.saved_changes.except('updated_at'))
-    trace.event(:cita, "movida a #{local(slot[:slot])}")
-    notice(meeting)
-  end
-
-  def cancel(reason)
-    return { error: 'No tiene cita agendada.' } unless meeting&.scheduled?
-    return { ok: true, prueba: true } if test?
-
-    meeting.update!(status: :cancelled, cancel_reason: reason.to_s.presence || 'El cliente la canceló')
-    Cases::MeetingSyncJob.perform_later(meeting.id, 'cancel')
-    trace.event(:cita, 'cancelada')
-    { ok: true }
-  end
-
-  # El recordatorio y el «¿otro horario?» si no llega (Motor2::AppointmentNotice), con la hora nueva.
-  def notice(scheduled)
-    tracking = @turn.tracking
-    @turn.after_send { Motor2::AppointmentNotice.schedule!(tracking, scheduled) } if tracking
   end
 
   def parse(value)
@@ -201,8 +203,9 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
 
   def taken(start)
     others = service.call(from: start.beginning_of_day).reject { |s| s[:slot] == start }.first(OFFER)
-    { error: 'Ese horario se acaba de ocupar.', horarios: others.map { |s| slot_row(s) },
-      nota: 'Dile que ese horario se acaba de ocupar y ofrécele estos.' }
+    rows = others.map { |s| slot_row(s) }
+    offered!(rows)
+    { error: 'Ese horario se acaba de ocupar.', horarios: rows, nota: 'Dile que ese horario se acaba de ocupar y ofrécele estos.' }
   end
 
   # No se pudo leer la agenda: no es que esté ocupado. Se pasa a una persona con el motivo.
@@ -224,13 +227,13 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
     created = AgendaItems::Creator.new(account: config.account, user: organizer, organizer: organizer,
                                        client: { contact: contact, organization: contact&.organization },
                                        attrs: meeting_attrs(slot, notes, contact)).call
-    state['appointment'] = { 'meeting_id' => created.id }
-    @meeting = created
+    remember('meeting_id' => created.id, 'services' => chosen_names, 'for' => @for_whom)
+    created
   end
 
   def meeting_attrs(slot, notes, contact)
     data = state.data.map { |k, v| "• #{k}: #{v}" }.join("\n")
-    { title: "Cita (#{kind}) · #{contact&.name}".first(255), description: [notes, data].compact_blank.join("\n"),
+    { title: meeting_title(contact).first(255), description: [notes, data].compact_blank.join("\n"),
       starts_at: slot[:slot], ends_at: slot[:end_time], location: setting(:location).presence,
       is_visit: kind == 'visita', attendee_emails: [contact&.email].compact_blank }
   end

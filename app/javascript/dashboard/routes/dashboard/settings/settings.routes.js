@@ -33,6 +33,7 @@ import trackingTemplates from './trackingTemplates/trackingTemplates.routes'; //
 import knowledgeSources from './knowledgeSources/knowledgeSources.routes'; // @knowledge_sources
 import whatsappTemplates from './whatsappTemplates/whatsappTemplates.routes'; // @waba_templates
 import googleCalendar from './googleCalendar/googleCalendar.routes'; // proyecto@google_calendar
+import demoKits from './demoKits/demoKits.routes'; // Ajustes › Demostraciones
 
 export default {
   routes: [
@@ -78,6 +79,7 @@ export default {
     ...trackingTemplates.routes, // proyecto@tracking_templates
     ...knowledgeSources.routes, // @knowledge_sources
     ...whatsappTemplates.routes, // @waba_templates
+    ...demoKits.routes, // Ajustes › Demostraciones
     ...googleCalendar.routes, // proyecto@google_calendar
   ],
 };

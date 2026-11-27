@@ -32,8 +32,11 @@ module Motor2::CampaignTouch
     TrackingCampaigns::ClickLink.wrap(TrackingCampaigns::SurveyLink.append(campaign, tracking, text), tracking)
   end
 
-  # WhatsApp con la ventana abierta: el texto que escribió la empresa para ese mensaje (la apertura o el toque N);
-  # vacío, lo escribe la IA.
+  # El mensaje que va a salir es la apertura (el primero; no los del seguimiento corto, que reinician attempt_count).
+  def opener?(tracking) = tracking.attempt_count.to_i.zero? && !tracking.motor2_state.to_h['follow_up']
+
+  # WhatsApp con la ventana abierta: el texto que escribió la empresa para el toque N; vacío, lo escribe la IA. La
+  # apertura no lleva texto fijo: sale con su plantilla (Motor2::CampaignSendHook).
   def whatsapp_opener(campaign, tracking)
     written = fixed_text(campaign, tracking.attempt_count.to_i + 1)
     written.present? ? fill(written, tracking.contact, campaign) : nil
@@ -47,11 +50,11 @@ module Motor2::CampaignTouch
     texts.any?(&:present?) ? texts : nil
   end
 
-  # Mensaje n de la campaña: 1 = la apertura (brief.opener), 2.. = toque 1.. (brief.touch_texts).
+  # Mensaje n de la campaña: 2.. = toque 1.. (brief.touch_texts). La apertura (1) no tiene texto fijo.
   def fixed_text(campaign, number)
-    brief = campaign.brief.to_h
-    text = number == 1 ? brief['opener'] : Array(brief['touch_texts'])[number - 2]
-    text.to_s.strip
+    return '' if number <= 1
+
+    Array(campaign.brief.to_h['touch_texts'])[number - 2].to_s.strip
   end
 
   # {{contacto}}, {{empresa}}, {{oferta}} (lo que ofrece la campaña) y, de cada contacto, {{ultima_compra}},

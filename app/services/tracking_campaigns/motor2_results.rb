@@ -8,7 +8,9 @@
 #   exits    no le interesa, pidió una persona, se dio de baja, rebotó, falló el envío, no contestó (ya sin toques),
 #            en curso (aún con toques por salir), omitidos y por qué
 #   Cotizaciones y ganadas: de los que contestaron, hechas desde que empezó y hasta ATTRIBUTION después del fin.
-#   kind     invitar: confirmó / no va / sin respuesta · encuesta: contestaron, promedio, bajas y casos
+#   kind     invitar: confirmó / no va / sin respuesta · encuesta: contestaron, promedio, bajas y casos ·
+#            ofrecer y reactivar: le interesó, pasó al relevo, cita, lo hizo (palabra clave), ventas · recordar: pagaron,
+#            sin pagar y lo que falta por cobrar de sus contratos
 #   money    cotizaciones y lo ganado de sus contactos desde que empezó
 #   reasons  los últimos motivos de «no le interesa»
 #
@@ -16,7 +18,7 @@
 #   TrackingCampaigns::Motor2Results.new(campaign).contacts(group) → [{ contact_id, name, … }] (los de un grupo)
 class TrackingCampaigns::Motor2Results
   GROUPS = %w[replied auto_replied interested relayed appointment not_interested no_reply in_progress not_read clicked confirmed declined low_score
-              failed bounced achieved not_now future_yes].freeze
+              failed bounced achieved not_now future_yes unpaid].freeze
   MAX_LIST = 500
   ATTRIBUTION = 30.days
   FINISHED = %w[completed cancelled].freeze
@@ -86,9 +88,25 @@ class TrackingCampaigns::Motor2Results
     case @campaign.brief.to_h['kind']
     when 'invite' then invite_results
     when 'survey' then survey_results
+    when 'offer', 'reactivate' then offer_results
+    when 'renew' then renew_results
     else {}
     end
   end
+
+  def offer_results
+    { what: @campaign.brief.to_h['offer_what'], interested: interested.count, relayed: relayed.count,
+      appointment: appointment.count, achieved: achieved.count, won: quotes.won.count, won_total: quotes.won.sum(:total).to_f }
+  end
+
+  # Recordar: pagaron (lo dijeron o la palabra clave) y lo que falta por cobrar de los contratos de los que no.
+  def renew_results
+    contracts = Contract.where(id: unpaid.select(:contract_id))
+    { paid: achieved.count, unpaid: unpaid.count, to_collect: contracts.sum('quantity * price').to_f,
+      currency: contracts.pick(:currency) || 'MXN' }
+  end
+
+  def unpaid = @trackings.where.not(id: achieved.select(:id))
 
   def invite_results
     event = @campaign.event

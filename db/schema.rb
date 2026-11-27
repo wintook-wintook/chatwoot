@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_29_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_12_01_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1134,6 +1134,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_29_100000) do
     t.boolean "price_includes_tax", default: false, null: false
     t.string "sat_code"
     t.bigint "withholding_rate_ids", default: [], null: false, array: true
+    t.integer "duration_minutes"
     t.index ["account_id", "active", "kind"], name: "index_catalog_items_on_account_id_and_active_and_kind"
     t.index ["account_id", "sku"], name: "index_catalog_items_on_account_id_and_sku", unique: true, where: "(sku IS NOT NULL)"
     t.index ["account_id"], name: "index_catalog_items_on_account_id"
@@ -2199,6 +2200,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_29_100000) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["account_id"], name: "index_data_imports_on_account_id"
+  end
+
+  create_table "demo_imports", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.string "name", null: false
+    t.string "source"
+    t.jsonb "created_ids", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_demo_imports_on_account_id"
+    t.index ["user_id"], name: "index_demo_imports_on_user_id"
   end
 
   create_table "email_suppressions", force: :cascade do |t|
@@ -3863,6 +3876,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_29_100000) do
   add_foreign_key "customer_assets", "accounts"
   add_foreign_key "customer_assets", "contacts", on_delete: :cascade
   add_foreign_key "customer_assets", "organizations", on_delete: :nullify
+  add_foreign_key "demo_imports", "accounts", on_delete: :cascade
+  add_foreign_key "demo_imports", "users", on_delete: :nullify
   add_foreign_key "event_attendees", "accounts"
   add_foreign_key "event_attendees", "contacts", on_delete: :cascade
   add_foreign_key "event_attendees", "events", on_delete: :cascade

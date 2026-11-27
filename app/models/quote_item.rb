@@ -54,8 +54,22 @@ class QuoteItem < ApplicationRecord
     (quantity.to_d * unit_price.to_d * (1 - (discount_percent.to_d / 100))).round(2)
   end
 
+  # Con el precio del Catálogo que ya incluye el impuesto (CatalogItem#price_includes_tax), la partida suma exacto ese
+  # precio: el impuesto es lo que falta para llegar a él (si no, 2 × $350 salía $699.99 por redondear el precio sin IVA).
   def tax_amount
+    included = included_gross
+    return (included - net_amount).round(2) if included
+
     (net_amount * tax_percent.to_d / 100).round(2)
+  end
+
+  # El precio con impuesto de la partida, si viene tal cual del Catálogo con «el precio ya incluye el impuesto».
+  def included_gross
+    item = catalog_item
+    return nil unless item&.price_includes_tax? && discount_percent.to_d.zero? && tax_percent.to_d.positive?
+
+    gross = (unit_price.to_d * (1 + (tax_percent.to_d / 100))).round(2)
+    (gross * quantity.to_d).round(2) if item.quote_unit_price(gross) == unit_price.to_d
   end
 
   # Sus retenciones (Quotes::Withholdings), cada una redondeada como en la factura. Cuentan solo si la cotización

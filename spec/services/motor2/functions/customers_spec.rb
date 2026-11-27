@@ -416,6 +416,23 @@ RSpec.describe Motor2::Functions::Customers do
       appointments = Motor2::Config.new(agent.reload).function.appointments
       expect(appointments).to include('on' => true, 'kind' => 'visita', 'user_ids' => [support_user.id])
     end
+
+    it '«¿Qué quieres que logre?»: sin elegir, solo atiende; con cita, prende la meta' do
+      expect(Motor2::Config.new(agent).function.skills['goal']).to include('on' => false)
+      save_agent(settings.merge('goal' => 'appointment', 'goal_mode' => 'soft'), template: agent)
+      expect(Motor2::Config.new(agent.reload).function.skills['goal']).to eq('on' => true, 'goal' => 'appointment', 'mode' => 'soft')
+    end
+
+    it 'Comercial con citas de servicio: agenda con la duración de cada servicio y el clasificador sabe de «cita»' do
+      save_agent(settings.merge('areas' => areas.deep_merge('sales' => { 'booking' => 'appointment',
+                                                                         'appointment_user_ids' => [support_user.id] })), template: agent)
+      function = Motor2::Config.new(agent.reload).function
+      expect(function.appointments).to include('on' => true, 'kind' => 'oficina', 'services' => true, 'user_ids' => [support_user.id])
+      expect(function.area('sales')['when']).to include('agendar, cambiar o cancelar una cita')
+      triager = Motor2::Triage.new(account: account).tap { |t| t.instance_variable_set(:@catalog, {}) }
+      context = triager.send(:context, function.areas, [{ role: 'user', content: 'hola' }], nil, [])
+      expect(context).to include('CITAS DE SERVICIO')
+    end
   end
 
   describe 'de qué empresa es' do

@@ -45,8 +45,11 @@ module Motor2::AppointmentNotice
 
   def deliver(tracking, meeting, kind)
     config = Motor2::Config.for(tracking)
-    message = Motor2::VoiceText.call(config, text(tracking, meeting, kind)) # con la voz de la empresa o del agente
-    sent = Motor2::LateMessage.deliver(tracking, message, template: config.function.appointment_notice[:template])
+    # Campaña con cita (Ofrecer, Reactivar): su recordatorio, de la IA al momento o fijo (TrackingCampaigns::AppointmentReminder).
+    campaign_text = kind.to_s == 'reminder' ? TrackingCampaigns::AppointmentReminder.text_for(tracking, meeting) : nil
+    message = campaign_text || Motor2::VoiceText.call(config, text(tracking, meeting, kind)) # con la voz de la empresa o del agente
+    template = TrackingCampaigns::AppointmentReminder.template(tracking) || config.function.appointment_notice[:template]
+    sent = Motor2::LateMessage.deliver(tracking, message, template: template)
     not_sent(tracking, meeting, kind) unless sent
   end
 

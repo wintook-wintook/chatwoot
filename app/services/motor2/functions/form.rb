@@ -111,7 +111,9 @@ class Motor2::Functions::Form
   # (las predefinidas van siempre: si vienen en la lista, es solo para su lugar en el orden).
   def assign_sources
     allowed = Motor2::SourceMap.new(@account).available.pluck(:key) | [Motor2::SourceMap::CANNED]
-    @template.motor2 = @template.motor2.to_h.merge('sources' => Array(@params['sources']).map(&:to_s) & allowed)
+    # «Sin predefinidas» (Motor2::Search::NO_CANNED) no sale en la pantalla: se conserva al guardar.
+    kept = Array(@template.motor2.to_h['sources']) & [Motor2::Search::NO_CANNED]
+    @template.motor2 = @template.motor2.to_h.merge('sources' => (Array(@params['sources']).map(&:to_s) & allowed) + kept)
   end
 
   # Indicaciones, bienvenida y lo de «Cómo habla tu empresa» que es solo para este agente.

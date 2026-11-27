@@ -11,6 +11,8 @@
 #                    (Motor2::InboxRouter) y esto ni aplica.
 #   human            understand_first (primero entiende qué necesita y lo pasa al equipo de esa área) | now
 #   identify         ask (si no se sabe de qué empresa es, se lo pregunta una vez: Motor2::Skills::Identity) | no
+#   goal             none (solo atender) | appointment (que agende) | quote (que cotice) · goal_mode soft | active
+#                    (Motor2::Skills::Goal)
 #   user_id/team_id  a quién se pasa lo que no tiene área (o si el área no dice)
 #
 # Qué área toca en cada mensaje lo decide el código (Motor2::Triage, en Motor2::Skills::Areas), no el
@@ -21,7 +23,8 @@ class Motor2::Functions::Customers
 
   KEY = 'customers'
   TEXTS = %w[tone price_source business_what business_who business_coverage business_why business_practical].freeze
-  OPTIONS = { 'not_client' => %w[serve handoff], 'human' => %w[understand_first now], 'identify' => %w[ask no] }.freeze
+  OPTIONS = { 'not_client' => %w[serve handoff], 'human' => %w[understand_first now], 'identify' => %w[ask no],
+              'goal' => %w[none appointment quote], 'goal_mode' => %w[soft active] }.freeze
   BUSINESS = Motor2::Functions::Prospects::BUSINESS
   TONES = Motor2::Functions::Prospects::TONES
 
@@ -72,17 +75,31 @@ class Motor2::Functions::Customers
       'quote' => { 'on' => quote_mode != 'off' && area('sales').present? },
       'handoff' => { 'on' => true, 'when' => 'pide una persona (como dice REGLAS DE ATENCIÓN), se molesta, o lo pide su área' }
         .merge(handoff_target.transform_keys(&:to_s)),
-      'appointments' => appointments }
+      'appointments' => appointments, 'goal' => goal_skill }
   end
 
+  # «¿Qué quieres que logre?» (Motor2::Skills::Goal): solo atender, agendar la cita o cotizar.
+  def goal_skill = { 'on' => option(:goal) != 'none', 'goal' => option(:goal), 'mode' => option(:goal_mode) }
+
   # Demo o visita de Comercial con «agendar», o la visita técnica de Soporte: la cita con las personas elegidas.
+  # Citas de servicio (estética, consultorio…): en el lugar, con la duración de los servicios del Catálogo.
   def appointments
     return technical_visit if support_visit?
 
     sales = area('sales').to_h
+    return service_booking(sales) if booking?
+
     wants = %w[demo visit].any? { |k| sales[k] == 'appointment' }
     { 'on' => wants && Array(sales['appointment_user_ids']).any?, 'kind' => sales['visit'] == 'appointment' ? 'visita' : 'videollamada',
       'when' => 'pide una demo o una visita', 'user_ids' => Array(sales['appointment_user_ids']), 'minutes' => sales['appointment_minutes'] }
+  end
+
+  def booking? = area('sales').to_h['booking'] == 'appointment'
+
+  def service_booking(sales)
+    { 'on' => Array(sales['appointment_user_ids']).any?, 'kind' => 'oficina', 'services' => true,
+      'when' => 'quiere agendar un servicio', 'location' => business_info(:business_coverage).to_s.first(200).presence,
+      'user_ids' => Array(sales['appointment_user_ids']), 'minutes' => sales['appointment_minutes'] }
   end
 
   def support_visit? = area('support').to_h['action'] == 'visit' && Array(area('support')['appointment_user_ids']).any?
@@ -101,22 +118,30 @@ class Motor2::Functions::Customers
     [Motor2::Functions.puesto(KEY), business_block, areas_block, rules_block].map { |b| b.to_s.strip }.compact_blank.join("\n\n")
   end
 
+  # Para la revisión de evidencia de Comercial (Motor2::AreaChecks): lo que la empresa escribió de su negocio.
+  def business_evidence
+    lines = BUSINESS.filter_map { |k, label| "- #{label}: #{business_info(k)}" if business_info(k).present? }
+    lines.any? ? "EL NEGOCIO (lo escribió la empresa):\n#{lines.join("\n")}" : nil
+  end
+
   # Para el entrenador del probador: lo que eligió la empresa.
   def rules_block
     sales = area('sales').to_h
     lines = ['REGLAS DE ATENCIÓN (las eligió la empresa; mandan sobre lo anterior):']
     lines << "- Tono: #{(TONES[answer(:tone)] || TONES['cercano']).last}."
     lines << (human_now? ? '- Si pide una persona, pásalo de inmediato al equipo de lo que necesita (canalizar).' : HUMAN_FIRST)
-    lines << SALES_EVIDENCE if area('sales')
+    lines.push(SALES_EVIDENCE, NO_VARIANTS) if area('sales')
     if area('sales')
       lines << "- Cotización: #{sales['quote'] == 'opportunity' ? 'regístrala (registrar_gestion)' : 'pásala al vendedor (registrar_gestion)'}."
     end
     lines.join("\n")
   end
 
+  NO_VARIANTS = '- No preguntes por opciones que tus fuentes no tienen («¿para hombre o mujer?», tamaños, marcas): si solo ' \
+                'hay un producto o servicio que coincide con lo que pidió, es ese.'
   HUMAN_FIRST = '- Si pide una persona: con gusto; si todavía no sabes qué necesita, pregúntaselo UNA vez (para pasarlo al ' \
                 'equipo correcto) y luego canalízalo. Si lo vuelve a pedir, canalízalo ya.'
-  SALES_EVIDENCE = '- Comercial: contesta SOLO lo que confirmen tus fuentes. Si no lo confirman exacto, di que no lo puedes ' \
+  SALES_EVIDENCE = '- Comercial: contesta SOLO lo que confirmen tus fuentes o EL NEGOCIO. Si no lo confirman exacto, di que no lo puedes ' \
                    'confirmar; no ofrezcas algo parecido en su lugar (una demo no sustituye una visita).'
 
   private

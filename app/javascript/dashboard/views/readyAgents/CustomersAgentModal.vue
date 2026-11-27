@@ -94,6 +94,8 @@ const AREA_DEFAULTS = {
     quote: 'opportunity',
     demo: 'handoff',
     visit: 'handoff',
+    // Citas de servicio (estética, consultorio…): duran lo de cada servicio del Catálogo.
+    booking: 'handoff',
     appointment_user_ids: [],
     appointment_minutes: '30',
     case_type_id: '',
@@ -129,6 +131,9 @@ const blank = () => ({
     human: 'understand_first',
     not_client: 'serve',
     identify: 'ask',
+    // «¿Qué quieres que logre?» (Motor2::Skills::Goal): none | appointment | quote · soft | active.
+    goal: 'none',
+    goal_mode: 'soft',
     // Lo que comparten los tres agentes (Motor2::Functions::Extras): seguimiento, plazo, recordatorio de cita, cotizar.
     follow_up: { nudges: 2, templates: [], template_days: 2 },
     attend_hours: 1,
@@ -228,7 +233,8 @@ export default {
       return (
         this.area('support').action === 'visit' ||
         sales.demo === 'appointment' ||
-        sales.visit === 'appointment'
+        sales.visit === 'appointment' ||
+        sales.booking === 'appointment'
       );
     },
     // Las plantillas aprobadas de su primera bandeja de WhatsApp (para después de las 24 h).
@@ -459,7 +465,11 @@ export default {
     },
     salesAppointments() {
       const sales = this.area('sales');
-      return sales.demo === 'appointment' || sales.visit === 'appointment';
+      return (
+        sales.demo === 'appointment' ||
+        sales.visit === 'appointment' ||
+        sales.booking === 'appointment'
+      );
     },
     toggleCalendarUser(id, key = 'sales') {
       const area = this.area(key);
@@ -623,6 +633,35 @@ export default {
                 </option>
               </select>
             </label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="block">
+                <span class="field-label">{{ c('GOAL.LABEL') }}</span>
+                <select v-model="form.settings.goal">
+                  <option
+                    v-for="goal in ['none', 'appointment', 'quote']"
+                    :key="goal"
+                    :value="goal"
+                  >
+                    {{ c(`GOAL.${goal}`) }}
+                  </option>
+                </select>
+              </label>
+              <label v-if="form.settings.goal !== 'none'" class="block">
+                <span class="field-label">{{ c('GOAL.MODE') }}</span>
+                <select v-model="form.settings.goal_mode">
+                  <option
+                    v-for="mode in ['soft', 'active']"
+                    :key="mode"
+                    :value="mode"
+                  >
+                    {{ c(`GOAL.${mode}`) }}
+                  </option>
+                </select>
+              </label>
+            </div>
+            <p class="m-0 -mt-1 text-xs text-slate-500">
+              {{ c(`GOAL.HINT_${form.settings.goal}`) }}
+            </p>
             <div>
               <span class="field-label">{{ t('FIELDS.INBOXES') }}</span>
               <div class="flex flex-wrap gap-1.5">
@@ -873,7 +912,7 @@ export default {
 
                   <template v-if="key === 'sales'">
                     <div
-                      v-for="field in ['quote', 'demo', 'visit']"
+                      v-for="field in ['quote', 'demo', 'visit', 'booking']"
                       :key="field"
                     >
                       <span class="field-label">{{
@@ -890,6 +929,15 @@ export default {
                           {{ c(`SALES.${field}.${value}`) }}
                         </option>
                       </select>
+                      <p
+                        v-if="
+                          field === 'booking' &&
+                          area('sales').booking === 'appointment'
+                        "
+                        class="m-0 mt-1 text-xs text-slate-500"
+                      >
+                        {{ c('SALES.booking.HINT') }}
+                      </p>
                     </div>
                     <label
                       v-if="area('sales').quote === 'opportunity'"

@@ -23,6 +23,7 @@ import EmailEditor, { toMarkdown } from './EmailEditor.vue';
 import DaliWriter from './DaliWriter.vue';
 import AudienceList from './AudienceList.vue';
 import LastCall from './LastCall.vue';
+import AppointmentReminder from './AppointmentReminder.vue';
 import CampaignChat from './CampaignChat.vue';
 import CampaignSimulator from './CampaignSimulator.vue';
 import CampaignTestRun from './CampaignTestRun.vue';
@@ -170,6 +171,7 @@ export default {
     DaliWriter,
     AudienceList,
     LastCall,
+    AppointmentReminder,
     CampaignChat,
     CampaignSimulator,
     CampaignTestRun,
@@ -396,6 +398,10 @@ export default {
       if (this.isInvite) tabs.push('reminders');
       // Ofrecer y Reactivar con vigencia: el «Último aviso» antes de que termine (TrackingCampaigns::LastCall).
       if (this.offerLike && this.form.brief.valid_until) tabs.push('last_call');
+      // Con objetivo «cita»: el recordatorio de la cita (TrackingCampaigns::AppointmentReminder).
+      if (this.offerLike && this.form.brief.offer_goal === 'appointment') {
+        tabs.push('appointment');
+      }
       // Quien ya platicó y dejó de contestar: en todos los tipos (el vendedor lo vuelve a buscar).
       if (this.form.attend) tabs.push('silent');
       return tabs;
@@ -2044,6 +2050,15 @@ export default {
             <!-- Ofrecer y Reactivar con vigencia: el último aviso -->
             <LastCall
               v-if="currentMessageTab === 'last_call'"
+              :brief.sync="form.brief"
+              :is-whatsapp="isWhatsapp"
+              :templates="inboxTemplates"
+              :campaign-id="campaignId"
+              :save="save"
+            />
+            <!-- Ofrecer y Reactivar con cita: el recordatorio de la cita -->
+            <AppointmentReminder
+              v-if="currentMessageTab === 'appointment'"
               :brief.sync="form.brief"
               :is-whatsapp="isWhatsapp"
               :templates="inboxTemplates"

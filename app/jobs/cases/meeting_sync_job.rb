@@ -16,9 +16,14 @@
 class Cases::MeetingSyncJob < ApplicationJob
   queue_as :low
 
+  # Un agente de IA agenda dentro de la transacción de su turno (Motor2::Reply#with_lock): el job puede correr antes de
+  # que la reunión quede guardada. Entonces se espera un poco y se intenta otra vez (si no, no había evento en Google).
+  WAIT_FOR_COMMIT = 10.seconds
+  MAX_WAITS = 6
+
   def perform(meeting_id, operation = 'create', changes = nil)
     meeting = CaseMeeting.find_by(id: meeting_id)
-    return if meeting.nil?
+    return wait_for_commit if meeting.nil?
 
     mirror = Cases::Meetings::GoogleMirrorService.new(meeting)
 
@@ -31,5 +36,11 @@ class Cases::MeetingSyncJob < ApplicationJob
     # El servicio ya captura los errores de la API; esto es la última red para
     # que un fallo del espejo nunca tumbe nada más.
     Rails.logger.error("[GestorTickets] MeetingSyncJob #{meeting_id}: #{e.message}")
+  end
+
+  private
+
+  def wait_for_commit
+    retry_job(wait: WAIT_FOR_COMMIT) if executions < MAX_WAITS
   end
 end

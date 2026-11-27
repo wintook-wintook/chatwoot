@@ -33,6 +33,7 @@ class Motor2::Skills::Recommend < Motor2::Skills::Base
     remember(items)
     rows = items.map { |item| row(item) }
     @turn.seen << rows.to_json # sus precios cuentan como vistos (Motor2::Runner#unsourced?)
+    @turn.evidence << "Catálogo (recomendar): #{rows.to_json}" # y como confirmados (Motor2::AreaChecks#ensure_evidence)
     { opciones: rows }
   end
 

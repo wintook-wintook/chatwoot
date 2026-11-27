@@ -30,6 +30,30 @@ RSpec.describe ContactTrackings::OptOut do
       described_class.undo(contact)
 
       expect(contact.reload).not_to be_opted_out
+      expect(contact.label_list).not_to include('baja')
+    end
+
+    it 'le deja la etiqueta «baja» al contacto' do
+      described_class.call(contact, source: 'reply')
+
+      expect(contact.reload.label_list).to include('baja')
+    end
+  end
+
+  describe '.hard_requested_in? (campaña con su etiqueta «no…»)' do
+    it 'la baja de todo: «BAJA» y pedir que no le escriban NADA' do
+      ['BAJA', 'darme de baja', 'No me manden nada, por favor', 'Ya no me escriban', 'no me escriban más',
+       'Por favor no me contacten', 'No quiero recibir más mensajes', 'Quítenme de su lista', 'borren mis datos',
+       'Gracias. No me vuelvan a escribir'].each do |text|
+        expect(described_class.hard_requested_in?(text)).to be(true), text
+      end
+    end
+
+    it '«no me inviten» o «no me manden promociones» es solo de ese tipo (lo decide el agente)' do
+      ['Ya no me inviten a eventos', 'No me manden promociones', 'no me escriban de eventos, gracias',
+       'No me interesa', 'No me mandaron la liga'].each do |text|
+        expect(described_class.hard_requested_in?(text)).to be(false), text
+      end
     end
   end
 

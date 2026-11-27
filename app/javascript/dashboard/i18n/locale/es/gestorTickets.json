@@ -3359,6 +3359,8 @@
       "CURRENCY": "Moneda",
       "COST": "Costo",
       "COST_HINT": "Opcional. Para ver el margen; solo lo ve quien tiene «Ver montos».",
+      "DURATION": "Duración (minutos)",
+      "DURATION_HINT": "Opcional. Si «Atención a clientes» agenda citas de servicio, la cita ocupa este tiempo en la agenda.",
       "IMAGE": "Foto (opcional)",
       "IMAGE_REMOVE": "Quitar foto",
       "IMAGE_HINT": "PNG, JPG o WEBP de hasta 5 MB. El agente de Atención a prospectos la manda cuando recomienda este producto.",

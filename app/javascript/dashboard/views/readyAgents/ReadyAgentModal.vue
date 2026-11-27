@@ -103,6 +103,8 @@ const blank = kind => ({
     appointment_minutes: '30',
     appointment_kind: 'llamada',
     appointment_location: '',
+    // Citas de servicio: la cita dura lo de cada servicio del Catálogo (Motor2::Skills::AppointmentServices).
+    appointment_services: false,
     // Tu negocio
     business_what: '',
     // ¿Dónde están tus productos y precios? catalog | google_sheet:<id> | canned | none (paso «Qué sabe»).
@@ -1029,6 +1031,19 @@ export default {
               <p class="m-0 text-xs text-slate-500">
                 {{ t('FIELDS.APPOINTMENT_HINT') }}
               </p>
+              <label class="flex items-start gap-2 text-sm">
+                <input
+                  v-model="form.settings.appointment_services"
+                  type="checkbox"
+                  class="!m-0 mt-1"
+                />
+                <span>
+                  {{ t('FIELDS.APPOINTMENT_SERVICES') }}
+                  <span class="block text-xs text-slate-500">
+                    {{ t('FIELDS.APPOINTMENT_SERVICES_HINT') }}
+                  </span>
+                </span>
+              </label>
               <label class="flex items-start gap-2 text-sm">
                 <input
                   v-model="form.settings.appointment_notice.on"

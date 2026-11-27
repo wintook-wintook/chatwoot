@@ -757,6 +757,15 @@ Rails.application.routes.draw do
             get :metrics, on: :member # «Atención a prospectos»: cómo terminan, dónde se van y de qué anuncio vienen
             post :suggest, on: :collection # ejemplos por área o preguntas para calificar, según «Tu negocio»
           end
+          # Ajustes › Demostraciones: exportar / importar kits de demo (agentes, catálogo, bandejas) y limpiarlos
+          resources :demo_kits, only: [:index, :destroy] do
+            collection do
+              post :export
+              post :preview
+              post :import
+            end
+            post :clean, on: :member
+          end
           resources :ready_agent_sessions, only: [:index] do
             member do
               patch :pause

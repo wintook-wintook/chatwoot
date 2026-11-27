@@ -9,7 +9,7 @@ module Motor2::Skills
   ALL = [
     Motor2::Skills::Areas, Motor2::Skills::Identity, Motor2::Skills::Campaign, Motor2::Skills::Knowledge, Motor2::Skills::Data,
     Motor2::Skills::Qualify, Motor2::Skills::Recommend, Motor2::Skills::Quote, Motor2::Skills::Offers,
-    Motor2::Skills::Appointments, Motor2::Skills::Tickets, Motor2::Skills::Files, Motor2::Skills::Collections,
+    Motor2::Skills::Appointments, Motor2::Skills::Goal, Motor2::Skills::Tickets, Motor2::Skills::Files, Motor2::Skills::Collections,
     Motor2::Skills::Handoff, Motor2::Skills::Finish,
     Motor2::Skills::Tags
   ].freeze
@@ -25,6 +25,7 @@ module Motor2::Skills
     'identity' => 'sabe de qué empresa es el cliente (o se lo pregunta una vez) y lo que ya se sabe de él',
     'recommend' => 'recomienda 2 o 3 productos del Catálogo, con su precio y su foto, según lo que busca',
     'quote' => 'arma la cotización con precios del Catálogo (borrador para el vendedor o se la manda)',
+    'goal' => 'lleva la plática hacia la meta de la empresa (agendar la cita o cotizar) sin presionar',
     'collections' => 'da el resumen de saldo, registra promesas de pago, «ya pagué» y aclaraciones de la cartera'
   }.freeze
 

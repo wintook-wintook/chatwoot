@@ -18,9 +18,12 @@ module Motor2::CampaignSendHook
 
   # Campaña con Vendedor IA: la ventana de 24 h con el mismo margen que Motor2::LateMessage (escribir el texto con IA
   # tarda; al filo de las 24 h Meta lo rechaza). Fuera de eso, el toque sale con su plantilla.
+  # La apertura con su plantilla sale SIEMPRE con la plantilla aprobada, aunque la ventana esté abierta (todos reciben
+  # exactamente el mensaje aprobado; sin texto fijo ni IA). Los toques sí aprovechan la ventana abierta.
   def whatsapp_window_open?(tracking)
     open = super
     return open unless open && tracking.tracking_campaign&.motor2? && tracking.conversation
+    return false if Motor2::CampaignTouch.opener?(tracking) && tracking.use_template_for_current_attempt?
 
     Motor2::LateMessage.window_open?(tracking.conversation)
   end

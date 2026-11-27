@@ -66,7 +66,7 @@ class Motor2::Functions::Prospects
   TEXTS = %w[objective tone questions qualified_when discard_when hot_when appointment_kind appointment_location price_source
              business_what business_who business_coverage business_why business_practical].freeze
   IDS = %w[handoff_user_id handoff_team_id client_user_id client_team_id case_type_id appointment_minutes].freeze
-  BOOLEANS = %w[only_prospects business_use_catalog].freeze
+  BOOLEANS = %w[only_prospects business_use_catalog appointment_services].freeze
 
   # Lo que manda el asistente, limpio (Motor2::Functions::ProspectAnswers).
   def self.sanitize(raw) = Motor2::Functions::ProspectAnswers.call(raw)
@@ -114,10 +114,17 @@ class Motor2::Functions::Prospects
       'quote' => { 'on' => quote_mode != 'off' },
       'knowledge' => { 'on' => answers_doubts? },
       'handoff' => { 'on' => true, 'when' => handoff_when }.merge(handoff_target.transform_keys(&:to_s)),
-      'appointments' => { 'on' => appointment?, 'kind' => answer(:appointment_kind).presence_in(APPOINTMENT_KINDS) || 'llamada',
-                          'location' => answer(:appointment_location).to_s, 'when' => 'ya califica',
-                          'user_ids' => Array(answer(:appointment_user_ids)), 'minutes' => answer(:appointment_minutes) }
+      'appointments' => appointments
     }
+  end
+
+  # La cita con quienes eligió. Citas de servicio (estética, consultorio…): con la duración de cada servicio del Catálogo
+  # y en cuanto quiera agendar uno (Motor2::Skills::AppointmentServices).
+  def appointments
+    services = answer(:appointment_services) == true
+    { 'on' => appointment?, 'kind' => answer(:appointment_kind).presence_in(APPOINTMENT_KINDS) || 'llamada',
+      'location' => answer(:appointment_location).to_s, 'when' => services ? 'quiere agendar un servicio o ya califica' : 'ya califica',
+      'user_ids' => Array(answer(:appointment_user_ids)), 'minutes' => answer(:appointment_minutes), 'services' => services }
   end
 
   # El puesto y lo que contestó la empresa, en el orden del agente listo de antes.

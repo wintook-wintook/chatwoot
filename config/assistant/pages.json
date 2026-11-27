@@ -27,6 +27,7 @@
     "contact_funnel": { "path": "kanban", "label": "Ventas › Embudo de contactos" },
     "quotes": { "path": "tickets/quotes", "label": "Ventas › Cotizaciones" },
     "quote_formats": { "path": "tickets/quotes/formats", "label": "Ajustes › Formatos de cotización" },
+    "demo_kits": { "path": "settings/demo-kits", "label": "Ajustes › Demostraciones" },
     "collections": { "path": "collections", "label": "Ventas › Cobranza" },
 
     "service_cases": { "path": "tickets/support/list", "label": "Servicio › Casos" },

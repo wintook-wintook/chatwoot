@@ -13,8 +13,10 @@
 #                inscribir (TrackingCampaigns::Enroll → 'opted_out').
 #   El enlace va firmado (signed_id, propósito :opt_out): no se puede adivinar ni alterar.
 # ================================================================================
+#   Etiqueta:    al contacto le queda «baja» (se ve en el contacto y en sus conversaciones); al quitar la baja, se quita.
 module ContactTrackings::OptOut
   SOURCES = %w[link reply agent].freeze
+  LABEL = 'baja'
   ACTIVE_STATUSES = %w[pending scheduled active paused].freeze
 
   # Frases que piden no volver a ser contactado. «No me interesa» NO es baja: es una salida
@@ -45,12 +47,14 @@ module ContactTrackings::OptOut
     active = contact.contact_trackings.where(status: ACTIVE_STATUSES)
     active.update_all(prospect_exit: 'opted_out') # rubocop:disable Rails/SkipsModelValidations -- prospeccion V5
     active.find_each(&:cancel!)
+    TrackingCampaigns::ContactLabels.apply(contact, add: LABEL, kind: 'opt_out')
     Rails.logger.info "[OptOut] Contacto ##{contact.id} pidió no ser contactado (#{source})"
     true
   end
 
   def undo(contact)
     contact.update_columns(opted_out_at: nil, opted_out_source: nil, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    contact.update!(label_list: contact.label_list - [LABEL]) if contact.label_list.include?(LABEL)
   end
 
   def requested_in?(text)
@@ -61,10 +65,22 @@ module ContactTrackings::OptOut
   # Solo la baja dicha con esas palabras («baja», «stop», «darme de baja»). La usa una Campaña con IA que tiene su
   # propia etiqueta «no…»: «no me inviten», «no me manden nada» los decide su agente (solo de ese tipo de campaña).
   HARD = /\b(?:d[aeé]n?me|darme|dar)\s+de\s+baja\b/i
+  # También es baja de todo (no solo de ese tipo de campaña) pedir que no le escriban NADA: «no me manden nada», «ya no
+  # me escriban», «no quiero recibir más mensajes», «quítenme de su lista», «borren mis datos». «No me manden
+  # invitaciones» o «no me escriban de eventos» llevan un «de qué»: esas las decide el agente (etiqueta «no…» del tipo).
+  NOTHING = /
+    (?:\A|[.!¡,;]\s*)(?:por\s+favor\s+|ya\s+)*no\s+(?:me\s+)?(?:vuelv(?:an|as|a)\s+a\s+#{INFINITIVE}|#{ASK})
+      (?:\s+(?:nada|m[aá]s|ya|nunca|por\s+favor|gracias))*\s*[.!]*\s*\z |
+    \bno\s+(?:me\s+)?(?:#{ASK}|vuelv(?:an|as|a)\s+a\s+#{INFINITIVE})\s+(?:nada|ning[uú]n\s+mensaje|m[aá]s\s+mensajes)\b |
+    \bno\s+quiero\s+recibir\s+(?:m[aá]s\s+)?(?:mensajes|nada|informaci[oó]n|publicidad|promociones\s+ni\s+nada)\b |
+    \bqu[ií]t[ae]n?me\s+de\s+(?:su|tu|la|esta|sus)\s+lista |
+    \b(?:borr|elimin)\w*\s+mis\s+datos |
+    \bunsubscribe\b
+  /xi
 
   def hard_requested_in?(text)
     text = text.to_s
-    text.match?(ONLY_WORD) || text.match?(HARD)
+    text.match?(ONLY_WORD) || text.match?(HARD) || text.match?(NOTHING)
   end
 
   def token(contact)

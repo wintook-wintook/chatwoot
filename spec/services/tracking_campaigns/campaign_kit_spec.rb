@@ -119,12 +119,13 @@ RSpec.describe TrackingCampaigns::CampaignKit do
     it 'se arman con lo que tiene la campaña' do
       camp = campaign(invite)
       keys = TrackingCampaigns::Motor2Cases.new(seller.reload, TrackingCampaigns::Motor2Brief.seller_answers(camp)).list.pluck(:key)
-      expect(keys).to include('interest', 'keyword', 'not_done', 'not_now', 'future_yes', 'opt_out', 'thanks', 'problem_link', 'resend_link')
+      expect(keys).to include('interest', 'keyword', 'not_done', 'not_now', 'future_yes', 'opt_out', 'unsubscribe', 'thanks', 'problem_link',
+                              'resend_link')
       expect(keys).not_to include('confirm', 'later')
 
       survey = campaign({ 'kind' => 'survey', 'survey_questions' => ['¿Qué tal?'] }, name: 'Encuesta')
       expect(TrackingCampaigns::Motor2Cases.new(seller.reload, TrackingCampaigns::Motor2Brief.seller_answers(survey)).list.pluck(:key))
-        .to eq(%w[survey_yes survey_answer opt_out])
+        .to eq(%w[survey_yes survey_answer opt_out unsubscribe])
     end
 
     it 'revisa lo que hizo la IA con sus herramientas y que traiga la liga exacta' do

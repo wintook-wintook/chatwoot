@@ -28,8 +28,8 @@ module Motor2::QuestionGuard
   # Las revisiones de la plática, en orden: buscó si le preguntaron, no prometió sin decidir, termina
   # con la pregunta pendiente.
   def guard_turn(messages, text)
-    checks = %i[ensure_handoff ensure_searched ensure_no_advisor ensure_defer ensure_decision ensure_area_action ensure_file_claim
-                ensure_no_guessing ensure_evidence ensure_question ensure_bridge]
+    checks = %i[ensure_handoff ensure_searched ensure_no_advisor ensure_defer ensure_decision ensure_area_action ensure_quote
+                ensure_file_claim ensure_no_guessing ensure_evidence ensure_question ensure_bridge]
     text = checks.reduce(text) do |current, check|
       current.present? ? send(check, messages, current) : current
     end
@@ -118,39 +118,6 @@ module Motor2::QuestionGuard
 
   def without_last_question(text)
     text.to_s.sub(/¿[^¿]*\?[\s\p{Emoji_Presentation}]*\z/, '').strip
-  end
-
-  # La bienvenida de la empresa va tal cual al inicio del primer mensaje (la pone el código).
-  def welcome_note
-    return nil unless @welcome
-
-    "Tu mensaje lo empieza la bienvenida de la empresa (la pone el código): «#{@welcome}». No saludes ni te presentes " \
-      'otra vez: escribe solo lo que sigue (contesta lo que preguntó, si preguntó algo, y la pregunta pendiente).'
-  end
-
-  def with_welcome(text)
-    return text unless @welcome
-
-    @trace.event(:bienvenida, 'combinada con la respuesta')
-    attach_welcome_files
-    # Si el modelo la volvió a escribir (pasa aunque se le diga, a veces con otros espacios o
-    # signos), se quita: va una sola vez.
-    rest = text.to_s.gsub(welcome_pattern, '').strip.sub(/\A[\s.,;:!?]+/, '')
-    # Si la bienvenida ya pregunta y el cliente solo saludó, no lleva otra pregunta.
-    rest = without_questions(rest) if welcome_asks?
-    [@welcome, rest].compact_blank.join("\n\n")
-  end
-
-  # Los archivos marcados «con la bienvenida» van con ella (también en «Probar»); Motor2::Reply los anota
-  # como enviados, así no se repiten.
-  def attach_welcome_files
-    Motor2::Skills::Files.welcome_names(@config.template).each { |name| attach(name) }
-  end
-
-  # La bienvenida con cualquier espacio o signo entre sus palabras.
-  def welcome_pattern
-    words = @welcome.scan(/[[:alnum:]]+/).map { |w| Regexp.escape(w) }
-    Regexp.new("[¿¡]?\\s*#{words.join('[^[:alnum:]]+')}[^[:alnum:]\\n¿¡]*", Regexp::IGNORECASE)
   end
 
   # Solo al contestar y si no decidió terminar (calificar, descartar, pasar).
