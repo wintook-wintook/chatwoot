@@ -25,10 +25,9 @@ export default {
     // Solo momentos, no toques: la apertura y los toques en WhatsApp salen como plantilla (la imagen va en su
     // encabezado) y en correo «Cuando muestre interés» ya va adjunta al primer correo.
     flags() {
+      // «confirm» = cuando lo logra: confirma el evento, agenda o compra, paga (cada tipo con su texto).
       if (this.kind === 'survey') return ['ask'];
-      return this.kind === 'invite'
-        ? ['interest', 'confirm', 'ask']
-        : ['interest', 'ask'];
+      return ['interest', 'confirm', 'ask'];
     },
     canAdd() {
       return this.files.length < MAX_FILES;
@@ -45,6 +44,12 @@ export default {
   methods: {
     t(key, params) {
       return this.$t(`CAMPAIGNS2.FILES.${key}`, params);
+    },
+    whenLabel(key) {
+      if (key === 'confirm' && this.kind !== 'invite') {
+        return this.t(`WHEN.confirm_${this.kind}`);
+      }
+      return this.t(`WHEN.${key}`);
     },
     async load() {
       try {
@@ -169,7 +174,7 @@ export default {
             :checked="has(file, key)"
             @change="toggle(file, key)"
           />
-          {{ t(`WHEN.${key}`) }}
+          {{ whenLabel(key) }}
         </label>
       </div>
     </div>

@@ -609,6 +609,59 @@ export default {
               </ul>
             </details>
           </template>
+          <!-- Ofrecer y Reactivar: cada número abre su lista -->
+          <template v-else-if="['offer', 'reactivate'].includes(kind)">
+            <p v-if="kindData.what" class="m-0 text-sm text-slate-600">
+              {{ kindData.what }}
+            </p>
+            <button
+              v-for="key in [
+                'interested',
+                'relayed',
+                'appointment',
+                'achieved',
+              ]"
+              v-show="kindData[key]"
+              :key="key"
+              type="button"
+              class="block text-sm"
+              @click="openGroup(key)"
+            >
+              {{
+                t('KIND_COUNT', { label: t(`GROUPS.${key}`), n: kindData[key] })
+              }}
+            </button>
+            <p v-if="kindData.won" class="m-0 text-sm">
+              {{
+                t('KIND_WON', {
+                  n: kindData.won,
+                  total: money$(kindData.won_total),
+                })
+              }}
+            </p>
+          </template>
+          <!-- Recordar: pagaron, sin pagar y lo que falta por cobrar -->
+          <template v-else-if="kind === 'renew'">
+            <button
+              type="button"
+              class="block text-sm"
+              @click="openGroup('achieved')"
+            >
+              {{ t('KIND_PAID', { n: kindData.paid || 0 }) }}
+            </button>
+            <button
+              type="button"
+              class="block text-sm"
+              @click="openGroup('unpaid')"
+            >
+              {{
+                t('KIND_UNPAID', {
+                  n: kindData.unpaid || 0,
+                  total: money$(kindData.to_collect),
+                })
+              }}
+            </button>
+          </template>
           <p v-else class="m-0 text-sm text-slate-600">
             {{ campaign.brief && campaign.brief.offer_what }}
           </p>

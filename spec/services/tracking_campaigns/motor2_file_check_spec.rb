@@ -44,4 +44,15 @@ RSpec.describe TrackingCampaigns::Motor2FileCheck do
     file(camp, 'flyer', { 'interest' => true })
     expect(described_class.new(camp).call).to be_empty
   end
+
+  it '«cuando lo logra» en Ofrecer: sí con cita o palabra clave; con «pasa a quien sigue», avisa' do
+    wa = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false).inbox
+    camp = campaign('offer', wa)
+    camp.update!(brief: camp.brief.merge('offer_goal' => 'appointment'))
+    file(camp, 'mapa', { 'confirm' => true })
+    expect(described_class.new(camp).call).to be_empty
+
+    camp.update!(brief: camp.brief.merge('offer_goal' => 'relay'))
+    expect(described_class.new(camp).call.pluck(:text).join).to include('«mapa»: con «le interesa → pasa a quien sigue»')
+  end
 end

@@ -11,9 +11,11 @@
 #   TrackingCampaigns::ReminderWriter.new(campaign, kind: 'day_before', pending: true).draft(tone: 'cercano')  → { text: }
 #   TrackingCampaigns::ReminderWriter.new(campaign, kind: 'hour_before', pending: false).for_contact(tracking, values) → '…'
 class TrackingCampaigns::ReminderWriter < Cases::Ai::BaseService
-  WHEN = { 'day_before' => 'mañana', 'hour_before' => 'en una hora', 'last_call' => 'mañana o hoy' }.freeze
+  WHEN = { 'day_before' => 'mañana', 'hour_before' => 'en una hora', 'last_call' => 'mañana o hoy',
+           'appointment' => 'pronto ({{cuando}})' }.freeze
   VARIABLES_RULE = 'Es un texto para TODOS: para el nombre usa {{nombre}} y para la liga {{liga}} (se llenan solas por ' \
-                   'contacto); también puedes usar {{evento}} {{cuando}} {{lugar}} (Invitar) u {{oferta}} {{cuando}} (promoción).'
+                   'contacto); también puedes usar {{evento}} {{cuando}} {{lugar}} (Invitar), {{oferta}} {{cuando}} (promoción) o ' \
+                   '{{cuando}} {{con}} (la cita: día y hora, y con quién).'
 
   def initialize(campaign, kind:, pending:)
     super(account: campaign.account)
@@ -70,22 +72,28 @@ class TrackingCampaigns::ReminderWriter < Cases::Ai::BaseService
   # Ofrecer y Reactivar: el «Último aviso» de la promoción (TrackingCampaigns::LastCall); Invitar: el recordatorio del evento.
   def subject
     return 'Escribes por WhatsApp el ÚLTIMO AVISO de una promoción que termina pronto ({{cuando}}), en español de México.' if last_call?
+    return 'Escribes por WhatsApp el recordatorio de la cita que agendó por esta promoción, en español de México.' if appointment?
 
     "Escribes por WhatsApp el recordatorio de un evento que es #{WHEN[@kind]}, en español de México."
   end
 
   def includes
     return 'Incluye qué es la promoción ({{oferta}}) y cuándo termina ({{cuando}}).' if last_call?
+    return 'Incluye día y hora ({{cuando}}) y con quién ({{con}}), y pídele que confirme que sí llega.' if appointment?
 
     "Incluye cuándo es#{@kind == 'hour_before' ? ' y la liga para entrar' : ' y dónde'}."
   end
 
   def last_call? = @kind == 'last_call'
 
+  def appointment? = @kind == 'appointment'
+
   # La liga va en la última invitación y una hora antes (para entrar): si no la puso, al final.
   def with_link?(text) = (@pending || @kind == 'hour_before') && text.exclude?('{{liga}}')
 
   def confirmed_rule
+    return 'Ya agendó su cita: recuérdasela con calidez y lo práctico (lo que sabes de la promoción, si sirve).' if appointment?
+
     'Ya confirmó que va (o ya se registró): recuérdaselo con calidez y lo práctico; no le vuelvas a preguntar si va ni le ' \
       'pidas registrarse o la palabra clave.'
   end

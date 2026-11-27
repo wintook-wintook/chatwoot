@@ -55,14 +55,18 @@ module Motor2::Skills::CampaignAnswers
   end
 
   def stop_tool
-    fn('no_contactar', 'Pide que no le escriban o no lo vuelvan a invitar («no me manden nada», «no me inviten», «bórrenme»): ' \
-                       'se respeta ya, sin preguntar el motivo. Después escribe la respuesta que te da la herramienta.',
-       { motivo: STR })
+    fn('no_contactar', 'Pide que no le escriban de esto («no me inviten», «no me interesan los eventos») o que ya no le escriban ' \
+                       'NADA («no me manden nada», «bórrenme», «ya no quiero mensajes»: de_todo = true): se respeta ya, sin ' \
+                       'preguntar el motivo. Después escribe la respuesta que te da la herramienta.',
+       { motivo: STR, de_todo: { type: 'boolean', description: 'true si no quiere recibir NADA de nosotros (baja de todo), ' \
+                                                               'no solo de este tipo de campaña' } })
   end
 
-  def opt_out!(reason)
-    @turn.decide('opt_out', reason.to_s)
-    fixed('opt_out')
+  # de_todo: baja de todo (etiqueta «baja», ninguna campaña de ningún número); si no, solo de este tipo («no…»).
+  def opt_out!(reason, everything: false)
+    key = everything ? 'unsubscribe' : 'opt_out'
+    @turn.decide(key, reason.to_s)
+    fixed(key)
   end
 
   def not_interested

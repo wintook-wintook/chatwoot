@@ -3,7 +3,7 @@
 # Campaña con Vendedor IA — «Redactar con Dali» (TrackingCampaigns::CopyWriter). No guarda: regresa la propuesta y la
 # pantalla decide si la usa.
 #
-#   POST motor2_campaigns/:id/copy  { target: info|opener|touch|email|reminder, number, kind, pending, tone, length,
+#   POST motor2_campaigns/:id/copy  { target: info|touch|email|reminder, number, kind, pending, tone, length,
 #                                    instruction, current }
 #        → { text } · email: { subject, subject_b, blocks } · 422 { error }
 class Api::V1::Accounts::Motor2Campaigns::CopiesController < Api::V1::Accounts::BaseController

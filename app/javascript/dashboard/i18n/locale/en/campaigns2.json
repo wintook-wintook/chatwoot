@@ -224,7 +224,8 @@
         "reminders": "Event reminders",
         "silent": "If they go quiet",
         "questions": "The questions",
-        "last_call": "Last call"
+        "last_call": "Last call",
+        "appointment": "Appointment reminder"
       }
     },
     "EMAIL": {
@@ -399,6 +400,10 @@
       },
       "CONFIRMED": "Confirmed: {n} (capacity {capacity})",
       "DECLINED": "Not going: {n}",
+      "KIND_COUNT": "{label}: {n}",
+      "KIND_WON": "Won sales: {n} · {total}",
+      "KIND_PAID": "Paid: {n}",
+      "KIND_UNPAID": "Unpaid: {n} · to collect {total}",
       "ANSWERED": "Answered: {n}",
       "AVERAGE": "Average: {avg}",
       "LOW": "Low scores: {n} · cases: {cases}",
@@ -435,7 +440,8 @@
         "achieved": "Done",
         "not_now": "Not this time",
         "future_yes": "Next time OK",
-        "auto_replied": "Only their auto-reply"
+        "auto_replied": "Only their auto-reply",
+        "unpaid": "Unpaid"
       },
       "CLOSE": "Close",
       "LIST_TITLE": "List «{name}»",
@@ -543,7 +549,8 @@
         "info": "Interested: your full information is sent once, with images.",
         "achieved": "Done ({goal}).",
         "not_now": "«Not this time»: we ask about next time (yes → {yes}; no → {no}).",
-        "opt_out": "«Don't send me anything»: leaves the campaign."
+        "opt_out": "«Don't write to me about this» («don't invite me»): leaves the campaign.",
+        "unsubscribe": "Unsubscribe from everything («STOP», «don't send me anything»): no campaign reaches them again."
       },
       "WARNINGS": {
         "no_address": "This contact has no data for the channel: it would not reach them.",
@@ -615,7 +622,10 @@
       "WHEN": {
         "interest": "When they show interest (once)",
         "ask": "When they ask or it helps",
-        "confirm": "When they confirm the event (also with the keyword)"
+        "confirm": "When they confirm the event (also with the keyword)",
+        "confirm_offer": "When they book or say they bought (also with the keyword)",
+        "confirm_reactivate": "When they book or say they bought (also with the keyword)",
+        "confirm_renew": "When they say they paid or renewed (also with the keyword)"
       },
       "ADD": "+ Upload images or files",
       "UPLOADING": "Uploading…",
@@ -646,19 +656,11 @@
     },
     "FLOW": {
       "OPENER_TITLE": "Opener",
-      "OPENER_HINT": "The first message (not a touch): short, so they reply.",
+      "OPENER_HINT": "The first message (not a touch): always goes out with its approved template, even if the contact wrote in the last 24 hours.",
+      "OPENER_TEMPLATE": "Template",
       "TEMPLATE_PICK": "Pick the approved template",
       "FIXED_TEXT": "Fixed text",
       "TOUCHES_NOTE": "If they reply to any touch, the rest are not sent.",
-      "OPEN_WINDOW": "Fixed message if they wrote in the last 24 hours (optional)",
-      "OPEN_WINDOW_PLACEHOLDER": {
-        "invite": "Hi {{contacto}}, we would like to invite you to {{oferta}}. Shall I tell you more?",
-        "offer": "Hi {{contacto}}, we have {{oferta}}. Shall I send you the details?",
-        "reactivate": "Hi {{contacto}}, it has been a while. We have something to bring you back: {{oferta}}. Interested?",
-        "renew": "Hi {{contacto}}, your {{que_vence}} is due on {{vence}}. Can I help you renew it?",
-        "survey": "Hi {{contacto}}, could you help us with a few questions about your service? It takes a minute."
-      },
-      "OPEN_WINDOW_HINT": "With {{contacto}}, {{empresa}} and {{oferta}}. Empty: the AI writes it with the same idea.",
       "INFO_TITLE": {
         "offer": "Full information · sent when interested",
         "reactivate": "Full information · sent when interested",
@@ -791,19 +793,28 @@
       "MOMENTS": {
         "not_now": "Not this time",
         "future_yes": "Agrees to hear from us next time",
-        "opt_out": "Does not want to hear about this"
+        "opt_out": "Does not want to hear about this",
+        "unsubscribe": "Asks to unsubscribe from everything"
+      },
+      "OPT_OUT_EXAMPLES": {
+        "invite": "«Don't invite me», «not interested in events»",
+        "offer": "«Don't send me promotions», «not interested in your offers»",
+        "reactivate": "«Don't write to me about this», «I don't buy from you anymore»",
+        "renew": "«Don't remind me of this», «I won't renew»",
+        "survey": "«I don't want to answer surveys»"
       },
       "ABOUT": {
         "achieved": "Ends as done.",
         "not_now": "«I can't this time»: not an opt-out. We ask once if we can write next time.",
         "future_yes": "Said yes to that question.",
-        "opt_out": "«Don't send me anything», or said no to the question: respected right away."
+        "opt_out": "{examples}, or said no to the question: only stops {kind} campaigns; respected right away, without asking why.",
+        "unsubscribe": "«STOP», «don't send me anything», «remove me from your list»: no campaign reaches them again, from any number."
       },
       "REPLY": "Reply",
       "LABEL": "Contact label",
       "NO_LABEL": "no label",
       "EXCLUDES": "Contacts with «{label}» are left out of the next {kind} campaigns.",
-      "GLOBAL_OPT_OUT": "«Unsubscribe», «stop» opts them out of everything.",
+      "FIXED_LABEL": "Contact and conversation label: «{label}» (the same in every campaign).",
       "CUSTOMIZE": "Customize",
       "USE_DEFAULT": "Use the default"
     },
@@ -1130,6 +1141,16 @@
       "TEMPLATE": "Template (if they have not written in 24 hours)",
       "NO_TEMPLATE": "No template (only to whoever wrote in 24 h)",
       "TEMPLATE_HINT": "After 24 hours WhatsApp only allows an approved template (Meta charges for it)."
+    },
+    "APPOINTMENT_REMINDER": {
+      "TITLE": "Appointment reminder",
+      "HINT": "One day before the appointment (or 2 hours before if booked for the same day), to whoever booked through the campaign.",
+      "PLACEHOLDER": "Hi {{nombre}}! Just a reminder of your appointment on {{cuando}} with {{con}}. Can you confirm you're coming?",
+      "AI_HINT": "For that contact: day, time and with whom, picking up what they talked about, and asking them to confirm.",
+      "FIXED_HINT": "Same for everyone. Use {{nombre}} {{cuando}} {{con}}; empty = the grey text. You can ask Dali.",
+      "TEMPLATE": "Template (if they haven't written in 24 hours)",
+      "NO_TEMPLATE": "No template (only to whoever wrote in 24 h)",
+      "TEMPLATE_HINT": "After 24 hours WhatsApp only allows an approved template. Without one, whoever handles the appointment is told to write to them."
     }
   }
 }

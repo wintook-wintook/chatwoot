@@ -130,6 +130,7 @@ export default {
         not_now: ['not_now'],
         future_yes: ['not_now'],
         opt_out: ['opt_out'],
+        unsubscribe: ['unsubscribe'],
       };
       const o = outcomes.find(x => (map[kind] || []).includes(x.kind));
       return o ? this.outcomeText(o) : '';

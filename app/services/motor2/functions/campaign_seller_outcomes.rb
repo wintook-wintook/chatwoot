@@ -12,6 +12,8 @@
 #   future_yes (futuras: sí)            → etiqueta «volver a…» (quita la de «no…») y termina
 #   opt_out   (no_contactar / futuras: no) → etiqueta «no…» (quita la de «volver a…»); la siguiente campaña del mismo
 #                                          tipo ya no lo inscribe (TrackingCampaigns::Enroll)
+#   unsubscribe (no_contactar de_todo)  → baja de todo (ContactTrackings::OptOut): etiqueta «baja» al contacto y a la
+#                                          conversación; ninguna campaña lo vuelve a inscribir
 class Motor2::Functions::CampaignSellerOutcomes
   def initialize(tracking, conversation, function)
     @tracking = tracking
@@ -21,7 +23,8 @@ class Motor2::Functions::CampaignSellerOutcomes
   end
 
   HANDLERS = { 'discarded' => :discarded, 'done' => :done, 'handoff' => :handed_off, 'later' => :later, 'achieved' => :achieved,
-               'not_now' => :not_now, 'future_yes' => :future_yes, 'opt_out' => :opt_out }.freeze
+               'not_now' => :not_now, 'future_yes' => :future_yes, 'opt_out' => :opt_out,
+               'unsubscribe' => :unsubscribe }.freeze
 
   def apply(kind, text)
     return Motor2::Relay.new(@tracking, @conversation, @function).call(text) if kind == 'relay'
@@ -94,6 +97,14 @@ class Motor2::Functions::CampaignSellerOutcomes
     label('opt_out')
     discarded_columns(reason.presence || state['exit_reason'] || 'No quiere que le escribamos')
     @tracking.cancel!
+  end
+
+  def unsubscribe(reason)
+    note("Pidió la baja de todo#{": #{reason}" if reason.present?}.")
+    discarded_columns(reason.presence || 'Pidió la baja de todo')
+    ContactTrackings::OptOut.call(@tracking.contact, source: 'reply')
+    @conversation&.add_labels([ContactTrackings::OptOut::LABEL])
+    @tracking.reload.cancel! unless @tracking.cancelled?
   end
 
   def discarded_columns(reason)

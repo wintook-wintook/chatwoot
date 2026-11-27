@@ -17,7 +17,6 @@
 #              warmup      calentar el dominio: el tope diario arranca en WARMUP_START y se duplica cada día
 #              content     WhatsApp, «el paquete»: lo que se manda TAL CUAL cuando muestra interés (el copy; sus
 #                          imágenes son los archivos «con la información»). Es lo que se MANDA; lo que sabe es la ficha.
-#              opener      WhatsApp: la apertura cuando la ventana de 24 h está abierta (vacía: la escribe la IA)
 #              touch_texts WhatsApp: lo mismo para cada toque a quien no contesta (toque 1, 2…; vacío: la IA)
 #              relay       '' (lo que diga el vendedor) | agent | person · relay_user_id / relay_team_id: quién atiende
 #                          a los de esta campaña (el interesado y el que pide una persona) }
@@ -70,7 +69,6 @@ module TrackingCampaigns::Motor2Brief
   # Cómo atiende a los de ESTA campaña, encima del vendedor: objeciones de la oferta y el relevo.
   def talk(raw)
     { 'objections' => objections(raw['objections']), 'content' => raw['content'].to_s.strip.first(MAX_CONTENT),
-      'opener' => raw['opener'].to_s.strip.first(MAX_TEXT),
       'touch_texts' => Motor2::CampaignTouch.clean_texts(raw['touch_texts'], MAX_TEXT) }.merge(relay(raw))
   end
 

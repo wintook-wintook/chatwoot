@@ -72,7 +72,7 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
 
   # La liga que mandó con mandar_liga va sí o sí, exacta (si la IA la cambió o no la puso, se agrega al final).
   def polish(reply)
-    attach_rule('confirm') if function.invite? && keyword_said? # se registró: van sus archivos aunque la IA no use ya_lo_hizo
+    attach_rule('confirm') if keyword_said? # se registró, compró o pagó: van sus archivos aunque la IA no use ya_lo_hizo
     return reply if @link_url.blank? || reply.blank? || reply.include?(@link_url)
 
     "#{reply.rstrip}\n\n#{@link_url}"
@@ -91,7 +91,7 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
     'le_interesa' => ->(a) { interested(a['resumen']) }, 'ya_lo_hizo' => ->(a) { achieved!(a['nota']) },
     'confirmar_asistencia' => ->(a) { attendance(a['asistira'], a['nota']) }, 'no_esta_vez' => ->(a) { not_now!(a['motivo']) },
     'futuras' => ->(a) { future!(a['acepta'], a['motivo']) }, 'mandar_liga' => ->(a) { send_link(a['liga']) },
-    'no_contactar' => ->(a) { opt_out!(a['motivo']) },
+    'no_contactar' => ->(a) { opt_out!(a['motivo'], everything: a['de_todo'] == true) },
     'no_le_interesa' => ->(a) { not_interested!(a['motivo']) }, 'mas_adelante' => ->(a) { later!(a['dias'], a['motivo']) }
   }.freeze
 
@@ -201,7 +201,8 @@ class Motor2::Skills::Campaign < Motor2::Skills::Base
   def achieved!(note)
     @turn.decide('achieved', note.presence || 'Lo hizo')
     trace.event(:campana, 'Lo logró')
-    attach_rule(function.invite? ? 'confirm' : 'interest')
+    # Los de «cuando lo logra» (recibo, instrucciones…); si la campaña no tiene, los de interés como antes.
+    attach_rule('interest') if attach_rule('confirm').empty? && !function.invite?
     fixed('achieved')
   end
 

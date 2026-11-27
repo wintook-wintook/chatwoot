@@ -57,7 +57,7 @@ class TrackingCampaigns::Motor2Cases
   end
 
   def sale_cases
-    [interest_case, question_case, keyword_case, not_done_case, confirm_case, not_now_case, future_case, opt_out_case,
+    [interest_case, question_case, keyword_case, not_done_case, confirm_case, not_now_case, future_case, *opt_out_case,
      off_topic_case, thanks_case, *link_cases, later_case, *TrackingCampaigns::OfferCases.new(function, @answers, method(:make)).cases]
   end
 
@@ -122,8 +122,15 @@ class TrackingCampaigns::Motor2Cases
          expect: { any: %w[futuras] }, messages: messages, state: { 'asked_future' => true })
   end
 
+  # «No…» de ESE tipo (etiqueta de la campaña) y la baja de todo («baja»). En una plática real «no me manden nada» lo toma
+  # antes Motor2::Reply (ContactTrackings::OptOut::NOTHING); aquí se ve que la IA también lo respeta.
+  OPT_OUT_TEXT = { 'invite' => 'Ya no me inviten a eventos, por favor', 'offer' => 'Ya no me manden promociones, por favor',
+                   'reactivate' => 'Ya no me escriban para esto, gracias', 'survey' => 'No quiero contestar encuestas' }.freeze
+
   def opt_out_case
-    make('opt_out', '«No me manden nada» (baja inmediata)', 'No me manden nada, por favor', expect: { any: %w[no_contactar] })
+    text = OPT_OUT_TEXT[function.purpose]
+    [text && make('opt_out', "«#{text}» (no de este tipo)", text, expect: { any: %w[no_contactar] }),
+     make('unsubscribe', '«No me manden nada» (baja de todo)', 'No me manden nada, por favor', expect: { any: %w[no_contactar] })]
   end
 
   def off_topic_case
@@ -156,7 +163,7 @@ class TrackingCampaigns::Motor2Cases
     [make('survey_yes', '«Sí» todavía no es una respuesta', 'Sí, claro', expect: { none: %w[guardar_respuesta] }),
      make('survey_answer', 'Contesta la primera pregunta', '9', expect: { any: %w[guardar_respuesta] },
                                                                 messages: talk('Sí, claro', first, '9')),
-     opt_out_case]
+     *opt_out_case]
   end
 
   # [ok, motivo]

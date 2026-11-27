@@ -68,8 +68,19 @@ class Motor2::Reply
     ContactTrackings::OptOut.requested_in?(text)
   end
 
+  # Baja de todo: el contacto queda dado de baja con la etiqueta «baja» (también la conversación) y, en una campaña,
+  # se le contesta (la respuesta «Pide la baja de todo» de la campaña o la de fábrica).
   def opt_out!
-    ContactTrackings::OptOut.call(@conversation.contact, source: 'reply')
+    return unless ContactTrackings::OptOut.call(@conversation.contact, source: 'reply')
+
+    @conversation.add_labels([ContactTrackings::OptOut::LABEL])
+    campaign = @tracking.tracking_campaign
+    return unless campaign&.motor2?
+
+    reply = TrackingCampaigns::CampaignKit.reply(campaign.brief, 'unsubscribe')
+    Motor2::Delivery.send_reply(@tracking, @conversation, reply) if reply.present?
+  rescue StandardError => e
+    Rails.logger.warn("[Motor2::Reply] baja #{@tracking.id}: #{e.class}: #{e.message}")
   end
 
   # Sin `return` dentro del bloque de with_lock: en Rails 7 salir así deshace la transacción.

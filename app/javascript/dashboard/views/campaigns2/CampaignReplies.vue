@@ -5,6 +5,7 @@
     No esta vez       pregunta si le escribimos la próxima (Invitar, Ofrecer, Reactivar)
       · sí, la próxima → respuesta + etiqueta «volver a…»
     No me escriban    respuesta + etiqueta «no…»: la siguiente campaña del mismo tipo ya no lo inscribe
+    Baja de todo      respuesta + etiqueta «baja» (fija): ninguna campaña lo vuelve a inscribir (ContactTrackings::OptOut)
   Vacío = el texto de fábrica (en gris). .sync: brief (replies, labels)
   compact (Invitar): cada momento en una línea con su texto de fábrica; «Personalizar» abre la caja.
 -->
@@ -35,6 +36,7 @@ export default {
             ]
           : []),
         { key: 'opt_out', label: 'opt_out' },
+        { key: 'unsubscribe', label: null, fixedLabel: 'baja' },
       ];
     },
     replies() {
@@ -111,7 +113,10 @@ export default {
       </div>
       <p class="m-0 text-xs text-slate-500">
         {{
-          t(`ABOUT.${m.key}`, { kind: $t(`CAMPAIGNS2.KINDS.${kind}.TITLE`) })
+          t(`ABOUT.${m.key}`, {
+            kind: $t(`CAMPAIGNS2.KINDS.${kind}.TITLE`),
+            examples: t(`OPT_OUT_EXAMPLES.${kind}`),
+          })
         }}
       </p>
       <label
@@ -152,6 +157,9 @@ export default {
           @input="setLabel(m.label, $event.target.value)"
         />
       </label>
+      <p v-if="m.fixedLabel" class="m-0 text-sm">
+        {{ t('FIXED_LABEL', { label: m.fixedLabel }) }}
+      </p>
       <p
         v-if="m.key === 'opt_out' && labels.opt_out"
         class="m-0 text-[11px] text-slate-500"
@@ -164,7 +172,5 @@ export default {
         }}
       </p>
     </section>
-
-    <p class="m-0 text-[11px] text-slate-500">{{ t('GLOBAL_OPT_OUT') }}</p>
   </div>
 </template>

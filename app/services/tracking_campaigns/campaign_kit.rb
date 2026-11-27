@@ -11,14 +11,15 @@
 #               answers   contesta la encuesta
 #   facts     los campos de la ficha (lo que sabe la IA); 'more' es texto libre
 #   replies   las respuestas fijas: achieved (lo logró), not_now (no esta vez: pide permiso para la próxima),
-#             future_yes (acepta la próxima), opt_out (no quiere que le escriban de esto)
+#             future_yes (acepta la próxima), opt_out (no quiere que le escriban de esto), unsubscribe (pide la baja
+#             de todo: «BAJA», «no me manden nada»; la etiqueta «baja» es fija, ContactTrackings::OptOut)
 #   labels    las etiquetas que le quedan al CONTACTO: achieved, future_yes, opt_out. Al que tiene la de opt_out
 #             no lo vuelve a inscribir otra campaña del mismo tipo (TrackingCampaigns::Enroll).
 #   keyword   la palabra clave de inicio para «external»
 module TrackingCampaigns::CampaignKit
   KINDS = %w[offer invite reactivate renew survey].freeze
   GOALS = %w[confirm external done relay appointment answers].freeze
-  REPLY_KEYS = %w[achieved not_now future_yes opt_out low].freeze
+  REPLY_KEYS = %w[achieved not_now future_yes opt_out unsubscribe low].freeze
   LABEL_KEYS = %w[achieved future_yes opt_out].freeze
   LINK_USES = %w[package request problem].freeze
   MAX_LINKS = 6
@@ -26,6 +27,8 @@ module TrackingCampaigns::CampaignKit
 
   FACT_LABELS = TrackingCampaigns::CampaignKitData::FACT_LABELS
   KIT = TrackingCampaigns::CampaignKitData::KIT
+  # Las que son iguales en todos los tipos.
+  DEFAULT_REPLIES = { 'unsubscribe' => 'Listo, ya no te escribiremos. Si cambias de opinión, escríbenos aquí. 😊' }.freeze
 
   # La etiqueta de «lo logró» de inicio, según el objetivo.
   ACHIEVED_LABELS = { 'confirm' => 'confirmo-asistencia', 'external' => 'registrado', 'done' => 'renovo', 'relay' => 'le-interesa',
@@ -60,7 +63,10 @@ module TrackingCampaigns::CampaignKit
     { 'facts' => sanitize_facts(kind, raw['facts']), 'links' => sanitize_links(raw['links']),
       'replies' => sanitize_replies(raw['replies']), 'labels' => raw['labels'].is_a?(Hash) ? sanitize_labels(raw['labels']) : nil,
       'reminders' => (TrackingCampaigns::EventReminders.sanitize(raw['reminders']) if kind == 'invite'),
-      'last_call' => (TrackingCampaigns::LastCall.sanitize(raw['last_call']) if TrackingCampaigns::LastCall::KINDS.include?(kind)) }
+      'last_call' => (TrackingCampaigns::LastCall.sanitize(raw['last_call']) if TrackingCampaigns::LastCall::KINDS.include?(kind)),
+      'appointment_reminder' => (if TrackingCampaigns::AppointmentReminder::KINDS.include?(kind)
+                                   TrackingCampaigns::AppointmentReminder.sanitize(raw['appointment_reminder'])
+                                 end) }
       .merge(offer_products(kind, raw), survey_parts(kind, raw), renew_parts(kind, raw))
   end
 
@@ -126,7 +132,7 @@ module TrackingCampaigns::CampaignKit
   # Lo que tiene la campaña o, si lo dejó vacío, lo de fábrica.
   def reply(brief, key)
     brief = brief.to_h
-    brief.dig('replies', key).presence || default_replies(brief['kind'])[key].to_s
+    brief.dig('replies', key).presence || default_replies(brief['kind'])[key].presence || DEFAULT_REPLIES[key].to_s
   end
 
   # Las etiquetas se guardan siempre (la pantalla las trae llenas): una vacía es «sin etiqueta».
@@ -141,7 +147,7 @@ module TrackingCampaigns::CampaignKit
   # Para la pantalla: lo de fábrica de cada tipo.
   def options
     KIT.to_h do |kind, data|
-      [kind, { goals: data[:goals], facts: data[:facts], keyword: data[:keyword], replies: data[:replies],
+      [kind, { goals: data[:goals], facts: data[:facts], keyword: data[:keyword], replies: DEFAULT_REPLIES.merge(data[:replies]),
                labels: data[:goals].index_with { |g| default_labels(kind, g) }, asks_future: asks_future?(kind) }]
     end
   end

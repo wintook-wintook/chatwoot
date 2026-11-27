@@ -128,13 +128,20 @@ RSpec.describe 'Motor2 campaign send rules' do # rubocop:disable RSpec/DescribeC
       expect(result[:parameters].pluck(:text)).to eq(['Mantenimiento gratis'])
     end
 
-    it 'con la ventana abierta, el primer toque es la apertura escrita' do
-      camp = wa_campaign('opener' => 'Hola {{contacto}}, tenemos {{oferta}}. ¿Te mando info?')
-      trk = ContactTracking.new(account: account, contact: contact, inbox: wa, tracking_template: seller, tracking_campaign: camp,
-                                attempt_count: 0)
-      expect(Motor2::CampaignTouch.text(trk)).to eq('Hola Mario, tenemos Mantenimiento gratis. ¿Te mando info?')
-      trk.attempt_count = 1
+    it 'la apertura sale SIEMPRE con su plantilla, aunque el contacto haya escrito en las últimas 24 h' do
+      camp = wa_campaign('opener' => 'Texto viejo que ya no se usa')
+      conversation = create(:conversation, account: account, inbox: wa, contact: contact)
+      create(:message, account: account, inbox: wa, conversation: conversation, message_type: :incoming, content: 'Hola')
+      trk = ContactTracking.create!(account: account, contact: contact, inbox: wa, tracking_template: seller, tracking_campaign: camp,
+                                    conversation: conversation, scheduled_for: 1.minute.from_now, status: 'scheduled',
+                                    max_attempts: 2, attempt_count: 0, objective: 'Vender la promo',
+                                    whatsapp_templates: %w[sample_shipping_confirmation sample_shipping_confirmation])
+      job = ContactTrackingJob.new
       expect(Motor2::CampaignTouch.text(trk)).to be_nil
+      expect(job.send(:whatsapp_window_open?, trk)).to be(false) # la apertura: plantilla
+
+      trk.update_columns(attempt_count: 1) # rubocop:disable Rails/SkipsModelValidations
+      expect(job.send(:whatsapp_window_open?, trk.reload)).to be(true) # el toque sí aprovecha la ventana
     end
 
     it 'con la ventana abierta, cada toque sale con su texto escrito; vacío lo escribe la IA' do
@@ -262,6 +269,27 @@ RSpec.describe 'Motor2 campaign send rules' do # rubocop:disable RSpec/DescribeC
       data = TrackingCampaigns::Motor2Results.new(camp).call
       expect(data[:exits]).to include(no_reply: 1, in_progress: 1)
       expect(data[:touches].pluck(:sent)).to eq([2, 1, 1])
+    end
+
+    it 'Ofrecer: le interesó, relevo y lo hizo, cada uno con su lista' do
+      camp = campaign
+      tracking(camp, status: 'completed', outcome: 'relayed: a Ana', interested_at: 1.hour.ago)
+      data = TrackingCampaigns::Motor2Results.new(camp).call
+      expect(data[:kind]).to include(what: 'Mantenimiento', interested: 1, relayed: 1, achieved: 0)
+    end
+
+    it 'Recordar: pagaron, sin pagar y lo que falta por cobrar' do
+      camp = campaign(brief: { 'kind' => 'renew' })
+      type = account.contract_types.create!(name: 'Pólizas')
+      contract = account.contracts.create!(contact: contact, contract_type: type, title: 'Póliza', quantity: 2, price: 500,
+                                           starts_on: 1.year.ago.to_date)
+      tracking(camp, status: 'scheduled', contract: contract)
+      other = create(:contact, account: account, email: 'c@ejemplo.com')
+      ContactTracking.create!(account: account, contact: other, inbox: inbox, tracking_template: seller, tracking_campaign: camp,
+                              scheduled_for: 1.minute.from_now, status: 'completed', outcome: 'Logrado: pagó', objective: 'Cobrar')
+      results = TrackingCampaigns::Motor2Results.new(camp)
+      expect(results.call[:kind]).to include(paid: 1, unpaid: 1, to_collect: 1000.0)
+      expect(results.contacts('unpaid').pluck(:contact_id)).to eq([contact.id])
     end
   end
 end

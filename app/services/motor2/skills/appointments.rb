@@ -139,6 +139,8 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
   # Después de mandar el mensaje: los archivos de la cita, la nota y etiqueta, y el recordatorio.
   def after_booking(created)
     trace.event(:cita, local(created.starts_at))
+    # Campaña: los archivos de «Al agendar o comprar» (mapa de la sucursal, qué traer) van con este mensaje.
+    Motor2::Skills::Files.attach_unsent(@turn, config, state, 'confirm') if config.function.respond_to?(:reply_text)
     @turn.after_send { booked_files }
     @turn.after_send { Motor2::Outcomes.new(@turn.tracking, @turn.conversation, config).booked(created) }
     notice(created)

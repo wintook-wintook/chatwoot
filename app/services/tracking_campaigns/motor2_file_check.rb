@@ -3,8 +3,9 @@
 # Campaña con IA — la parte de la revisión antes de lanzar (Motor2Check) que mira las imágenes y archivos de la
 # campaña: que cada uno tenga cuándo va y que ese momento pueda pasar con como está armada la campaña.
 #   interest → la primera muestra de interés (información, «le interesa», cotizar, pide la liga, ya lo hizo); en correo,
-#              adjunta al primer correo; en Invitar, cuando pide la información del evento · confirm → Invitar, al
-#              confirmar (también con la palabra clave) ·
+#              adjunta al primer correo; en Invitar, cuando pide la información del evento · confirm → cuando lo logra:
+#              Invitar al confirmar; Ofrecer y Reactivar al agendar o decir que ya compró; Recordar al decir que pagó
+#              (también con la palabra clave). Con «le interesa → pasa a quien sigue» no hay ese momento ·
 #   ask → cuando lo pida o le sirva. No van por toque (la apertura y los toques en WhatsApp son plantilla).
 class TrackingCampaigns::Motor2FileCheck
   def initialize(campaign)
@@ -34,6 +35,7 @@ class TrackingCampaigns::Motor2FileCheck
 
   def wrong_moment
     return 'en una encuesta no hay interés ni confirmación; márcale «Cuando lo pida».' if survey?
+    return 'con «le interesa → pasa a quien sigue» la campaña no llega a ese momento (lo cierra quien sigue); márcale otro.' if relay?
 
     'su momento no aplica a este tipo de campaña; márcale otro.'
   end
@@ -41,9 +43,10 @@ class TrackingCampaigns::Motor2FileCheck
   def own_moments
     return [] if survey?
 
-    invite? ? %w[interest confirm] : %w[interest]
+    relay? ? %w[interest] : %w[interest confirm]
   end
 
+  def relay? = TrackingCampaigns::CampaignKit.goal(@kind, @campaign.brief.to_h['offer_goal']) == 'relay'
+
   def survey? = @kind == 'survey'
-  def invite? = @kind == 'invite'
 end

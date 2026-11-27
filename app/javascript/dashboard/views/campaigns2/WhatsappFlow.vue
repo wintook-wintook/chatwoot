@@ -4,7 +4,8 @@
              cada variable) para cuando no ha escrito en 24 h y, opcional, su texto fijo para cuando sí (vacío: la IA).
     info     La información completa, a lo ancho y con cómo le llega: sale TAL CUAL, una sola vez, si le interesa
              (con las imágenes «cuando muestre interés» y, al final, las ligas «con la información»); en Encuesta, las preguntas.
-  .sync: touches (templates, template_vars) y brief (opener, touch_texts, content).
+  .sync: touches (templates, template_vars) y brief (touch_texts, content). La apertura sale SIEMPRE con su plantilla
+  (Motor2::CampaignSendHook): no lleva texto fijo ni IA.
 -->
 <script>
 import DaliWriter from './DaliWriter.vue';
@@ -126,9 +127,8 @@ export default {
       vars[tpl.name] = rules;
       this.$emit('update:touches', { ...this.touches, template_vars: vars });
     },
-    // Texto fijo del mensaje n (1 = apertura → brief.opener; 2.. = toque → brief.touch_texts).
+    // Texto fijo del toque (mensaje 2.. → brief.touch_texts). La apertura no lleva.
     fixedOf(n) {
-      if (n === 1) return this.brief.opener || '';
       return (this.brief.touch_texts || [])[n - 2] || '';
     },
     // Toque: ¿mensaje fijo? (con texto, o recién elegido). Al volver a «la IA al momento» se borra el fijo.
@@ -141,10 +141,6 @@ export default {
         : this.fixedOpen.filter(x => x !== n);
     },
     setFixed(n, value) {
-      if (n === 1) {
-        this.setBrief('opener', value);
-        return;
-      }
       const texts = [...(this.brief.touch_texts || [])];
       while (texts.length < n - 1) texts.push('');
       texts[n - 2] = value;
@@ -176,7 +172,9 @@ export default {
           {{ n === 1 ? t('OPENER_HINT') : t('TOUCH_HINT') }}
         </p>
         <label class="block">
-          <span class="field-label">{{ t('TEMPLATE') }}</span>
+          <span class="field-label">
+            {{ n === 1 ? t('OPENER_TEMPLATE') : t('TEMPLATE') }}
+          </span>
           <select
             class="!mb-0"
             :value="touches.templates[n - 1] || ''"
@@ -220,22 +218,14 @@ export default {
             />
           </div>
         </template>
-        <!-- Con la ventana abierta: la apertura con su texto fijo; cada toque, la IA al momento o un fijo -->
+        <!-- Con la ventana abierta: cada toque, la IA al momento o un fijo (la apertura, siempre su plantilla) -->
         <MessageChoice
+          v-if="n > 1"
           :value="fixedOf(n)"
           :ai="!fixedMode(n)"
-          :choose-mode="n > 1"
-          :legend="n === 1 ? t('OPEN_WINDOW') : ''"
-          :placeholder="
-            n === 1
-              ? t(`OPEN_WINDOW_PLACEHOLDER.${kind}`)
-              : t(`TOUCH_PLACEHOLDER.${kind}`)
-          "
-          :fixed-hint="n === 1 ? t('OPEN_WINDOW_HINT') : ''"
-          :dali="{
-            target: n === 1 ? 'opener' : 'touch',
-            number: Math.max(n - 1, 1),
-          }"
+          choose-mode
+          :placeholder="t(`TOUCH_PLACEHOLDER.${kind}`)"
+          :dali="{ target: 'touch', number: n - 1 }"
           :campaign-id="campaignId"
           :save="save"
           @update:value="setFixed(n, $event)"

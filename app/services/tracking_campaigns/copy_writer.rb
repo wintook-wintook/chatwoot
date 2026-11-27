@@ -4,7 +4,6 @@
 # objetivo, el evento o la oferta, la ficha, las preguntas autorizadas, las ligas y cómo habla la empresa).
 #
 #   target   info    la información completa de WhatsApp: copy con gancho, emojis con medida, viñetas, *negritas*
-#            opener  el mensaje fijo de la apertura (si escribió en 24 h): corto, para que conteste
 #            touch   el mensaje fijo del toque N: otro ángulo, más corto
 #            reminder  Invitar: el mensaje fijo de un recordatorio del evento (kind: day_before|hour_before, pending)
 #            email   el correo N (1 = el que lleva todo; los demás, seguimiento): asunto, asunto B y bloques
@@ -16,7 +15,7 @@
 #   → { text: '…' } · email: { subject:, subject_b:, blocks: [{ type:, text:, url: }] } · { error: '…' }
 # Las ligas «con la información» se agregan solas al final (Skills::CampaignNotes#with_package_links): no las escribe.
 class TrackingCampaigns::CopyWriter < Cases::Ai::BaseService
-  TARGETS = %w[info opener touch email].freeze
+  TARGETS = %w[info touch email].freeze
   TONES = { 'cercano' => 'cercano y cálido', 'profesional' => 'profesional y claro', 'entusiasta' => 'entusiasta, con energía' }.freeze
 
   def initialize(campaign, params = {})
@@ -114,7 +113,6 @@ class TrackingCampaigns::CopyWriter < Cases::Ai::BaseService
   def target_rules
     case target
     when 'info' then info_rules
-    when 'opener' then opener_rules
     when 'touch' then touch_rules
     else email_rules
     end
@@ -129,16 +127,6 @@ class TrackingCampaigns::CopyWriter < Cases::Ai::BaseService
       - Sin títulos con #, sin [ligas](url) y sin escribir URLs: #{ctx.links_note}
       - Cierra con #{ctx.closing}.
       - #{short? ? 'Corto: máximo 600 caracteres.' : 'Completo pero escaneable: máximo 1,200 caracteres.'}
-      Responde solo JSON: {"texto": "..."}
-    TEXT
-  end
-
-  def opener_rules
-    <<~TEXT
-      Escribes el PRIMER MENSAJE de WhatsApp a alguien que te escribió hace poco: 1 o 2 renglones, máximo 280
-      caracteres, que haga una pregunta fácil de contestar para que responda (no mandes todo aún: la información
-      completa sale cuando conteste). Puedes usar {{contacto}} para su nombre. 1 emoji como mucho. Sin URLs.
-      #{Motor2::CampaignPersuasion.first(kind)}
       Responde solo JSON: {"texto": "..."}
     TEXT
   end
@@ -192,5 +180,5 @@ class TrackingCampaigns::CopyWriter < Cases::Ai::BaseService
 
   def total_messages = [@campaign.touches.to_h['attempts'].to_i, number + 1].max
 
-  def short? = @params['length'].to_s == 'corto' || %w[opener touch].include?(target)
+  def short? = @params['length'].to_s == 'corto' || target == 'touch'
 end

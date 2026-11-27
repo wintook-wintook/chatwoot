@@ -138,10 +138,11 @@ class TrackingCampaigns::Motor2Simulation
   # No esta vez (pregunta por la próxima) o no le interesa, y «no me escriban» (su etiqueta lo deja fuera de las siguientes).
   def negative_outcomes
     stop = { kind: 'opt_out', label: function.label_for('opt_out').presence, reply: function.reply_text('opt_out').presence }.compact
-    return [{ kind: 'discarded' }, stop] unless function.asks_future?
+    all = { kind: 'unsubscribe', label: ContactTrackings::OptOut::LABEL, reply: function.reply_text('unsubscribe').presence }.compact
+    return [{ kind: 'discarded' }, stop, all] unless function.asks_future?
 
     [{ kind: 'not_now', reply: function.reply_text('not_now'), yes_label: function.label_for('future_yes').presence,
-       no_label: function.label_for('opt_out').presence }.compact, stop]
+       no_label: function.label_for('opt_out').presence }.compact, stop, all]
   end
 
   # Le interesa: le agenda la cita, o el relevo al agente de la bandeja o a una persona.

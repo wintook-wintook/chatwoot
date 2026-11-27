@@ -224,7 +224,8 @@
         "reminders": "Recordatorios del evento",
         "silent": "Si se queda callado",
         "questions": "Las preguntas",
-        "last_call": "Último aviso"
+        "last_call": "Último aviso",
+        "appointment": "Recordatorio de la cita"
       }
     },
     "EMAIL": {
@@ -399,6 +400,10 @@
       },
       "CONFIRMED": "Confirmaron: {n} (cupo {capacity})",
       "DECLINED": "No van: {n}",
+      "KIND_COUNT": "{label}: {n}",
+      "KIND_WON": "Ventas ganadas: {n} · {total}",
+      "KIND_PAID": "Pagaron: {n}",
+      "KIND_UNPAID": "Sin pagar: {n} · por cobrar {total}",
       "ANSWERED": "Contestaron: {n}",
       "AVERAGE": "Promedio: {avg}",
       "LOW": "Calificaciones bajas: {n} · casos: {cases}",
@@ -435,7 +440,8 @@
         "achieved": "Lo lograron",
         "not_now": "No esta vez",
         "future_yes": "Aceptan la próxima",
-        "auto_replied": "Solo su respuesta automática"
+        "auto_replied": "Solo su respuesta automática",
+        "unpaid": "Sin pagar"
       },
       "CLOSE": "Cerrar",
       "LIST_TITLE": "Lista «{name}»",
@@ -543,7 +549,8 @@
         "info": "Le interesa: se manda tu información completa tal cual (una vez), con sus imágenes; luego contesta con la ficha.",
         "achieved": "Lo logra ({goal}): termina como logrado.",
         "not_now": "«No puedo esta vez»: se le pregunta si le escribimos la próxima (sí → {yes}; no → {no}).",
-        "opt_out": "«No me manden nada»: sale de la campaña."
+        "opt_out": "«No me escriban de esto» («no me inviten»): sale de la campaña.",
+        "unsubscribe": "Baja de todo («BAJA», «no me manden nada»): ya no le llega ninguna campaña."
       },
       "WARNINGS": {
         "no_address": "Este contacto no tiene el dato del canal: no le llegaría.",
@@ -615,7 +622,10 @@
       "WHEN": {
         "interest": "Cuando muestre interés (una vez)",
         "ask": "Cuando lo pida o le sirva",
-        "confirm": "Al confirmar el evento (también con la palabra clave)"
+        "confirm": "Al confirmar el evento (también con la palabra clave)",
+        "confirm_offer": "Al agendar la cita o decir que ya compró (también con la palabra clave)",
+        "confirm_reactivate": "Al agendar la cita o decir que ya compró (también con la palabra clave)",
+        "confirm_renew": "Al decir que ya pagó o renovó (también con la palabra clave)"
       },
       "ADD": "+ Subir imágenes o archivos",
       "UPLOADING": "Subiendo…",
@@ -646,19 +656,11 @@
     },
     "FLOW": {
       "OPENER_TITLE": "Apertura",
-      "OPENER_HINT": "El primer mensaje (no es toque): corto, para que conteste.",
+      "OPENER_HINT": "El primer mensaje (no es toque): sale siempre con su plantilla aprobada, aunque el contacto haya escrito en las últimas 24 horas.",
+      "OPENER_TEMPLATE": "Plantilla",
       "TEMPLATE_PICK": "Elige la plantilla aprobada",
       "FIXED_TEXT": "Texto fijo",
       "TOUCHES_NOTE": "Si contesta en cualquier toque, ya no salen los que faltan.",
-      "OPEN_WINDOW": "Mensaje fijo si escribió en las últimas 24 horas (opcional)",
-      "OPEN_WINDOW_PLACEHOLDER": {
-        "invite": "Hola {{contacto}}, te queremos invitar a {{oferta}}. ¿Te cuento?",
-        "offer": "Hola {{contacto}}, tenemos {{oferta}}. ¿Te mando la información?",
-        "reactivate": "Hola {{contacto}}, hace tiempo que no sabemos de ti. Tenemos algo para que vuelvas: {{oferta}}. ¿Te cuento?",
-        "renew": "Hola {{contacto}}, tu {{que_vence}} vence el {{vence}}. ¿Te ayudo a renovarlo?",
-        "survey": "Hola {{contacto}}, ¿nos ayudas con unas preguntas sobre tu servicio? Es un minuto."
-      },
-      "OPEN_WINDOW_HINT": "Con {{contacto}}, {{empresa}} y {{oferta}}. Vacío: lo escribe la IA con la misma idea.",
       "INFO_TITLE": {
         "offer": "Información completa · si le interesa, se manda",
         "reactivate": "Información completa · si le interesa, se manda",
@@ -826,19 +828,28 @@
       "MOMENTS": {
         "not_now": "No esta vez",
         "future_yes": "Acepta que le escribamos la próxima",
-        "opt_out": "No quiere que le escribamos de esto"
+        "opt_out": "No quiere que le escribamos de esto",
+        "unsubscribe": "Pide la baja de todo"
+      },
+      "OPT_OUT_EXAMPLES": {
+        "invite": "«No me inviten», «no me interesan los eventos»",
+        "offer": "«No me manden promociones», «no me interesan sus ofertas»",
+        "reactivate": "«No me escriban para esto», «ya no compro con ustedes»",
+        "renew": "«No me recuerden esto», «ya no lo voy a renovar»",
+        "survey": "«No quiero contestar encuestas»"
       },
       "ABOUT": {
         "achieved": "Termina como logrado.",
         "not_now": "«No puedo esta vez», «por ahora paso»: no es una baja. Se le pregunta una vez si le escribimos la próxima.",
         "future_yes": "Contestó que sí a esa pregunta.",
-        "opt_out": "«No me manden nada», «no me inviten», o dijo que no a la pregunta: se respeta ya, sin pedir el motivo."
+        "opt_out": "{examples}, o dijo que no a la pregunta: solo deja de recibir campañas de {kind}; se respeta ya, sin pedir el motivo.",
+        "unsubscribe": "«BAJA», «stop», «no me manden nada», «bórrenme de su lista»: ya no le llega ninguna campaña, de ningún número."
       },
       "REPLY": "Respuesta",
       "LABEL": "Etiqueta del contacto",
       "NO_LABEL": "sin etiqueta",
       "EXCLUDES": "Quien tenga «{label}» ya no entra a las siguientes campañas de {kind}.",
-      "GLOBAL_OPT_OUT": "«Baja», «stop» o «darme de baja» lo da de baja de todo (ya no le llega ninguna campaña).",
+      "FIXED_LABEL": "Etiqueta del contacto y de la conversación: «{label}» (la misma en todas las campañas).",
       "CUSTOMIZE": "Personalizar",
       "USE_DEFAULT": "Usar el de fábrica"
     },
@@ -1165,6 +1176,16 @@
       "TEMPLATE": "Plantilla (si no ha escrito en 24 horas)",
       "NO_TEMPLATE": "Sin plantilla (solo a quien escribió en 24 h)",
       "TEMPLATE_HINT": "Pasadas 24 horas WhatsApp solo deja mandar plantilla aprobada (Meta la cobra)."
+    },
+    "APPOINTMENT_REMINDER": {
+      "TITLE": "Recordatorio de la cita",
+      "HINT": "Un día antes de la cita (o 2 horas antes si la agendó para el mismo día), a quien agendó con la campaña.",
+      "PLACEHOLDER": "¡Hola {{nombre}}! Te recuerdo tu cita del {{cuando}} con {{con}}. ¿Nos confirmas que sí llegas?",
+      "AI_HINT": "Para ese contacto: día, hora y con quién, retomando lo que platicó, y que confirme que sí llega.",
+      "FIXED_HINT": "Sale igual para todos. Usa {{nombre}} {{cuando}} {{con}}; vacío = el texto en gris. Puedes pedírselo a Dali.",
+      "TEMPLATE": "Plantilla (si no ha escrito en 24 horas)",
+      "NO_TEMPLATE": "Sin plantilla (solo a quien escribió en 24 h)",
+      "TEMPLATE_HINT": "Pasadas 24 horas WhatsApp solo deja mandar plantilla aprobada. Sin plantilla, se le avisa a quien atiende la cita para que le escriba."
     }
   }
 }
