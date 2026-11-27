@@ -690,7 +690,11 @@
       "le_interesa": "Le interesa: pasa el relevo",
       "no_le_interesa": "No le interesa",
       "confirmar_asistencia": "Confirmó o declinó el evento",
-      "enviar_archivo": "Mandó un archivo"
+      "enviar_archivo": "Mandó un archivo",
+      "agregar_a_cuenta": "Agregó a su cuenta",
+      "quitar_de_cuenta": "Quitó de su cuenta",
+      "ver_cuenta": "Vio su cuenta",
+      "cotizar": "Cotizó"
     },
     "DECISIONS": {
       "prospecto_calificado": "Prospecto calificado",

@@ -690,7 +690,11 @@
       "le_interesa": "Interested: hands over",
       "no_le_interesa": "Not interested",
       "confirmar_asistencia": "Confirmed or declined the event",
-      "enviar_archivo": "Sent a file"
+      "enviar_archivo": "Sent a file",
+      "agregar_a_cuenta": "Added to their tab",
+      "quitar_de_cuenta": "Removed from their tab",
+      "ver_cuenta": "Checked their tab",
+      "cotizar": "Quoted"
     },
     "DECISIONS": {
       "prospecto_calificado": "Qualified prospect",

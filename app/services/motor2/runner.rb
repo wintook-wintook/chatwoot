@@ -18,6 +18,7 @@
 #     si aun así no, se agrega tal cual.
 class Motor2::Runner < Cases::Ai::BaseService
   include Motor2::QuestionGuard
+  include Motor2::WelcomeCombine
   include Motor2::ReplyChecks
   include Motor2::AreaChecks
   include Motor2::QuoteCheck

@@ -120,51 +120,6 @@ module Motor2::QuestionGuard
     text.to_s.sub(/¿[^¿]*\?[\s\p{Emoji_Presentation}]*\z/, '').strip
   end
 
-  # La bienvenida de la empresa va tal cual al inicio del primer mensaje (la pone el código).
-  def welcome_note
-    return nil unless @welcome
-
-    "Tu mensaje lo empieza la bienvenida de la empresa (la pone el código): «#{@welcome}». No saludes ni te presentes " \
-      'otra vez: escribe solo lo que sigue (contesta lo que preguntó, si preguntó algo, y la pregunta pendiente).'
-  end
-
-  def with_welcome(text)
-    return text unless @welcome
-
-    @trace.event(:bienvenida, 'combinada con la respuesta')
-    attach_welcome_files
-    # Si el modelo la volvió a escribir (pasa aunque se le diga, a veces con otros espacios o
-    # signos), se quita: va una sola vez.
-    rest = text.to_s.gsub(welcome_pattern, '').strip.sub(/\A[\s.,;:!?]+/, '')
-    # Si la bienvenida ya pregunta y el cliente solo saludó, no lleva otra pregunta.
-    rest = without_questions(rest) if welcome_asks?
-    rest = '' if greeting_only?(rest) # «¡Hola!» o «¡Hola, Mario!» después de la bienvenida sobra
-    [@welcome, rest].compact_blank.join("\n\n")
-  end
-
-  # Solo un saludo, aunque traiga su nombre («¡Hola Mario!», «¡Qué gusto, Mario!»): hasta 4 palabras sin pregunta que
-  # empiezan con un saludo.
-  def greeting_only?(text)
-    return true if ContactTrackings::WelcomeMessage.only_greeting?(text)
-
-    words = I18n.transliterate(text.to_s.downcase).scan(/[a-z]+/)
-    return false if words.empty? || words.size > 4 || text.match?(/[?\d]/)
-
-    words.size <= 2 || %w[hola buenas buenos buen que mucho bienvenido bienvenida].include?(words.first)
-  end
-
-  # Los archivos marcados «con la bienvenida» van con ella (también en «Probar»); Motor2::Reply los anota
-  # como enviados, así no se repiten.
-  def attach_welcome_files
-    Motor2::Skills::Files.welcome_names(@config.template).each { |name| attach(name) }
-  end
-
-  # La bienvenida con cualquier espacio o signo entre sus palabras.
-  def welcome_pattern
-    words = @welcome.scan(/[[:alnum:]]+/).map { |w| Regexp.escape(w) }
-    Regexp.new("[¿¡]?\\s*#{words.join('[^[:alnum:]]+')}[^[:alnum:]\\n¿¡]*", Regexp::IGNORECASE)
-  end
-
   # Solo al contestar y si no decidió terminar (calificar, descartar, pasar).
   def pending_question
     return nil unless @mode == :reply && @decision.nil?

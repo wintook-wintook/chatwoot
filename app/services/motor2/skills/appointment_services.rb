@@ -15,6 +15,18 @@ module Motor2::Skills::AppointmentServices
 
   def before_slots(args) = missing_contact || choose(args)
 
+  # Pidió cita y en este mensaje dijo el servicio sin duda («caballero» → Corte de caballero): a buscar horarios ya.
+  def service_said(text)
+    return nil unless services? && @turn.find_skill('areas')&.now.to_h['gestion'].in?([nil, 'cita'])
+
+    Motor2::CatalogSearch.new(config.account).named_item(text)
+  end
+
+  def service_note
+    "Dijo el servicio: «#{@service_said.name}». Si quiere cita, llama ver_horarios con ese servicio ahora (no le " \
+      'preguntes antes si quiere algo más ni por estilos).'
+  end
+
   def book_required = services? ? %w[inicio servicios] : %w[inicio]
 
   def minutes = @chosen.present? ? services_minutes : base_minutes
@@ -35,7 +47,9 @@ module Motor2::Skills::AppointmentServices
       "agendar_cita: la cita dura lo de esos servicios. Si pide con alguien, pásalo en «con» (atienden: #{people.to_sentence}). " \
       'Al darle horarios dile también cada servicio con su precio y lo que dura (como los regresa ver_horarios), y usa ' \
       'siempre el nombre del servicio tal como lo regresan las herramientas. Si tiene su cuenta y quiere agendar todo, ' \
-      'llama ver_horarios sin servicios (usa los de su cuenta).'
+      'llama ver_horarios sin servicios (usa los de su cuenta). ' \
+      'No preguntes por tipos o estilos que no están en el Catálogo («¿clásico o moderno?»): si un servicio coincide con lo ' \
+      'que dijo, es ese y busca horarios de una vez.'
   end
 
   # Citas de servicio: los servicios del Catálogo y con quién (cambian la duración y las agendas).
@@ -44,6 +58,9 @@ module Motor2::Skills::AppointmentServices
 
     names = requested_services(args['servicios'])
     return { error: 'Primero pregúntale qué servicio quiere (de los del Catálogo) y pásalo en servicios.' } if names.empty?
+
+    unclear = unclear_services(names)
+    return unclear if unclear
 
     found = names.index_with { |name| catalog_service(name) }
     missing = found.select { |_, item| item.nil? }.keys
@@ -56,9 +73,12 @@ module Motor2::Skills::AppointmentServices
   # Los que pidió o, sin servicios, los de su cuenta («agéndame todo»: Motor2::Skills::QuoteCart).
   def requested_services(list)
     names = Array(list).map { |n| n.to_s.strip }.compact_blank.uniq
-    names = Array(state['cart']).pluck('name') if names.empty?
+    @from_cart = names.empty?
+    names = Array(state['cart']).pluck('name') if @from_cart
     names.first(MAX_SERVICES)
   end
+
+  def unclear_services(names) = names.filter_map { |name| unclear_service(name) }.first || not_what_they_said(names)
 
   def catalog_service(name)
     Motor2::CatalogSearch.new(config.account).item(name)

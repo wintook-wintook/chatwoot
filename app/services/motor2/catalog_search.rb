@@ -36,14 +36,41 @@ class Motor2::CatalogSearch
     return nil if stems.empty?
 
     active = @account.catalog_items.where(active: true)
-    by_name = active.limit(SCAN).select { |i| stems.all? { |s| GlobalSearch.normalize(i.name).include?(s) } }
+    by_name = named(stems)
     return by_name.min_by { |i| i.name.length } if by_name.any?
 
     best = Array(call(name)[:results]).first
     best && active.find_by(name: best[:nombre])
   end
 
+  # Lo que el cliente dijo que en el Catálogo tiene varias opciones («otro corte» → Corte de dama / Corte de caballero),
+  # si no dijo cuál: { 'corte' => [items] }. La palabra que comparten es la primera de su nombre.
+  def ambiguous_in(text)
+    words = GlobalSearch.normalize(text).split
+    heads = @account.catalog_items.where(active: true).limit(SCAN).group_by { |i| GlobalSearch.normalize(i.name).split.first }
+    heads.select do |head, items|
+      items.size > 1 && words.any? { |w| w.start_with?(head.to_s[0, 5]) } && items.none? { |i| said_rest?(i, words) }
+    end
+  end
+
+  # Dijo lo que distingue a ese producto («dama», «caballero»).
+  def said_rest?(item, words)
+    rest = GlobalSearch.normalize(item.name).split.drop(1).select { |w| w.length > 2 }
+    rest.any? { |w| words.include?(w) }
+  end
+
+  # Solo si lo nombró sin duda: uno solo trae en su nombre todas sus palabras («caballero» → Corte de caballero).
+  def named_item(text)
+    stems = stems(text)
+    found = stems.any? ? named(stems) : []
+    found.one? ? found.first : nil
+  end
+
   private
+
+  def named(stems)
+    @account.catalog_items.where(active: true).limit(SCAN).select { |i| stems.all? { |s| GlobalSearch.normalize(i.name).include?(s) } }
+  end
 
   def stems(query)
     words = GlobalSearch.normalize(query).split.select { |w| w.length > 2 }

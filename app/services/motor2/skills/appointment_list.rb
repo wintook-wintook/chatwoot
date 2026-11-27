@@ -10,6 +10,17 @@
 module Motor2::Skills::AppointmentList
   private
 
+  # Eligió uno de los horarios que se le dieron (Motor2::SlotPick): que lo agende sin volver a ofrecer.
+  def picked_note
+    return nil unless @picked
+
+    services = Array(state['offered_services']).presence
+    "ELIGIÓ EL HORARIO: #{@picked['texto']}#{" con #{@picked['con']}" if @picked['con']} (inicio #{@picked['inicio']}). Llama " \
+      "agendar_cita con ese inicio#{" y con=#{@picked['con']}" if @picked['con']}#{" y los servicios #{services.join(', ')}" if services} " \
+      '(o mover_cita si está cambiando una ' \
+      'cita); no le vuelvas a dar horarios.'
+  end
+
   def entries
     list = Array(state['appointments'])
     legacy = state['appointment']
@@ -70,10 +81,11 @@ module Motor2::Skills::AppointmentList
 
   # Lo que se le confirma: día, hora, con quién, dónde y (citas de servicio) servicios, total y duración.
   def confirmation(starts_at, with, length)
+    add_booked_to_cart
     sourced({ ok: true, cita: local(starts_at), con: with, para: @for_whom, lugar: setting(:location).presence,
-              servicios: chosen_names, total: services_total, duracion_minutos: (length / 60).round,
-              nota: 'Confírmale día, hora, con quién y dónde (y, si vienen, servicios, total y duración); pídele avisar con tiempo ' \
-                    'si no puede llegar.' }.compact)
+              servicios: chosen_names, desglose: services_breakdown, duracion_minutos: (length / 60).round,
+              nota: 'Confírmale día, hora, con quién y dónde; si viene «desglose», dáselo tal cual (subtotal, IVA y total) y lo ' \
+                    'que dura; pídele avisar con tiempo si no puede llegar.' }.compact)
   end
 
   # La que quiere mover o cancelar: si solo hay una, esa; si hay varias, la que dice «cita» (hora, día, servicio o

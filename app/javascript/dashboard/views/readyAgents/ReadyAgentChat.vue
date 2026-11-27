@@ -84,10 +84,25 @@ export default {
         ? this.t(`TOOLS.${tool.name}`)
         : tool.name;
       const detail = Object.values(tool.args || {})
+        .map(value => this.argText(value))
         .filter(Boolean)
         .join(' · ');
       const line = detail ? `${label}: ${detail}` : label;
       return tool.ok === false ? `${line} ${this.t('TEST.NOT_DONE')}` : line;
+    },
+    // Partidas de cotizar / la cuenta: «Manicure gelish ×2, Corte de dama» (no «[object Object]»).
+    argText(value) {
+      if (Array.isArray(value)) {
+        return value
+          .map(v => this.argText(v))
+          .filter(Boolean)
+          .join(', ');
+      }
+      if (value && typeof value === 'object') {
+        const name = value.producto || value.nombre || '';
+        return value.cantidad > 1 ? `${name} ×${value.cantidad}` : name;
+      }
+      return value;
     },
     decisionText(decision) {
       const key = `${T}.DECISIONS.${decision[0]}`;

@@ -20,6 +20,7 @@
 #   memoria: state['appointments'] (AppointmentList), state['offered_slots'] (los últimos horarios que se le dieron)
 class Motor2::Skills::Appointments < Motor2::Skills::Base
   include Motor2::Skills::AppointmentServices
+  include Motor2::Skills::ServiceCart
   include Motor2::Skills::AppointmentList
   include Motor2::Skills::AppointmentChanges
 
@@ -54,8 +55,11 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
         Si le diste horarios y dice que sí sin escoger, pregúntale cuál. Solo di que quedó agendada si agendar_cita regresó ok
         y confírmale lo que regrese (día, hora, con quién, dónde#{', total y duración' if services?}); pídele avisar con
         tiempo si no puede llegar. Después de agendar puedes ofrecerle UNA vez si quiere algo más.
-        Puede tener varias citas (otro día, otro servicio o para otra persona: pregúntale su nombre y pásalo en «para»; si la
-        quiere a la misma hora que la suya, busca ese horario exacto).#{services_instructions}
+        No le preguntes «¿algo más?» antes de darle horarios: primero los horarios. Cada persona lleva su propia cita (la
+        de su esposa no va dentro de la suya): agéndala aparte, con «para».
+        Puede tener varias citas (otro día, otro servicio o para otra persona: pregúntale su nombre y qué servicio quiere —no
+        supongas el de la cita anterior— y pásalo en «para»; si la quiere a la misma hora que la suya, busca ese horario
+        exacto).#{services_instructions}
     TEXT
   end
 
@@ -70,17 +74,10 @@ class Motor2::Skills::Appointments < Motor2::Skills::Base
     return unless last && last[:role].to_s == 'user'
 
     @picked = Motor2::SlotPick.call(last[:content], state['offered_slots'])
+    @service_said = service_said(last[:content]) unless @picked
   end
 
-  def turn_note
-    return '' unless @picked
-
-    services = Array(state['offered_services']).presence
-    "ELIGIÓ EL HORARIO: #{@picked['texto']}#{" con #{@picked['con']}" if @picked['con']} (inicio #{@picked['inicio']}). Llama " \
-      "agendar_cita con ese inicio#{" y con=#{@picked['con']}" if @picked['con']}#{" y los servicios #{services.join(', ')}" if services} " \
-      '(o mover_cita si está cambiando una ' \
-      'cita); no le vuelvas a dar horarios.'
-  end
+  def turn_note = @service_said ? service_note : picked_note.to_s
 
   def call(name, args)
     case name

@@ -142,11 +142,13 @@ RSpec.describe Motor2::Skills do
 
     def cart_tool(name, args = {}) = test_runner.send(:tool, name, args.stringify_keys)
 
+    def iva16 = account.tax_rates.find_by(percent: 16, kind: :transfer)
+
     before do
       template.update_columns(agent_function: 'customers') # rubocop:disable Rails/SkipsModelValidations
       CatalogParameters.ensure!(account)
-      CatalogItem.create!(account: account, name: 'Manicure gelish', kind: :service, price: 350, price_includes_tax: true)
-      CatalogItem.create!(account: account, name: 'Mechas / balayage', kind: :service, price: 2200, price_includes_tax: true)
+      CatalogItem.create!(account: account, name: 'Manicure gelish', kind: :service, price: 350, price_includes_tax: true, tax_rate: iva16)
+      CatalogItem.create!(account: account, name: 'Mechas / balayage', kind: :service, price: 2200, price_includes_tax: true, tax_rate: iva16)
       test_runner.instance_variable_set(:@skills, described_class.for(test_runner))
     end
 
@@ -154,7 +156,7 @@ RSpec.describe Motor2::Skills do
       expect(cart_tool('agregar_a_cuenta', partidas: [{ 'producto' => 'balayage' }, { 'producto' => 'manicure', 'cantidad' => 2 }]))
         .to include(total: 2900.0, iva_incluido: true)
       result = cart_tool('quitar_de_cuenta', producto: 'manicure', cantidad: 1)
-      expect(result[:texto]).to include('Mechas / balayage ×1 — $2,200', 'Manicure gelish ×1 — $350', 'Total: $2,550 (IVA incluido)')
+      expect(result[:texto]).to include('Mechas / balayage ×1 — $2,200', 'Manicure gelish ×1 — $350', 'IVA (16 %)', 'Total: $2,550')
       expect(cart_tool('cotizar')).to include(ok: true, prueba: true, total: 2550.0)
     end
 
@@ -170,6 +172,14 @@ RSpec.describe Motor2::Skills do
     it 'después de la bienvenida no repite «¡Hola Mario!»' do
       expect(runner.send(:greeting_only?, '¡Hola Mario!')).to be(true)
       expect(runner.send(:greeting_only?, '¡Hola Mario! El corte cuesta $200.')).to be(false)
+    end
+
+    it 'con la bienvenida: si ya pidió algo, se queda la pregunta de la respuesta (no solo la bienvenida)' do
+      runner.instance_variable_set(:@welcome, '¡Hola! Soy Luz. ¿Qué se te antoja hoy?')
+      runner.instance_variable_set(:@last_customer, 'hola quiero un corte de pelo')
+      expect(runner.send(:with_welcome, '¿Es para dama o caballero?')).to eq("¡Hola! Soy Luz.\n\n¿Es para dama o caballero?")
+      runner.instance_variable_set(:@last_customer, 'hola')
+      expect(runner.send(:with_welcome, '¡Hola! ¿En qué te ayudo?')).to eq('¡Hola! Soy Luz. ¿Qué se te antoja hoy?')
     end
 
     it 'si se presenta, le pide guardar su nombre (no «soy cliente»)' do
@@ -262,7 +272,8 @@ RSpec.describe Motor2::Skills do
       first = test_runner.send(:tool, 'agendar_cita', { 'inicio' => slot_at.strftime('%Y-%m-%dT%H:%M'), 'servicios' => ['Corte de dama'] })
       second = test_runner.send(:tool, 'agendar_cita', { 'inicio' => (slot_at + 1.hour).strftime('%Y-%m-%dT%H:%M'),
                                                          'servicios' => ['Corte de dama'], 'para' => 'Laura, su esposa' })
-      expect(first).to include(ok: true, total: 350.0)
+      expect(first).to include(ok: true)
+      expect(first[:desglose]).to include('Corte de dama ×1 — $350', 'Total: $350')
       expect(second).to include(ok: true, para: 'Laura, su esposa')
       expect(state['appointments'].size).to eq(2)
       expect(test_runner.send(:tool, 'cancelar_cita', { 'motivo' => 'no puede' })[:error]).to include('varias citas')

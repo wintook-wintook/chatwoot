@@ -11,6 +11,7 @@
 # Lo incluye Motor2::Skills::Quote.
 module Motor2::Skills::QuoteCart
   MAX_CART = 20
+  CART_TOOLS = %w[agregar_a_cuenta quitar_de_cuenta ver_cuenta].freeze
   OFFERED = /¿[^¿?]*\b(agrego|agregar|añado|añadir|sumo|sumar|pongo|incluyo)\b[^¿?]*\bcuenta\b[^¿?]*\?/i
 
   def cart? = function.respond_to?(:quote_cart?) && function.quote_cart?
@@ -40,7 +41,8 @@ module Motor2::Skills::QuoteCart
     <<~TEXT.chomp
 
       - SU CUENTA: #{offer} Si dice que sí o pide agregar o quitar, usa agregar_a_cuenta / quitar_de_cuenta y enséñale la cuenta
-        tal como la regresa la herramienta (texto). Nunca sumes tú. Para la cotización formal, llama cotizar sin partidas
+        tal como la regresa la herramienta (texto, con su desglose). Si pregunta cuánto es en total, ver_cuenta (sus citas
+        ya están en su cuenta). Nunca sumes tú. Para la cotización formal, llama cotizar sin partidas
         (usa su cuenta).
     TEXT
   end
@@ -120,16 +122,8 @@ module Motor2::Skills::QuoteCart
 
   def cart_text(items, totals = nil)
     totals ||= Motor2::CartTotals.new(items, promo: ->(item) { promo(item) }).call
-    lines = totals[:partidas].map { |l| "• #{l[:producto]} ×#{fmt_qty(l[:cantidad])} — #{money(l[:importe])}" }
-    lines << if totals[:impuesto].to_f.positive?
-               "Subtotal #{money(totals[:subtotal])} + IVA #{money(totals[:impuesto])} = Total #{money(totals[:total])}"
-             else
-               "Total: #{money(totals[:total])}#{' (IVA incluido)' if totals[:iva_incluido]}"
-             end
-    "Tu cuenta:\n#{lines.join("\n")}"
+    "Tu cuenta:\n#{Motor2::CartTotals.text(totals)}"
   end
 
-  def fmt_qty(qty) = qty.to_f.round(2) == qty.to_f.round ? qty.to_f.round : qty.to_f.round(2)
-
-  def money(value) = "$#{ActiveSupport::NumberHelper.number_to_delimited(format('%.2f', value.to_f).delete_suffix('.00'))}"
+  def fmt_qty(qty) = Motor2::CartTotals.qty(qty)
 end

@@ -29,7 +29,19 @@ class Motor2::Skills::Quote < Motor2::Skills::Base
 
   def memory = cart_memory
 
+  # Tocó la cuenta y no la enseñó con su desglose: se agrega tal cual la calculó el sistema.
+  def polish(reply)
+    return reply unless cart_shown_without_breakdown?(reply)
+
+    question = reply[/¿[^¿?]*\?\s*\z/]
+    [reply.sub(/¿[^¿?]*\?\s*\z/, '').strip, cart_text(cart_items), question].compact_blank.join("\n\n")
+  end
+
   def prepare(history) = cart_prepare(history)
+
+  def cart_shown_without_breakdown?(reply)
+    cart? && reply.to_s.exclude?('Subtotal') && trace.tools.any? { |t| CART_TOOLS.include?(t['name']) && t['ok'] } && cart_items.any?
+  end
 
   def instructions
     <<~TEXT.strip
