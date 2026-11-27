@@ -228,6 +228,16 @@ class ActionCableConnector extends BaseActionCableConnector {
         key: 'CASE_TICKETS.TASKS.INBOX.TOAST_RULE_NOTICE',
         icon: 'alert',
       },
+      // Agenda — te agregaron, cambió la hora, se canceló, está por empezar o alguien no puede ir.
+      // Tareas que se repiten — la anterior sigue pendiente.
+      task_recurrence_missed: {
+        key: 'AGENDA_PARTICIPANTS.TOAST',
+        icon: 'alert',
+      },
+      case_meeting_participant: {
+        key: 'AGENDA_PARTICIPANTS.TOAST',
+        icon: 'calendar-clock',
+      },
       // Tareas con el cliente — avanzó, comentó o completó en su portal.
       client_task_update: {
         key: 'CASE_TICKETS.TASKS.INBOX.TOAST_CLIENT_TASK',

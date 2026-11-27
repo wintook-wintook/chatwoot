@@ -38,7 +38,8 @@ class ContactTrackings::Assistant::InterviewTurn
   def interview_service
     servicio = ContactTrackings::Assistant::InterviewService
                .new(@account, messages: messages, inbox: @inbox,
-                              drafts: { current: @params['draft'], delivered: delivered_draft, building: building },
+                              drafts: { current: @params['draft'], delivered: delivered_draft, building: building,
+                                        ficha: ficha_lines },
                               one_shot: ActiveModel::Type::Boolean.new.cast(@params['one_shot']))
     @progress ? servicio.with_progress(@progress) : servicio
   end
@@ -121,6 +122,16 @@ class ContactTrackings::Assistant::InterviewTurn
 
       turno.merge('changes' => previo['changes'])
     end
+  end
+
+  # feat/ficha_agente_ia: lo que cambió en la ficha del agente y el prompt todavía no tiene.
+  def ficha_lines
+    id = @params['template_id'].presence || session_record&.tracking_template_id
+    template = id && @account.tracking_templates.find_by(id: id)
+    template ? ContactTrackings::Ficha::Changes.new(template).chat_lines : []
+  rescue StandardError => e
+    Rails.logger.warn "[Ficha] no se pudieron leer los cambios: #{e.message}"
+    []
   end
 
   def session_record

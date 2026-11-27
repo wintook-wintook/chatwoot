@@ -5,7 +5,8 @@ require 'rails_helper'
 # proyecto@ai_agent_attachments
 RSpec.describe AiAgentAttachment do
   describe 'associations' do
-    it { is_expected.to belong_to(:tracking_template) }
+    it { is_expected.to belong_to(:tracking_template).optional } # o es de una Campaña con Vendedor IA
+    it { is_expected.to belong_to(:tracking_campaign).optional }
     it { is_expected.to belong_to(:account) }
   end
 
@@ -49,6 +50,18 @@ RSpec.describe AiAgentAttachment do
                     account: existing.account,
                     name: 'catalogo')
       expect(other).to be_valid
+    end
+  end
+
+  describe 'lo que WhatsApp acepta (al subir)' do
+    it 'una imagen que no es JPG ni PNG, o muy pesada, no se sube' do
+      gif = build(:ai_agent_attachment, file: Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/sample.png'), 'image/png'))
+      gif.file.blob.content_type = 'image/gif'
+      expect(gif).not_to be_valid
+      expect(gif.errors[:file].join).to include('JPG o PNG')
+
+      png = build(:ai_agent_attachment, file: Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/sample.png'), 'image/png'))
+      expect(png).to be_valid
     end
   end
 end

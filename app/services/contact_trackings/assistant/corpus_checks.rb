@@ -21,6 +21,9 @@ class ContactTrackings::Assistant::CorpusChecks
   # se lo puso a una rama de actualizaciones de versión. El grupo tenía dos
   # respuestas, de datos fiscales y bancarios. La directiva es válida, el grupo
   # existe, y la rama no iba a responder nunca — nada lo marcaba.
+  #
+  # Un grupo con UNA sola respuesta no se marca (25/11/2026): la rama ya eligió el tema y el
+  # motor usa esa respuesta sin umbral. El problema son 2 o 3: ahí sí se busca con 0.45.
   MIN_GROUP_SIZE = 4
 
   def initialize(map, account:, findings:)
@@ -61,7 +64,8 @@ class ContactTrackings::Assistant::CorpusChecks
       next if group.nil?
 
       total = canned_count_for(group)
-      next if total >= MIN_GROUP_SIZE
+      # Con UNA sola, el motor la usa sin umbral (KnowledgeBaseResponseService#only_item_of_group).
+      next if total >= MIN_GROUP_SIZE || total == 1
 
       # El pluralizador de Rails es inglés y deja "2 respuesta": se arma a mano.
       cuantas = total == 1 ? '1 respuesta predefinida' : "#{total} respuestas predefinidas"
@@ -89,7 +93,12 @@ class ContactTrackings::Assistant::CorpusChecks
   end
 
   # El grupo es el prefijo del short_code, que es lo que se vectoriza como título.
+  # proyecto@predefinidas_que_contestan: el grupo puede ser una categoría fija (la misma regla
+  # que el motor, KnowledgeBase::CannedGroup.kind_named).
   def canned_count_for(group)
+    kind = KnowledgeBase::CannedGroup.kind_named(group)
+    return @account.canned_responses.where(kind: kind).count if kind
+
     @account.canned_responses.where('UPPER(short_code) LIKE ?', "#{group.upcase}%").count
   end
 end

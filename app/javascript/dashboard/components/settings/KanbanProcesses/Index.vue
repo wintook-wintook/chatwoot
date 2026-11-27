@@ -381,8 +381,8 @@ onBeforeMount(async () => {
         </woot-button>
       </div>
 
-      <!-- Tabla -->
-      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <!-- Tabla (overflow-x-auto: la columna Acciones se desplaza, no se corta) -->
+      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-x-auto">
         <table class="min-w-full">
           <thead class="bg-slate-50 dark:bg-slate-900">
             <tr>

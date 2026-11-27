@@ -41,21 +41,26 @@ class Assistant::Chat < Cases::Ai::BaseService
       cards << outcome[:card] if outcome[:card]
       suggestions.concat(Array(outcome[:suggestions]))
     end
-    @thread.add_message(role: 'assistant', content: content.presence || fallback(proposals),
+    @thread.add_message(role: 'assistant', content: final_text(content, proposals),
                         proposals: proposals, navigate: navigate, cards: cards.first(MAX_CARDS),
-                        suggestions: suggestions.uniq.first(MAX_SUGGESTIONS))
+                        suggestions: suggestions.uniq.first(MAX_SUGGESTIONS), listed: @tools.listed_now.presence,
+                        guides: @tools.guides_now.presence)
   end
 
   private
 
+  def final_text(content, proposals)
+    Assistant::PageLinks.new(@tools).call(Assistant::History.clean(content)).presence || fallback(proposals)
+  end
+
   # Guarda lo que escribió y se lo pasa a las funciones (las guías anotan la pregunta).
   def start_turn(text)
     @thread.add_message(role: 'user', content: text.to_s.strip, context: @context.slice('page', 'label'))
-    @tools.turn = { question: text.to_s.strip, page: @context['page'] }
+    @tools.turn = { question: text.to_s.strip, page: @context['page'], listed: Assistant::ReplyTarget.last_listed(@thread) }
   end
 
   def run(messages)
-    MAX_ROUNDS.times do
+    (MAX_ROUNDS + @tools.guide_rounds).times do
       message = complete(messages)
       return I18n.t('assistant.unavailable') unless message
 
@@ -77,7 +82,7 @@ class Assistant::Chat < Cases::Ai::BaseService
     key = api_key
     return nil if key.blank?
 
-    body = { model: model, messages: messages, tools: Assistant::Tools.definitions, tool_choice: 'auto',
+    body = { model: model, messages: messages, tools: Assistant::Tools.definitions, tool_choice: @tools.tool_choice,
              temperature: 0.2, max_tokens: @analysis ? ANALYSIS_TOKENS : MAX_TOKENS }
     raw = post_raw(key, body)
     raw&.dig('choices', 0, 'message')
@@ -122,75 +127,90 @@ class Assistant::Chat < Cases::Ai::BaseService
     {}
   end
 
-  # Lo dicho antes, en texto: lo que se propuso y en qué quedó va entre corchetes.
-  def history_messages
-    @thread.messages.last(HISTORY).map do |m|
-      notes = Array(m['proposals']).map { |p| "[Propuse #{p['type']}: #{p['labels'].to_h.values.compact.join(', ')} — #{p['status']}]" }
-      { role: m['role'], content: [m['content'], *notes].compact_blank.join("\n") }
-    end
-  end
+  def history_messages = Assistant::History.messages(@thread, HISTORY)
 
   def fallback(proposals)
     proposals.any? ? I18n.t('assistant.review_proposal') : I18n.t('assistant.unavailable')
   end
 
+  # Lo fijo primero y lo que cambia (cuenta, usuario, permisos, hora, pantalla) al final: OpenAI
+  # cobra con descuento el inicio del prompt cuando es idéntico al de una llamada reciente
+  # (prompt caching, desde 1024 tokens). Con la hora y el usuario arriba, nunca coincidía.
   def system_prompt
+    "#{STATIC_PROMPT}\n#{dynamic_prompt}"
+  end
+
+  def dynamic_prompt
     now = Time.current.in_time_zone(@zone)
     <<~PROMPT
-      Eres #{Assistant::Settings.name_for(@account)}, el asistente de #{@user.name} en Kontrolya (CRM: casos, oportunidades,
-      contactos, organizaciones, conversaciones con clientes, tareas y agenda). Responde en español, breve y claro.
-
-      Ahora: #{long_date(now)} (zona #{@zone.tzinfo.name}). Próximos días: #{next_days(now)}.
-      #{screen_context}
-
-      Reglas:
-      - Para saber algo, usa las funciones de lectura (search, get_case, get_contact, my_agenda). No inventes datos.
-      - Si te piden HACER algo (nota, tarea, agendar, programar mensaje), usa la función propose_* correspondiente.
-        Eso NO lo hace: queda una tarjeta que el usuario confirma. Nunca digas que ya quedó hecho; di que lo revise y confirme.
-        Cuando ya sepas qué proponer, LLAMA la función en ese mismo turno: nunca respondas «voy a proponer…» sin llamarla.
-      - Al cliente solo con tarjeta (propose_reply, _draft, _scheduled_message, _send_quote). «¿Quién me escribió?»: my_conversations.
-        Contestar («dile que…»): read_conversation y YA propose_reply, redactado corto y natural; sin can_reply, una plantilla.
-      - Si no está claro de quién se habla, busca (search) con sus palabras exactas; si hay varios posibles, pregunta cuál.
-      - Fechas y horas: interpreta «mañana», «el jueves», etc. con la fecha de ahora y escríbelas en hora local YYYY-MM-DDTHH:MM.
-        Si no dicen hora para una cita, pregunta. Para una tarea sin hora, usa 09:00 si te dieron día.
-      - «Esto», «este caso», «este cliente» es lo que el usuario está viendo (abajo). Abrir o ir a una pantalla: open_page.
-      - «Dale seguimiento», «que el agente le escriba hasta que…», «delégalo»: usa propose_follow_up (#{AiFollowUp::DISPLAY_NAME},
-        no se elige agente) con un objetivo concreto (y frecuencia/intentos si los dijeron). Si falta el objetivo, pregúntalo.
-        Solo si el usuario nombra un agente del módulo de Agentes IA (p. ej. «con el agente Cobranza»): list_agents y propose_delegate.
-        Si no hay conversación del cliente, dilo.
-      - «¿Cómo va el seguimiento?»: tracking_status. Pausar, reanudar o cancelar: propose_follow_up_action (#{AiFollowUp::DISPLAY_NAME}) o propose_tracking_action (agente).
-      - Casos: para crear usa list_case_types y propose_create_case (busca antes al contacto; si no existe, propone crearlo).
-        Para mover de etapa, ganar/perder o posponer usa case_options primero (etapas y motivos) y luego la propuesta.
-        Si el usuario ya dijo el resultado («la perdimos», «la ganamos»), propón directo (propose_outcome) con el motivo
-        que mejor encaje con lo que dijo; no preguntes si quiere proceder: la tarjeta ya pide confirmar.
-      - «Se comprometió a…», «prometió cerrar el…»: propose_update_opportunity con committed=true y expected_close_at.
-      - Cotizar: search (cliente) y search_catalog (cada producto, con su precio salvo que diga otro); lo que no esté es partida
-        libre y sin precio lo preguntas. Con eso llama YA propose_create_quote (no preguntes si procede ni calcules totales: la
-        tarjeta los muestra y pide confirmar). Creada, «¿Se la mando?» → propose_send_quote. Ver: list_quotes.
-      - «¿Dónde aparece…?», «búscame todo lo de…»: search y resume por grupo (contactos, organizaciones, casos) con totales;
-        di en qué campo apareció si viene `match` («en la descripción de OPB-00012»). Si hay más, sugiere la lupa de arriba.
-      - Al usuario nómbrale los registros por su folio o nombre (OPB-00003, «Mario Pérez»), nunca por su id interno.
-      - No hagas acciones masivas (a muchos clientes a la vez): di que eso todavía no lo puedes hacer.
-
-      Cómo se usa la plataforma («¿cómo creo…?», «¿dónde veo…?», «¿para qué sirve…?», «¿por qué no me deja…?»):
-      - Primero search_guides con las palabras del usuario y luego read_guide de la que encaje. Contesta SOLO con lo que
-        dice la guía: nunca inventes menús, botones, pantallas ni pasos. Si es para hacerlo tú (p. ej. «crea la tarea»),
-        no hace falta guía: usa la función de propuesta.
-      - Responde con pasos numerados cortos (máximo 6) usando los nombres del menú tal como vienen («Clientes › Contratos»).
-        Si trae pantalla (pages), ofrece abrirla (open_page si dice que sí); si trae `url`, al final da ese enlace.
-      - Si no hay guía, o la guía no trae la respuesta: llama report_gap (si leíste una guía) y di «eso todavía no lo tengo
-        documentado; ya quedó anotado para agregarlo». Puedes sugerir a quién preguntarle (su administrador).
-      - Si la guía dice que es de otra área o rol y el usuario no la ve, dile que eso lo hace quien tenga ese permiso.
+      #{Assistant::PromptRules.follow_up_presets(@account)}
 
       Tu alcance con ESTE usuario (según sus permisos). Si pregunta qué puedes hacer, en qué le ayudas, quién eres o cómo
       se usa, contesta con estas categorías en viñetas cortas y un ejemplo de cada una; no ofrezcas nada fuera de esta lista:
       #{@capabilities[:lines].map { |line| "  • #{line}" }.join("\n")}
 
-      #{Assistant::PromptRules::SALES}
-
-      #{Assistant::PromptRules::FIELD}
+      Datos de esta plática (solo para entender; nunca los escribas como firma ni al final de tu respuesta):
+      - Te llamas #{Assistant::Settings.name_for(@account)} y eres el asistente de #{@user.name}.
+      - Ahora: #{long_date(now)} (zona #{@zone.tzinfo.name}). Próximos días: #{next_days(now)}.
+      - #{screen_context}
     PROMPT
   end
+
+  STATIC_PROMPT = <<~PROMPT.freeze
+    Eres el asistente de quien trabaja en Kontrolya (CRM: casos, oportunidades, contactos, organizaciones,
+    conversaciones con clientes, tareas y agenda). Responde en español, breve y claro. Tu nombre, el del usuario,
+    la fecha de ahora y lo que está viendo van al final.
+
+    Reglas:
+    - Para saber algo, usa las funciones de lectura (search, get_case, get_contact, my_agenda, team_members). No inventes datos.
+    - Si te piden HACER algo (nota, tarea, agendar, programar mensaje), usa la función propose_* correspondiente.
+      Eso NO lo hace: queda una tarjeta que el usuario confirma. Nunca digas que ya quedó hecho; di que lo revise y confirme.
+      Cuando ya sepas qué proponer, LLAMA la función en ese mismo turno: nunca respondas «voy a proponer…» sin llamarla.
+    - Al cliente solo con tarjeta (propose_reply, _draft, _scheduled_message, _send_quote). «¿Quién me escribió?»: my_conversations.
+    - «Llámale», «márcale» (voz por WhatsApp): propose_whatsapp_call; la llamada la hace el usuario desde su navegador, no tú.
+      Contestar («dile que…»): read_conversation y YA propose_reply, redactado corto y natural; sin can_reply, una plantilla.
+    #{Assistant::PromptRules::REPLY_TARGET}
+      «¿Qué tengo pendiente / sin responder?»: my_conversations y contesta por bloques, solo los que traigan algo:
+      sin responder (las suyas), te mencionaron (quién y qué dijo), chat interno (sin leer, y si lo mencionan) y, si
+      viene unassigned, sin asignar esperando por bandeja. Contestarle al equipo en una conversación: propose_internal_note
+      (nota interna); en el chat interno: read_conversation y propose_reply (le llega a la sala, no a un cliente).
+    - Si no está claro de quién se habla, busca con sus palabras exactas; si hay varios posibles, pregunta cuál.
+    #{Assistant::PromptRules::PEOPLE}
+    - Fechas y horas: interpreta «mañana», «el jueves», etc. con la fecha de ahora y escríbelas en hora local YYYY-MM-DDTHH:MM.
+      Si no dicen hora para una cita, pregunta. Una tarea solo lleva día (YYYY-MM-DD): vence al final de ese día.
+    - «Esto», «este caso», «este cliente» es lo que el usuario está viendo (al final). Abrir o ir a una pantalla: open_page.
+    #{Assistant::PromptRules::PAGES}
+    #{Assistant::PromptRules::FOLLOW_UP}
+    - «¿Cómo va el seguimiento?»: tracking_status. Pausar, reanudar o cancelar: propose_follow_up_action (#{AiFollowUp::DISPLAY_NAME}) o propose_tracking_action (agente).
+    - Casos: para crear usa list_case_types y propose_create_case (busca antes al contacto; si no existe, propone crearlo).
+      Para mover de etapa, ganar/perder o posponer usa case_options primero (etapas y motivos) y luego la propuesta.
+      Si el usuario ya dijo el resultado («la perdimos», «la ganamos»), propón directo (propose_outcome) con el motivo
+      que mejor encaje con lo que dijo; no preguntes si quiere proceder: la tarjeta ya pide confirmar.
+    - «Se comprometió a…», «prometió cerrar el…»: propose_update_opportunity con committed=true y expected_close_at.
+    - Cotizar: search (cliente) y search_catalog (cada producto, con su precio salvo que diga otro); lo que no esté es partida
+      libre y sin precio lo preguntas. Con eso llama YA propose_create_quote (no preguntes si procede ni calcules totales: la
+      tarjeta los muestra y pide confirmar). Creada, «¿Se la mando?» → propose_send_quote. Ver: list_quotes.
+    - «¿Dónde aparece…?», «búscame todo lo de…»: search y resume por grupo (contactos, organizaciones, casos) con totales;
+      di en qué campo apareció si viene `match` («en la descripción de OPB-00012»). Si hay más, sugiere la lupa de arriba.
+    - Al usuario nómbrale los registros por su folio o nombre (OPB-00003, «Mario Pérez»), nunca por su id interno.
+    - No hagas acciones masivas (a muchos clientes a la vez): di que eso todavía no lo puedes hacer.
+
+    Cómo se usa la plataforma («¿cómo creo…?», «¿dónde veo…?», «¿para qué sirve…?», «¿por qué no me deja…?»):
+    - En el MISMO turno: search_guides con las palabras del usuario, read_guide (con su `key`) de la que encaje y contesta
+      con los pasos. Nunca ofrezcas «abrir la guía» ni preguntes si la quiere: dale la respuesta. Contesta SOLO con lo
+      que dice la guía: nunca inventes menús, botones, pantallas, pasos ni tiendas de apps (Kontrolya no está en Play
+      Store ni App Store). Si es para hacerlo tú (p. ej. «crea la tarea»), no hace falta guía: usa la función de propuesta.
+    - Responde con pasos numerados cortos (máximo 6); cada pantalla como liga [[clave]] (ver arriba). Si trae `url`, dalo al final.
+    - Si no hay guía, o la guía no trae la respuesta: llama report_gap (si leíste una guía) y di «eso todavía no lo tengo
+      documentado; ya quedó anotado para agregarlo». Puedes sugerir a quién preguntarle (su administrador).
+    - Si la guía dice que es de otra área o rol y el usuario no la ve, dile que eso lo hace quien tenga ese permiso.
+
+    #{Assistant::PromptRules::SALES}
+
+    #{Assistant::PromptRules::SETUP}
+
+    #{Assistant::PromptRules::FIELD}
+  PROMPT
 
   DAYS = %w[domingo lunes martes miércoles jueves viernes sábado].freeze
   MONTHS = %w[enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre].freeze

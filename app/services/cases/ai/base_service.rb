@@ -124,7 +124,7 @@ class Cases::Ai::BaseService
     uri               = URI(API_URL)
     http              = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl      = true
-    http.read_timeout = READ_TIMEOUT
+    http.read_timeout = read_timeout
 
     request                  = Net::HTTP::Post.new(uri)
     request['Authorization'] = "Bearer #{key}"
@@ -147,6 +147,11 @@ class Cases::Ai::BaseService
   rescue JSON::ParserError => e
     Rails.logger.error("[Cases::Ai] JSON parse error: #{e.message} — #{content.to_s[0, 200]}")
     nil
+  end
+
+  # Cuánto esperar a OpenAI; un servicio con mucho texto (p. ej. ConversationAnalyst) lo sube.
+  def read_timeout
+    READ_TIMEOUT
   end
 
   def model

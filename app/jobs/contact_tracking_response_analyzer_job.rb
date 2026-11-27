@@ -37,6 +37,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   DEBUG_TAG            = ENV.fetch('TRACKING_DEBUG_TAG', 'false') == 'true'
   # proyecto@ai_agent_attachments: máximo de archivos adjuntados por respuesta ({{nombre}})
   MAX_DIRECTIVE_ATTACHMENTS = ENV.fetch('AI_AGENT_MAX_ATTACHMENTS', '5').to_i
+  # Mensajes del historial que ve la respuesta conversacional (los últimos).
+  HISTORY_LIMIT = 20
   # Directiva de adjunto: {{nombre}} (admite espacios internos: {{ catalogo }}). El nombre
   # referencia un archivo del Agente IA (ai_agent_attachments) por su `name`.
   ATTACHMENT_DIRECTIVE = /\{\{\s*([a-zA-Z0-9_-]+)\s*\}\}/
@@ -49,9 +51,35 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return unless message&.incoming?
     return unless message_has_content?(message)
     return if already_replied_by_bot?(message)
+    return unless take_burst(message)
 
     Rails.logger.info "[Coordinator] 🔍 Mensaje ##{message_id}: \"#{message_text_for_ai(message).truncate(80)}\""
 
+    # proyecto@diagrama_agente_ia F0: lo que cada etapa decida queda en la traza de la respuesta.
+    ContactTrackings::EngineTrace.run(message) { coordinate(message) }
+  rescue StandardError => e
+    Rails.logger.error "[Coordinator] ❌ Error: #{e.message}"
+    Rails.logger.error e.backtrace.first(5).join("\n")
+  end
+
+  private
+
+  # Mensajes seguidos, si el agente lo pide (ContactTrackings::MessageBurst): si llegó otro
+  # después, ese contesta (false). Si este es el último, su texto pasa a ser el de todos los
+  # que siguen sin respuesta (solo en memoria: el mensaje no se guarda).
+  def take_burst(message)
+    return true if ContactTrackings::MessageBurst.seconds_for(message.conversation_id).zero?
+    return false if ContactTrackings::MessageBurst.newer_incoming?(message)
+
+    juntos = ContactTrackings::MessageBurst.text(message)
+    if juntos
+      Rails.logger.info "[Coordinator] 🧺 Mensajes seguidos → se contestan juntos: #{juntos.truncate(120).inspect}"
+      message.content = juntos
+    end
+    true
+  end
+
+  def coordinate(message)
     active_trackings = find_active_trackings(message)
     # prospeccion V4: pidió no ser contactado → baja, se cancelan sus seguimientos y la IA no contesta
     if active_trackings.any? && ContactTrackings::OptOut.requested_in?(message_text_for_ai(message))
@@ -81,12 +109,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       Rails.logger.info '[Coordinator] 🤖 Sin seguimiento, @botseller disponible → [@botseller]'
       BotSeller::Dispatcher.new(message).dispatch
     end
-  rescue StandardError => e
-    Rails.logger.error "[Coordinator] ❌ Error: #{e.message}"
-    Rails.logger.error e.backtrace.first(5).join("\n")
   end
-
-  private
 
   # ==============================================================================
   # Procesamiento principal por tracking
@@ -94,6 +117,15 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
   # Retorna true si envió una respuesta, false si no (para que el Coordinator
   # decida si escala a BotSeller)
   def process_message_for_tracking(tracking, message)
+    @held_welcome = ContactTrackings::WelcomeMessage::Held.new
+    replied = run_tracking_turn(tracking, message)
+    # La bienvenida apartada que ninguna respuesta se llevó (palabra clave, agenda, ticket
+    # o sin respuesta) se manda sola: nunca se pierde.
+    send_auto_reply(tracking, message, @held_welcome.take) if @held_welcome.pending?
+    replied
+  end
+
+  def run_tracking_turn(tracking, message)
     Rails.logger.info "[TrackingBot] 🔍 Tracking ##{tracking.id} (#{tracking.status})"
     # proyecto@adaptar_prompts_publicados (F5): con <PENDIENTE:> en su Entrenamiento no contesta.
     if ContactTrackings::PendingSetup.blocked?(tracking)
@@ -127,15 +159,23 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     end
 
     # [0] proyecto@contact_tracking — el primer mensaje del cliente se contesta con la
-    # sección [MENSAJE DE BIENVENIDA] tal cual, diga lo que diga (ver WelcomeMessage).
-    return true if send_welcome_message(tracking, message)
+    # sección [MENSAJE DE BIENVENIDA] tal cual (ver WelcomeMessage). Si además trae una
+    # pregunta, se sigue y se contesta también.
+    # Con pregunta, la bienvenida no sale sola: se aparta y va al inicio de la respuesta, en
+    # el mismo mensaje (ver WelcomeMessage, «Bienvenida COMBINADA»).
+    if ContactTrackings::WelcomeMessage.only_greeting?(message.content)
+      return answered(:bienvenida) if send_welcome_message(tracking, message)
+    elsif (welcome = ContactTrackings::WelcomeMessage.claim(tracking, message.conversation))
+      @held_welcome.text = welcome
+      Rails.logger.info '[TrackingBot] 👋 La bienvenida va con pregunta → se combina con la respuesta'
+    end
 
     # [1] Keywords — prioridad máxima, sin IA (solo si hay texto)
     if message.content.present? && defined?(ContactTrackings::KeywordActionService)
       keyword_service = ContactTrackings::KeywordActionService.new(tracking, message.content, 'incoming')
       if keyword_service.call
         Rails.logger.info '[TrackingBot] ⌨️  Acción por keyword ejecutada — skip RouterService'
-        return true
+        return answered(:palabra_clave)
       end
     end
 
@@ -146,25 +186,25 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         clear_pending_slot(tracking)
       else
         Rails.logger.info '[TrackingBot] 📅 PENDING_SLOT detectado → procesando elección de horario'
-        return handle_slot_selection(tracking, message)
+        return handle_slot_selection(tracking, message) && answered(:eleccion_horario)
       end
     end
 
     # [2b] proyecto@bot_seguimiento_calendar — Esperando el email (opcional) para la cita
     if pending_email_selection?(tracking)
       Rails.logger.info '[TrackingBot] 📧 PENDING_EMAIL detectado → procesando email'
-      return handle_pending_email(tracking, message)
+      return handle_pending_email(tracking, message) && answered(:correo_cita)
     end
 
     # [2c] proyecto@hoja_buscar, pieza 4 — hay un servicio APARTADO y el mensaje cae en la
     # ruta de @confirmar_servicio: se confirma (o se pide el pago) antes que nada.
-    return true if handle_service_confirmation(tracking, message)
+    return answered(:confirmar_servicio) if handle_service_confirmation(tracking, message)
 
     # [2d] proyecto@solicitudes, pieza 5 — la ruta del mensaje tiene @solicitudes: cada servicio
     # que pida es un caso (y en F3, su horario). Si no pide servicios, sigue como siempre.
-    return true if handle_service_actions(tracking, message)
-    return true if handle_service_choice(tracking, message)
-    return true if handle_service_requests(tracking, message)
+    return answered(:solicitudes) if handle_service_actions(tracking, message)
+    return answered(:solicitudes) if handle_service_choice(tracking, message)
+    return answered(:solicitudes) if handle_service_requests(tracking, message)
 
     # [3] RouterService — clasifica ruta via IA
     route_result = classify_route(tracking, message)
@@ -173,7 +213,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     replied = case route
               when :rejected
                 handle_rejected(tracking, message, route_result[:confidence])
-                true
+                answered(:rechazo)
               when :interested
                 # proyecto@tickets_cases — en trackings de intake de datos (@crear_ticket),
                 # "interested" no es una señal accionable: el cliente pidiendo o dando datos
@@ -183,22 +223,22 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                   try_kbase_then_conversational(tracking, message, route_result)
                 else
                   handle_interested(tracking, message, route_result[:confidence])
-                  true
+                  answered(:interes)
                 end
               when :book_appointment
                 dispatch_book_appointment(tracking, message, route_result)
-                true
+                answered(:agenda)
               when :reschedule
                 handle_reschedule(tracking, message, route_result)
-                true
+                answered(:agenda)
               when :cancel_appointment
                 handle_cancel_appointment(tracking, message)
-                true
+                answered(:agenda)
               when :botseller
                 if BotSeller::Dispatcher.configured?
                   Rails.logger.info '[TrackingBot] 🤖 Derivando a @botseller'
                   BotSeller::Dispatcher.new(message).dispatch
-                  true
+                  answered(:botseller)
                 else
                   try_kbase_then_conversational(tracking, message, route_result)
                 end
@@ -221,7 +261,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       Rails.logger.info "[TrackingBot] 📅 Acción de cita ya clasificada (#{route_result[:appointment_action]}) → " \
                         'calendario antes que KBase'
       dispatch_appointment_action(tracking, message, route_result)
-      return true
+      return answered(:agenda)
     end
 
     # @tickets_cases: @estado_ticket — el cliente pregunta por su caso ("¿cuál es
@@ -229,7 +269,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # También va ANTES de la KBase: agenda y tickets siempre ganan sobre la hoja.
     if Cases::TicketStatusService.new(message, tracking: tracking).answer_if_status_query
       Rails.logger.info '[TrackingBot] 🔎 Estado de ticket respondido via @estado_ticket'
-      return true
+      return answered(:estado_ticket)
     end
 
     # @tickets_cases: si la directiva @crear_ticket está en el prompt, crea ticket y confirma.
@@ -251,7 +291,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       ticket_as_fallback = Cases::TicketCreatorService.fallback?(tracking)
     end
     ticket_now = !ticket_as_fallback && !source_only_branch?(tracking, branch)
-    return true if ticket_now && try_create_ticket(tracking, message, route_result, directive: ticket_directive, branch: branch)
+    return answered(:ticket) if ticket_now && try_create_ticket(tracking, message, route_result, directive: ticket_directive, branch: branch)
 
     # proyecto@bot_seguimiento_calendar — @agendar_calendar (appointment-aware): el clasificador
     # ve el ESTADO DE LA CITA y decide la acción concreta (consultar/agendar/mover/cancelar). No
@@ -262,7 +302,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       if appt && appt[:appointment_action]
         Rails.logger.info "[TrackingBot] 📅 @agendar_calendar → acción de cita: #{appt[:appointment_action]}"
         dispatch_appointment_action(tracking, message, appt)
-        return true
+        return answered(:agenda)
       end
     end
 
@@ -271,10 +311,10 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     # la hoja nunca se come la recolección de datos ni la confirmación de agenda.
     if kbase_available?(message, tracking)
       Rails.logger.info '[TrackingBot] 📚 KBase disponible → intentando búsqueda semántica'
-      kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking, branch: branch).perform
+      kbase_replied = KnowledgeBaseResponseService.new(message, tracking: tracking, branch: branch, welcome: @held_welcome).perform
       if kbase_replied
         Rails.logger.info '[TrackingBot] ✅ KBase respondió'
-        return true
+        return answered(:kbase)
       end
       Rails.logger.info '[TrackingBot] ⚠️ KBase sin resultados → conversacional'
     end
@@ -284,10 +324,15 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     if ticket_as_fallback && try_create_ticket(tracking, message, route_result, directive: ticket_directive, branch: branch)
       Rails.logger.info '[TrackingBot] 🎫 Ticket como último recurso' \
                         "#{branch ? " (rama #{branch.name})" : ' (fallback=true)'}"
-      return true
+      return answered(:ticket)
     end
 
-    generate_and_send_conversational_reply(tracking, message)
+    generate_and_send_conversational_reply(tracking, message) && answered(:conversacional)
+  end
+
+  # proyecto@diagrama_agente_ia F0: qué parte del turno contestó, para la traza. Siempre true.
+  def answered(camino)
+    ContactTrackings::EngineTrace.answered(camino)
   end
 
   # @tickets_cases — alta de ticket vía @crear_ticket. Devuelve true si el turno quedó
@@ -378,6 +423,11 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return false unless creator.create_if_needed
 
     Rails.logger.info "[TrackingBot] 🎫 Ticket via @crear_ticket (outcome: #{creator.outcome})"
+    # feat/ficha_agente_ia: los archivos que la ficha manda al levantar un ticket de ese tipo
+    if creator.outcome == :created
+      ContactTrackings::EventFiles.send_for(tracking, :ticket, conversation: message.conversation, sender: bot_user(tracking.account),
+                                                               case_type: creator.ticket&.case_type&.name)
+    end
     # proyecto@bot_seguimiento_calendar — si el ticket quedó completo (recién creado o ya
     # existía) y hay calendario configurado, seguimos directo a ofrecer disponibilidad en
     # el mismo turno (ETAPA 3), en vez de esperar a que el cliente lo pida en otro mensaje.
@@ -399,7 +449,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     map = ContactTrackings::RouteMap.parse(tracking.complementary_prompt)
     @branch_cache[key] = if map.present?
                            ContactTrackings::BranchClassifierService.new(
-                             tracking, message, map, recent_context: get_recent_context(message, 4)
+                             tracking, message, map, recent_context: get_recent_context(message, 4, for_branch: true)
                            ).classify
                          end
   rescue StandardError => e
@@ -425,6 +475,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return text if tag.blank? || text.blank? || text.match?(ANY_TAG_RE)
 
     Rails.logger.info "[TrackingBot] 🏷️ Sin etiqueta → se repone la de la rama '#{route.name}': #{tag}"
+    ContactTrackings::EngineTrace.tag_restored(tag)
     "#{text.rstrip}\n\n#{tag}"
   end
 
@@ -700,20 +751,26 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
       cp_raw = ContactTrackings::WelcomeMessage.strip(ContactTrackings::RouteMap.strip(tracking.complementary_prompt.to_s))
       # proyecto@bot_seguimiento_calendar — @agendar_calendar no debe filtrarse al LLM conversacional
       clean_cp = KnowledgeBase::Directives.strip_tokens(cp_raw).gsub(/@agendar_calendar\b(?:\s*\([^)]*\))?/i, '').strip
-      scope_rule = branch_scope_rule(tracking, message)
-      clean_cp = "#{clean_cp}\n\n#{scope_rule}" if clean_cp.present? && scope_rule.present?
+      scope_rule = clean_cp.present? ? branch_scope_rule(tracking, message) : nil
 
+      # Lo fijo del agente (identidad e instrucciones) primero y lo de este contacto y este
+      # turno al final: OpenAI cobra con descuento el inicio idéntico de una llamada reciente
+      # (prompt caching, desde 1024 tokens). Antes el perfil, el objetivo y la cita iban antes
+      # de las instrucciones y el inicio cambiaba en cada mensaje.
       system_prompt = <<~SYSTEM.strip
         #{conversational_identity(tracking, clean_cp)}
 
+        #{clean_cp.present? ? "INSTRUCCIONES ADICIONALES:\n#{clean_cp}" : ''}
+        #{clean_cp.match?(ATTACHMENT_DIRECTIVE) ? 'ENVÍO DE ARCHIVOS: Para enviar un archivo al cliente, escribe la directiva EXACTA (por ejemplo {{nombre}}) dentro de tu respuesta, tal cual y sin comillas; el sistema la sustituirá por el archivo adjunto. No la describas ni la traduzcas.' : ''}
+
+        #{scope_rule}
         #{contact_profile}
         OBJETIVO DE LA CONVERSACIÓN: #{tracking.objective}
         ESTADO DE LA CITA: #{appointment_state_summary(tracking, message)} (si el cliente pregunta por su cita, respóndele con esta fecha/hora exacta; no inventes ni ofrezcas horarios nuevos)
         #{next_contact_line}
         #{tracking.ai_context.present? ? "BASE DE CONOCIMIENTO:\n#{tracking.ai_context.truncate(800)}\n" : ''}
-        #{clean_cp.present? ? "INSTRUCCIONES ADICIONALES:\n#{clean_cp}" : ''}
         #{ContactTrackings::ConversationVariables.rule_for(tracking, message.conversation)}
-        #{clean_cp.match?(ATTACHMENT_DIRECTIVE) ? 'ENVÍO DE ARCHIVOS: Para enviar un archivo al cliente, escribe la directiva EXACTA (por ejemplo {{nombre}}) dentro de tu respuesta, tal cual y sin comillas; el sistema la sustituirá por el archivo adjunto. No la describas ni la traduzcas.' : ''}
+        #{ContactTrackings::MediaNote.rule(message_text_for_ai(message))}
       SYSTEM
 
       user_prompt = <<~USER.strip
@@ -721,7 +778,9 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
         "#{message_text_for_ai(message).truncate(300)}"
 
         #{conversational_form(clean_cp)}
+        #{ContactTrackings::WelcomeMessage.model_note(@held_welcome.text) if @held_welcome&.pending?}
         #{CONVERSATIONAL_GUARD}
+        #{clean_cp.present? ? ContactTrackings::MissingAnswer.rule(clean_cp) : ''}
         No uses prefijos como "Asesor:" o "Bot:". No incluyas comillas al inicio ni al final.
         #{clean_cp.present? ? 'Si las INSTRUCCIONES ADICIONALES de arriba definen etiquetas de cierre, esta respuesta debe terminar con la que corresponda, sola en la última línea — no es opcional.' : ''}
       USER
@@ -1636,6 +1695,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                 'Te esperamos. Si necesitas cambiarla, avísanos con anticipación. 😊'
             end
     send_auto_reply(tracking, message, reply)
+    # feat/ficha_agente_ia: los archivos que la ficha manda al agendar (mapa, indicaciones…)
+    ContactTrackings::EventFiles.send_for(tracking, :booking, conversation: message.conversation, sender: bot_user(tracking.account))
 
     clear_pending_slot(tracking)
     tracking.disable_auto_retry_mode!
@@ -2185,6 +2246,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     return nil if response.nil? || response.body.blank?
 
     response_body = JSON.parse(response.body)
+    ContactTrackings::EngineTrace.usage(ContactTrackings::EngineConfig.model_for_tracking(tracking, :conversational), response_body)
 
     reply = ContactTrackings::OpenaiRequest.clean(response_body.dig('choices', 0, 'message', 'content'))
     reply&.gsub(/\A[A-Za-záéíóúñÁÉÍÓÚÑ\s]{2,20}:\s*\n?/, '')&.strip
@@ -2232,6 +2294,7 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
 
     # proyecto@contact_tracking: la línea «VARIABLES: …» se guarda y no llega al cliente
     reply_content = ContactTrackings::ConversationVariables.settle(tracking, message.conversation, reply_content)
+    reply_content = ContactTrackings::WelcomeMessage.combine(@held_welcome.take, reply_content) if @held_welcome&.pending?
 
     # proyecto@ai_agent_attachments: resuelve {{nombre}} → archivos del Agente IA
     clean_content, attachment_signed_ids = resolve_attachment_directives(tracking, reply_content)
@@ -2352,7 +2415,8 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     nil
   end
 
-  def get_recent_context(message, limit = 4)
+  # for_branch: para el clasificador de ramas, sin lo de hace horas (ContextLine.recent?).
+  def get_recent_context(message, limit = 4, for_branch: false)
     return '' unless message.conversation_id.present?
 
     messages = Message.where(conversation_id: message.conversation_id)
@@ -2361,12 +2425,13 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
                       .reorder(created_at: :desc)
                       .limit(limit)
                       .reverse
+    messages = messages.select { |msg| ContactTrackings::ContextLine.recent?(msg, message) } if for_branch
 
     return '' if messages.empty?
 
     messages.map do |msg|
       sender = msg.incoming? ? 'Cliente' : 'Bot'
-      "#{sender}: #{message_text_for_ai(msg).truncate(120)}"
+      "#{sender}: #{ContactTrackings::ContextLine.brief(message_text_for_ai(msg, with_file_text: false))}"
     end.join("\n")
   rescue StandardError
     ''
@@ -2378,14 +2443,19 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     messages = Message.where(conversation_id: tracking.conversation_id)
                       .where('created_at > ?', tracking.created_at)
                       .where(message_type: [0, 1])
-                      .order(created_at: :asc)
-                      .limit(20)
+                      .reorder(created_at: :desc)
+                      .limit(HISTORY_LIMIT)
+                      .reverse
 
     return '' if messages.empty?
 
+    # Los ÚLTIMOS HISTORY_LIMIT, de viejo a nuevo. Antes eran los primeros 20 desde que empezó
+    # el seguimiento: en una conversación larga el modelo leía lo viejo y no lo reciente.
+    # El adjunto va solo con su nombre (with_file_text: false): el texto se cortaba a 200
+    # caracteres y aun así se extraía (o se reintentaba con OpenAI) en cada mensaje.
     lines = messages.map do |msg|
       sender = msg.incoming? ? 'Cliente' : 'Bot'
-      "[#{msg.created_at.strftime('%d/%m %H:%M')}] #{sender}: #{message_text_for_ai(msg).truncate(200)}"
+      "[#{msg.created_at.strftime('%d/%m %H:%M')}] #{sender}: #{message_text_for_ai(msg, with_file_text: false).truncate(200)}"
     end
 
     "HISTORIAL DE CONVERSACIÓN:\n#{lines.join("\n")}"
@@ -2398,19 +2468,19 @@ class ContactTrackingResponseAnalyzerJob < ApplicationJob
     message.content.present? || message.attachments.present?
   end
 
-  def message_text_for_ai(message)
+  def message_text_for_ai(message, with_file_text: true)
     parts = []
     parts << message.content.strip if message.content.present?
 
     message.attachments.each do |att|
       case att.file_type.to_s
       when 'audio'  then parts << '[mensaje de voz]'
-      when 'image'  then parts << '[imagen adjunta]'
-      when 'video'  then parts << '[video adjunto]'
+      when 'image'  then parts << ContactTrackings::MediaNote::IMAGE
+      when 'video'  then parts << ContactTrackings::MediaNote::VIDEO
       when 'file'
         fname = att.file&.blob&.filename.to_s.presence || 'documento'
         # proyecto@solicitudes, pieza 7: el texto del PDF/Excel/Word, no solo su nombre.
-        texto = ContactTrackings::AttachmentText.for(att)
+        texto = ContactTrackings::AttachmentText.for(att) if with_file_text
         parts << "[archivo adjunto: #{fname}]#{"\n#{texto}" if texto.present?}"
       when 'location'
         parts << "[ubicación compartida: #{att.coordinates_lat}, #{att.coordinates_long}]"

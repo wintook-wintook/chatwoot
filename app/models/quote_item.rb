@@ -12,11 +12,13 @@
 #  total            :decimal(14, 2)   default(0.0), not null
 #  unit             :string
 #  unit_price       :decimal(14, 2)   default(0.0), not null
+#  withholdings     :jsonb            not null
 #  created_at       :datetime         not null
 #  updated_at       :datetime         not null
 #  account_id       :bigint           not null
 #  catalog_item_id  :bigint
 #  quote_id         :bigint           not null
+#  tax_rate_id      :bigint
 #
 # Indexes
 #
@@ -40,6 +42,7 @@ class QuoteItem < ApplicationRecord
 
   enum kind: { product: 0, service: 1, part: 2 }
 
+  before_validation -> { self.withholdings = Quotes::Withholdings.clean(withholdings) }
   before_validation :compute_total
 
   validates :description, presence: true, length: { maximum: 500 }
@@ -53,6 +56,12 @@ class QuoteItem < ApplicationRecord
 
   def tax_amount
     (net_amount * tax_percent.to_d / 100).round(2)
+  end
+
+  # Sus retenciones (Quotes::Withholdings), cada una redondeada como en la factura. Cuentan solo si la cotización
+  # tiene apply_withholdings.
+  def withholding_amount
+    Array(withholdings).sum { |row| (net_amount * row['percent'].to_d / 100).round(2) }
   end
 
   private

@@ -50,7 +50,7 @@ class ContactTrackings::Assistant::ValidatorService
   # porque su diagnóstico suprime el genérico "0 ramas" (decirle a alguien que no
   # escribió ninguna @ruta cuando la escribió mal es lo que hace que descarte el aviso).
   CHECKS = %i[
-    check_pending_markers check_contract_leftovers check_structure
+    check_pending_markers check_contract_leftovers check_structure check_variables check_constants
     check_unparsed_route_lines check_has_routes
     check_route_sources check_route_lines check_action_in_source check_ticket_types check_default_route
     check_descriptions check_duplicate_descriptions check_tags_exist check_corpus
@@ -141,6 +141,12 @@ class ContactTrackings::Assistant::ValidatorService
 
   # S1–S4: lo mal escrito a mano fuera de las rutas (ver StructureChecks).
   def check_structure = ContactTrackings::Assistant::StructureChecks.check(text, findings: findings)
+
+  # V1–V5: las variables de [VARIABLES] (ver VariableChecks).
+  def check_variables = ContactTrackings::Assistant::VariableChecks.check(text, findings: findings)
+
+  # C1–C5: los datos fijos de [DATOS FIJOS] (ver ConstantChecks).
+  def check_constants = ContactTrackings::Assistant::ConstantChecks.check(text, findings: findings)
 
   def pending?(value) = ContactTrackings::Assistant::PendingMarkers.pending?(value)
 

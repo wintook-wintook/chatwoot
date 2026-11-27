@@ -7,7 +7,7 @@
 #   rake assistant:guide_gaps:resolve IDS=4,7 NOTE='guía agenda: cómo cambiar el responsable'
 #   rake assistant:guide_gaps:discard IDS=9 NOTE='es del negocio del cliente'
 #   rake assistant:guides:check                       # las guías completas y su búsqueda
-#   rake assistant:guides:portal ACCOUNT=1            # crea el Centro de ayuda global (una vez)
+#   rake assistant:guides:portal ACCOUNT=1            # crea el Centro de ayuda «Guías de Dali» (una vez)
 #   rake assistant:guides:publish                     # guías → artículos del Centro de ayuda (en cada deploy)
 namespace :assistant do
   desc 'Preguntas que Dali no supo contestar (STATUS, REASON, ACCOUNT, LIMIT)'
@@ -66,6 +66,12 @@ namespace :assistant do
         problems << "#{guide.key}: pantallas desconocidas #{unknown}" if unknown.any?
         puts "#{guide.key.ljust(20)} #{guide.title} [#{guide.areas.join(', ').presence || 'todos'}] #{guide.body.size} car."
       end
+      freshness = Assistant::GuideFreshness.new
+      Assistant::Guides.all.each do |guide|
+        guide.sources.each do |glob|
+          problems << "#{guide.key}: sources sin archivos #{glob}" if freshness.files_for(guide.dup.tap { |g| g.sources = [glob] }).empty?
+        end
+      end
       missing = AccessRole::AREAS - Assistant::Guides.all.flat_map(&:areas)
       problems << "áreas sin guía: #{missing}" if missing.any?
       abort(problems.join("\n")) if problems.any?
@@ -76,15 +82,15 @@ end
 
 namespace :assistant do
   namespace :guides do
-    desc 'Crea el Centro de ayuda global de Kontrolya en la cuenta ACCOUNT (slug PLATFORM_HELP_PORTAL_SLUG, «ayuda»)'
+    desc 'Crea el Centro de ayuda «Guías de Dali» en la cuenta ACCOUNT (slug PLATFORM_HELP_PORTAL_SLUG, «ayuda-dali»)'
     task portal: :environment do
-      abort 'Falta ACCOUNT=<id de la cuenta de Kontrolya>' if ENV['ACCOUNT'].blank?
+      abort 'Falta ACCOUNT=<id de la cuenta dueña de las guías>' if ENV['ACCOUNT'].blank?
       portal = Assistant::GuidePublisher.create_portal!(account: Account.find(ENV.fetch('ACCOUNT', nil)),
-                                                        name: ENV.fetch('NAME', 'Ayuda Kontrolya'))
+                                                        name: ENV.fetch('NAME', Assistant::GuidePublisher::DEFAULT_PORTAL_NAME))
       puts "Portal «#{portal.name}» (#{portal.slug}) en la cuenta #{portal.account_id}: /hc/#{portal.slug}/es"
     end
 
-    desc 'Publica las guías como artículos del Centro de ayuda global (crea, actualiza y archiva)'
+    desc 'Publica las guías como artículos del Centro de ayuda «Guías de Dali» (crea, actualiza y archiva)'
     task publish: :environment do
       unless Assistant::GuidePublisher.portal
         puts "Sin portal «#{Assistant::GuidePublisher.portal_slug}»: nada que publicar (rake assistant:guides:portal ACCOUNT=…)"
@@ -96,6 +102,25 @@ namespace :assistant do
       puts "  nuevas: #{result.created.join(', ')}" if result.created.any?
       puts "  actualizadas: #{result.updated.join(', ')}" if result.updated.any?
       puts "  archivadas: #{result.archived.join(', ')}" if result.archived.any?
+      puts "  NO publicadas: #{result.failed.join(' · ')}" if result.failed.any?
+    end
+  end
+end
+
+namespace :assistant do
+  namespace :guides do
+    desc 'Guías que pueden estar viejas: su código (sources) cambió después de su último commit'
+    task stale: :environment do
+      result = Assistant::GuideFreshness.new.call
+      result[:stale].each do |report|
+        puts "#{report.guide.key} (guía: #{report.guide_at&.first(10) || 'sin commit'})"
+        report.commits.first(10).each { |commit| puts "  #{commit}" }
+        puts "  … y #{report.commits.size - 10} más" if report.commits.size > 10
+        puts "  sin commit: #{report.dirty.join(', ')}" if report.dirty.any?
+      end
+      puts "Al día: #{result[:fresh].size} · por revisar: #{result[:stale].size} · sin sources: #{result[:without_sources].size}"
+      puts "  sin sources: #{result[:without_sources].map(&:key).join(', ')}" if result[:without_sources].any?
+      puts 'Actualiza la guía o pon `reviewed:` con la fecha de hoy si sigue bien.' if result[:stale].any?
     end
   end
 end

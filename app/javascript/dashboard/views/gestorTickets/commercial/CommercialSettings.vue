@@ -120,20 +120,17 @@ export default {
           </span>
         </span>
       </label>
-      <label class="flex items-center gap-2 mb-0 text-sm">
-        {{ $t('QUOTES.SETTINGS.DEFAULT_TAX') }}
-        <input
-          type="number"
-          min="0"
-          max="100"
-          step="0.01"
-          class="!mb-0 w-24"
-          :value="settings.default_tax_percent"
-          @change="
-            saveQuoteSetting({ default_tax_percent: $event.target.value })
-          "
-        />
-      </label>
+      <!-- El impuesto por omisión ya es una lista: Productos y servicios › Parámetros -->
+      <router-link
+        :to="{ name: 'gestorTickets_catalog', query: { tab: 'parameters' } }"
+        class="text-sm text-woot-600 hover:underline"
+      >
+        {{
+          $t('CATALOG.QUOTE_TAX_MOVED', {
+            name: `${Number(settings.default_tax_percent || 0)} %`,
+          })
+        }}
+      </router-link>
     </div>
     <!-- Plan-Organizaciones O3 — prospectos y clientes automáticos -->
     <div

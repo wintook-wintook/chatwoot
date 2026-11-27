@@ -11,9 +11,14 @@
 //
 // Los campos de la rama viven en RouteFields: un solo lugar, para que el modal y
 // cualquier otra pantalla no se desincronicen.
+//
+// proyecto@crear_agente_conversando: en la línea de alcance, «%» ofrece los datos
+// fijos («haz %Q1%», «manda %LIGA_AGENDA%»), igual que en el modal de sección.
 // ============================================================================
 import RouteFields from './RouteFields.vue';
 import ProofreadBar from './ProofreadBar.vue';
+import ConstantPicker from './ConstantPicker.vue';
+import { insertConstant, percentTriggerAt } from './constantPicker';
 import AssistantAPI from 'dashboard/api/assistant';
 import { useAlert } from 'dashboard/composables';
 
@@ -32,7 +37,7 @@ const ramaVacia = () => ({
 });
 
 export default {
-  components: { RouteFields, ProofreadBar },
+  components: { RouteFields, ProofreadBar, ConstantPicker },
   props: {
     show: { type: Boolean, default: false },
     // { sources, labels, caseTypes, actions } — ver RouteFields.
@@ -49,6 +54,8 @@ export default {
     // "Mejorar la redacción" (endpoint del Asistente, solo administradores).
     canProofread: { type: Boolean, default: false },
     inboxId: { type: Number, default: null },
+    // Los nombres de [DATOS FIJOS], para la lista que abre «%».
+    constantNames: { type: Array, default: () => [] },
   },
   emits: ['close', 'save', 'delete'],
   data() {
@@ -58,6 +65,7 @@ export default {
       asDefault: false,
       confirmDelete: false,
       generatingScope: false,
+      pickerCaret: null,
     };
   },
   computed: {
@@ -90,9 +98,38 @@ export default {
       this.scope = this.scopeText || '';
       this.asDefault = this.isDefault;
       this.confirmDelete = false;
+      this.pickerCaret = null;
     },
   },
   methods: {
+    // «%» al empezar una palabra abre la lista de datos fijos.
+    onScopeInput(event) {
+      const caret = event.target.selectionStart;
+      this.pickerCaret = percentTriggerAt(event.target.value, caret)
+        ? caret
+        : null;
+    },
+    // Esc cierra la lista si está abierta; si no, sigue al modal (que se cierra).
+    closePicker(event) {
+      if (this.pickerCaret === null) return;
+      event.stopPropagation();
+      this.pickerCaret = null;
+    },
+    pickConstant(name) {
+      const { text, caret } = insertConstant(
+        this.scope,
+        this.pickerCaret,
+        name
+      );
+      this.scope = text;
+      this.pickerCaret = null;
+      this.$nextTick(() => {
+        const campo = this.$refs.scope;
+        if (!campo) return;
+        campo.focus();
+        campo.setSelectionRange(caret, caret);
+      });
+    },
     onFields(rama) {
       this.route = { ...rama };
     },
@@ -194,12 +231,21 @@ export default {
         </label>
         <textarea
           id="route-scope"
+          ref="scope"
           v-model="scope"
           rows="2"
           class="w-full !mb-1 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2"
           :placeholder="
             $t('TRACKING_TEMPLATES.FORM.TRAINING.ROUTE_SCOPE_PLACEHOLDER')
           "
+          @input="onScopeInput"
+          @keydown.esc="closePicker"
+        />
+        <ConstantPicker
+          v-if="pickerCaret !== null && constantNames.length"
+          :names="constantNames"
+          @pick="pickConstant"
+          @close="pickerCaret = null"
         />
         <div class="flex flex-wrap items-center gap-2 mb-1">
           <woot-button

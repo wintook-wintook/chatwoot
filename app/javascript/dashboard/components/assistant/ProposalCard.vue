@@ -5,6 +5,7 @@
 -->
 <script>
 import AssistantAPI from 'dashboard/api/platformAssistant';
+import { dueDateInput, dueToIso } from 'dashboard/helper/taskDue'; // tarea: vence solo fecha
 
 const T = 'ASSISTANT.PROPOSAL';
 const ICONS = {
@@ -40,11 +41,21 @@ const ICONS = {
   client_task: 'person',
   // Cancelar con motivo
   cancel_item: 'dismiss-circle',
+  // Guardar plantilla de seguimiento
+  save_follow_up_preset: 'save',
   // Tarea ↔ tarea agendada
   convert_item: 'calendar',
+  // Reportar avance de una tarea (es un reporte, no una nota)
+  task_progress: 'clipboard',
+  // «Arma tu cuenta con Dali»: tipos de caso, etapas y motivos
+  account_setup: 'settings',
+  // Llamar por WhatsApp (la llamada sale del navegador al confirmar)
+  whatsapp_call: 'call',
+  // Nota interna en una conversación (para el equipo; el cliente no la ve)
+  internal_note: 'document',
 };
 
-// Igual que el servidor (Assistant::QuoteTools.totals): descuento por partida, IVA de la partida.
+// Igual que el servidor (Quotes::Withholdings.totals): descuento por partida, IVA y retenciones de la partida.
 const round2 = n => Math.round(n * 100) / 100;
 const itemNet = i =>
   round2(
@@ -76,7 +87,7 @@ export default {
       form: {
         title: p.title || '',
         content: p.content || '',
-        due_at: toLocalInput(p.due_at),
+        due_at: dueDateInput(p.due_at),
         starts_at: toLocalInput(p.starts_at),
         ends_at: toLocalInput(p.ends_at),
         send_at: toLocalInput(p.send_at),
@@ -88,6 +99,9 @@ export default {
         max_attempts: p.max_attempts || 3,
         interval_value: p.interval_value || 1,
         interval_unit: p.interval_unit || 'days',
+        // Seguimiento IA: plantilla de seguimiento elegida y plantilla de WhatsApp fijada.
+        preset_id: '',
+        wa_template: p.template_name || '',
         // D4
         column_id: p.column_id || '',
         reason_id: p.reason_id || '',
@@ -111,6 +125,8 @@ export default {
         notify: p.notify !== false,
         // Cancelar: comentario y si se le avisa al cliente (motivo en reason_id, tiempo en minutes).
         cancel_comment: p.comment || '',
+        // Reporte de visita: el cliente no asistió (la cita queda «No asistió»).
+        no_show: !!p.no_show,
         notify_client: p.notify_client !== false,
       },
       writing: false,
@@ -151,7 +167,25 @@ export default {
           sum + round2((itemNet(i) * Number(i.tax_percent || 0)) / 100),
         0
       );
-      return { net: round2(net), tax: round2(tax), total: round2(net + tax) };
+      // Retenciones: solo si el cliente es persona moral (lo dice el servidor).
+      const withheld = this.labels.apply_withholdings
+        ? this.form.items.reduce(
+            (sum, i) =>
+              sum +
+              (i.withholdings || []).reduce(
+                (acc, w) =>
+                  acc + round2((itemNet(i) * Number(w.percent)) / 100),
+                0
+              ),
+            0
+          )
+        : 0;
+      return {
+        net: round2(net),
+        tax: round2(tax),
+        withheld: round2(withheld),
+        total: round2(net + tax - withheld),
+      };
     },
     isAction() {
       return (
@@ -162,6 +196,20 @@ export default {
   methods: {
     t(key, params) {
       return this.$t(`${T}.${key}`, params);
+    },
+    // Seguimiento IA: elegir una plantilla de seguimiento llena los campos de la tarjeta.
+    usePreset() {
+      const preset = (this.labels.presets || []).find(
+        p => String(p.id) === String(this.form.preset_id)
+      );
+      if (!preset) return;
+      const f = preset.fields || {};
+      this.form.objective = f.objective || this.form.objective;
+      this.form.instruction = f.instructions || '';
+      this.form.max_attempts = f.max_attempts || this.form.max_attempts;
+      this.form.interval_value = f.interval_value || this.form.interval_value;
+      this.form.interval_unit = f.interval_unit || this.form.interval_unit;
+      if (f.template_name) this.form.wa_template = f.template_name;
     },
     // Solo los campos que se ven en la tarjeta de ese tipo.
     payload() {
@@ -174,9 +222,21 @@ export default {
         interval_value: Number(f.interval_value),
         interval_unit: f.interval_unit,
       };
+      const waTemplate = (this.labels.whatsapp_templates || []).find(
+        tp => tp.name === f.wa_template
+      );
       return {
+        follow_up: {
+          ...delegate,
+          template_name: waTemplate ? waTemplate.name : null,
+          template_language: waTemplate ? waTemplate.language : null,
+        },
+        save_follow_up_preset: { name: f.name },
+        account_setup: {},
+        whatsapp_call: {},
         note: { content: f.content },
-        task: { title: f.title, due_at: toIso(f.due_at) },
+        internal_note: { content: f.content },
+        task: { title: f.title, due_at: dueToIso(f.due_at) },
         meeting: {
           title: f.title,
           starts_at: toIso(f.starts_at),
@@ -186,7 +246,6 @@ export default {
         scheduled_message: { content: f.content, send_at: toIso(f.send_at) },
         draft: { content: f.content },
         delegate,
-        follow_up: delegate,
         tracking_action: {},
         follow_up_action: {},
         create_case: { title: f.title },
@@ -221,14 +280,19 @@ export default {
         },
         client_task: {
           title: f.title,
-          due_at: toIso(f.due_at),
+          due_at: dueToIso(f.due_at),
           requires_file: !!f.requires_file,
           notify: !!f.notify,
+        },
+        task_progress: {
+          notes: f.notes,
+          minutes: f.minutes === '' ? null : Number(f.minutes),
         },
         visit_report: {
           notes: f.notes,
           done_task_ids: f.done_task_ids,
           minutes: f.minutes === '' ? null : Number(f.minutes),
+          no_show: !!this.labels.closes_visit && !!f.no_show,
         },
       }[this.type];
     },
@@ -267,11 +331,19 @@ export default {
           this.payload()
         );
         this.$emit('updated', data.proposal);
+        this.startCall(data.proposal);
       } catch (e) {
         this.error = e.response?.data?.error || this.t('FAILED');
       } finally {
         this.busy = false;
       }
+    },
+    // Llamar por WhatsApp: el servidor revisó que se puede; el audio sale de aquí, con el
+    // mismo widget que el botón «Llamar» de la conversación (store whatsappCalls).
+    startCall(proposal) {
+      const call = proposal && proposal.result && proposal.result.call;
+      if (proposal.type !== 'whatsapp_call' || !call) return;
+      this.$store.dispatch('whatsappCalls/call', call);
     },
     async cancel() {
       this.busy = true;
@@ -358,8 +430,19 @@ export default {
         <template v-if="labels.target"> · {{ labels.target }}</template>
       </p>
     </template>
+    <!-- Responder: a quién va, en grande (para notar si no es la conversación correcta). -->
+    <div
+      v-if="type === 'reply' && labels.to"
+      class="flex flex-col gap-0.5"
+      data-test="reply-to"
+    >
+      <p class="m-0 text-sm font-semibold text-slate-800 dark:text-slate-100">
+        {{ t('TARGET') }}: {{ labels.to }}
+      </p>
+      <p class="m-0 text-xs text-slate-500">{{ labels.conversation }}</p>
+    </div>
     <p
-      v-if="(labels.target || labels.conversation) && !isAction"
+      v-else-if="(labels.target || labels.conversation) && !isAction"
       class="m-0 text-xs text-slate-500"
     >
       {{ labels.target ? t('TARGET') : t('CONVERSATION') }}:
@@ -375,6 +458,13 @@ export default {
     </p>
 
     <!-- D4 — lo que la tarjeta resume (tipo, cliente, etapa, resultado, datos…) -->
+    <p
+      v-if="type === 'whatsapp_call' && pending"
+      class="m-0 text-xs text-slate-500"
+      data-test="call-hint"
+    >
+      {{ t('CALL_HINT') }}
+    </p>
     <dl v-if="labels.rows && labels.rows.length" class="m-0 text-xs">
       <div v-for="[key, value] in labels.rows" :key="key" class="flex gap-1">
         <dt class="text-slate-500">{{ rowLabel(key) }}:</dt>
@@ -397,7 +487,9 @@ export default {
       </label>
       <label
         v-if="
-          ['note', 'scheduled_message', 'draft'].includes(type) ||
+          ['note', 'internal_note', 'scheduled_message', 'draft'].includes(
+            type
+          ) ||
           (type === 'reply' && !labels.template)
         "
         class="text-xs"
@@ -407,11 +499,7 @@ export default {
       </label>
       <label v-if="type === 'task' || type === 'client_task'" class="text-xs">
         {{ t('DUE') }}
-        <input
-          v-model="form.due_at"
-          type="datetime-local"
-          class="h-8 text-sm"
-        />
+        <input v-model="form.due_at" type="date" class="h-8 text-sm" />
       </label>
       <!-- Tarea ↔ tarea agendada: qué pasa con la tarea -->
       <p v-if="type === 'convert_item'" class="m-0 text-xs text-slate-500">
@@ -467,6 +555,49 @@ export default {
         <input v-model="form.location" type="text" class="h-8 text-sm" />
       </label>
       <template v-if="isDelegate">
+        <!-- Seguimiento IA: ya corre uno (se reemplaza) y plantillas de seguimiento -->
+        <p
+          v-if="type === 'follow_up' && labels.replaces"
+          class="p-1.5 m-0 text-xs rounded bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+        >
+          {{
+            t('REPLACES', {
+              attempts: labels.replaces.attempts,
+              max: labels.replaces.max_attempts,
+              at: labels.replaces.next_at || '—',
+            })
+          }}
+        </p>
+        <p
+          v-if="type === 'follow_up' && labels.preset"
+          class="m-0 text-xs text-slate-500"
+        >
+          {{ t('USED_PRESET', { name: labels.preset }) }}
+        </p>
+        <label v-if="type === 'follow_up'" class="text-xs">
+          {{ t('PRESET') }}
+          <select
+            v-model="form.preset_id"
+            class="!h-9 !py-1 text-sm"
+            :disabled="!(labels.presets || []).length"
+            @change="usePreset"
+          >
+            <option value="">
+              {{
+                (labels.presets || []).length
+                  ? t('PRESET_NONE')
+                  : t('PRESETS_EMPTY')
+              }}
+            </option>
+            <option
+              v-for="pr in labels.presets || []"
+              :key="pr.id"
+              :value="pr.id"
+            >
+              {{ pr.name }}
+            </option>
+          </select>
+        </label>
         <label class="text-xs">
           {{ t('OBJECTIVE') }}
           <textarea v-model="form.objective" rows="2" class="text-sm" />
@@ -512,7 +643,30 @@ export default {
             </select>
           </label>
         </div>
+        <label
+          v-if="
+            type === 'follow_up' && (labels.whatsapp_templates || []).length
+          "
+          class="text-xs"
+        >
+          {{ t('WA_TEMPLATE') }}
+          <select v-model="form.wa_template" class="!h-9 !py-1 text-sm">
+            <option value="">{{ t('WA_TEMPLATE_AUTO') }}</option>
+            <option
+              v-for="tp in labels.whatsapp_templates"
+              :key="`${tp.name}-${tp.language}`"
+              :value="tp.name"
+            >
+              {{ tp.name }} ({{ tp.language }})
+            </option>
+          </select>
+        </label>
       </template>
+      <!-- Guardar plantilla de seguimiento: el nombre se puede cambiar -->
+      <label v-if="type === 'save_follow_up_preset'" class="text-xs">
+        {{ t('PRESET_NAME') }}
+        <input v-model="form.name" type="text" class="h-8 text-sm" />
+      </label>
       <label v-if="type === 'create_case'" class="text-xs">
         {{ t('TITLE') }}
         <input v-model="form.title" type="text" class="h-8 text-sm" />
@@ -632,6 +786,12 @@ export default {
               money(quoteTotals.tax)
             }}</span>
           </div>
+          <div v-if="quoteTotals.withheld">
+            {{ t('WITHHELD') }}:
+            <span class="text-slate-700 dark:text-slate-200"
+              >−{{ money(quoteTotals.withheld) }}</span
+            >
+          </div>
           <div class="font-semibold text-slate-800 dark:text-slate-100">
             {{ t('TOTAL') }}: {{ money(quoteTotals.total) }}
           </div>
@@ -719,6 +879,13 @@ export default {
             {{ task.title }}
           </label>
         </div>
+        <label
+          v-if="labels.closes_visit"
+          class="flex items-center gap-2 text-xs"
+        >
+          <input v-model="form.no_show" type="checkbox" class="!m-0" />
+          {{ t('NO_SHOW') }}
+        </label>
         <label v-if="labels.closes_visit" class="text-xs">
           {{ t('MINUTES') }}
           <input
@@ -731,6 +898,23 @@ export default {
         <p class="m-0 text-xs text-slate-500">
           {{ labels.closes_visit ? t('CLOSES_VISIT') : t('FIELD_REST') }}
         </p>
+      </template>
+      <!-- Avance de una tarea: lo hecho y el tiempo; la tarea sigue pendiente -->
+      <template v-if="type === 'task_progress'">
+        <label class="text-xs">
+          {{ t('NOTES') }}
+          <textarea v-model="form.notes" rows="4" class="text-sm" />
+        </label>
+        <label class="text-xs">
+          {{ t('MINUTES') }}
+          <input
+            v-model="form.minutes"
+            type="number"
+            min="0"
+            class="h-8 text-sm"
+          />
+        </label>
+        <p class="m-0 text-xs text-slate-500">{{ t('PROGRESS_HINT') }}</p>
       </template>
       <!-- Ventana de 24 h cerrada: sale una plantilla aprobada, ya llena -->
       <template v-if="type === 'reply' && labels.template">
@@ -759,6 +943,9 @@ export default {
 
     <p v-if="labels.assignee" class="m-0 text-xs text-slate-500">
       {{ t('ASSIGNEE') }}: {{ labels.assignee }}
+    </p>
+    <p v-if="labels.participants" class="m-0 text-xs text-slate-500">
+      {{ $t('AGENDA_PARTICIPANTS.LABEL') }}: {{ labels.participants }}
     </p>
     <p
       v-if="type === 'meeting' && labels.google"

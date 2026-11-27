@@ -9,13 +9,13 @@ pages: [ai_agents, trackings]
 Un agente IA es un asistente que le escribe a tus clientes y les contesta en tu nombre. Cada agente tiene un nombre, un objetivo, la bandeja (canal) donde trabaja y su Entrenamiento: las instrucciones que sigue y los temas que atiende, con la fuente de la que saca cada respuesta. Los usan los seguimientos, las campañas de agentes IA y las reglas de automatización.
 
 ## Dónde está
-Agentes IA › Agentes. La lista muestra Nombre, Objetivo, Canal, Acciones y Actualizado; se busca por nombre y se filtra por canal. Los administradores ven además la columna Revisión y las pestañas «En construcción» (agentes que se están armando y no se han publicado) y «Recursos».
+Agentes IA › Agentes. La lista muestra Nombre, Objetivo, Canal, Acciones y Actualizado (los agentes del Motor 2.0 llevan la etiqueta «2.0»); se busca por nombre y se filtra por canal. Los administradores ven además la columna Revisión y las pestañas «En construcción» (agentes que se están armando y no se han publicado) y «Recursos».
 Al abrir un agente entras a su espacio, con tres pestañas: Entrenamiento, Ficha y Versiones.
 
 ## Cómo se hace
 ### Crear un agente
 1. En Agentes IA › Agentes pulsa «Nuevo agente».
-2. Elige cómo empezar: «Con el Asistente (conversar, pegar o importar)», «Bajar de la Galería» o «Formulario en blanco».
+2. Elige cómo empezar: «Motor 2.0 (beta)», al final de la lista (la ficha con habilidades y probador, ver «Agentes a medida con Motor 2.0») o, con el Motor 1.0, «Con el Asistente (conversar, pegar o importar)», «Bajar de la Galería» o «Formulario en blanco».
 3. Con el Asistente, cuéntale qué quieres que haga el agente; él escribe el Entrenamiento y tú lo puedes editar a mano. También puedes pegar un prompt o usar «Crear desde instrucciones (.md)».
 4. Cuando el comprobador ya no marque problemas, pulsa «Crear el Agente IA» y llena nombre, objetivo y bandeja.
 
@@ -23,6 +23,9 @@ Al abrir un agente entras a su espacio, con tres pestañas: Entrenamiento, Ficha
 1. En la pestaña Entrenamiento usa «Probar sin enviar nada»: escribe una pregunta como la haría un cliente y ves a qué tema cae, en qué fuente busca y qué encuentra. No se envía ningún mensaje.
 2. Con el agente ya creado, «Probar el agente» corre una pila de pruebas con el motor real en el canal de pruebas y deja descargar el informe.
 3. «Analizar» revisa el texto contra las reglas del motor, «Optimizar» propone una versión más corta y «Explicar selección» te dice qué hace un fragmento.
+
+### Probar como cliente, sin WhatsApp
+Pon el agente «En prueba» (botón «Poner en prueba» en su renglón de la lista) y cualquier usuario lo prueba como cliente en Inicio › Probar agentes; con 👎 se sabe si el error es del prompt, del contenido, del modelo o del motor. Ver la guía «Probar agentes (probador)».
 
 ### Publicar cambios y volver atrás
 1. Edita en la pestaña Entrenamiento y pulsa «Publicar cambios». Queda guardado como una versión nueva.
@@ -40,7 +43,7 @@ Solo aparecen las bandejas que tienen activo el Bot de Seguimientos en Ajustes �
 2. Revisa uno y pulsa «Bajar a mi cuenta». Queda como un agente nuevo tuyo; adáptalo a tu negocio con el Asistente.
 
 ## Dudas frecuentes
-- ¿Cómo llega un agente a mis clientes? Con un seguimiento («Delegar seguimiento» › «Vista anterior»), con una campaña de Campañas › De agentes IA o con la acción «Asignar Agente IA» de una regla en Agentes IA › Automatización.
+- ¿Cómo llega un agente a mis clientes? Con un seguimiento («Delegar seguimiento» › «Seleccionar agente entrenado»), con una campaña de Campañas › De agentes IA o con la acción «Asignar Agente IA» de una regla en Agentes IA › Automatización.
 - ¿Cómo contesta? En la conversación del seguimiento: le escribe al cliente en cada intento y, cuando el cliente responde, contesta según su Entrenamiento y las fuentes de la Base de Conocimiento que usan sus temas.
 - ¿Por qué no puedo borrar un agente? Si tiene seguimientos activos, campañas o automatizaciones que lo usan, primero hay que quitarlo de ahí.
 - El Asistente necesita la integración de OpenAI de la empresa.

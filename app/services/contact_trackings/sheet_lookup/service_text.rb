@@ -20,9 +20,6 @@ module ContactTrackings::SheetLookup::ServiceText
   end
 
   def service_number(filter)
-    numeros = ContactTrackings::SheetNumbers.in_text(@text, filter.column)
-    return nil if numeros.empty?
-
-    filter.op.start_with?('>') ? numeros.max : numeros.min
+    ContactTrackings::SheetRanges.wanted(@text, filter)
   end
 end

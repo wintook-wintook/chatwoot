@@ -80,12 +80,16 @@ class CaseMeeting < ApplicationRecord
   include AgendaLink
   include TaskReportable
   belongs_to :case_task, optional: true
+  belongs_to :task_recurrence, optional: true # Tareas que se repiten (con hora)
   belongs_to :case_meeting_series, optional: true
   # Dueño del calendario donde vive el evento: reasignar el ticket NO lo mueve
   # (§8.7 del plan), por eso se persiste y se muestra en la fila.
   belongs_to :organizer,    class_name: 'User', optional: true
   belongs_to :cancelled_by, class_name: 'User', optional: true
   belongs_to :held_by,      class_name: 'User', optional: true
+  # Participantes: otros usuarios del equipo que la ven en su Agenda (CaseMeetings::Participants).
+  has_many :participants, class_name: 'CaseMeetingParticipant', dependent: :delete_all
+  has_many :participant_users, through: :participants, source: :user
 
   enum status: { scheduled: 0, held: 1, no_show: 2, cancelled: 3, rescheduled: 4 }
   # `local_only` = existe solo en MGCI. Modo degradado válido de la Opción B.
@@ -99,6 +103,10 @@ class CaseMeeting < ApplicationRecord
 
   scope :ordered, -> { order(:starts_at, :id) }
   scope :active,  -> { where(status: %i[scheduled rescheduled]) }
+  # Las de una persona: las que tiene como responsable o en las que participa.
+  scope :for_user, lambda { |user_id|
+    where(organizer_id: user_id).or(where(id: CaseMeetingParticipant.where(user_id: user_id).select(:case_meeting_id)))
+  }
 
   # La tarea agendada de una orden de trabajo siempre es visita.
   before_validation -> { self.is_visit = true }, if: -> { case_ticket&.work_order? }
@@ -141,9 +149,11 @@ class CaseMeeting < ApplicationRecord
   end
 
   # Vencimiento que cubriría esta reunión, para la acción "mover el vencimiento
-  # de la tarea": el fin de la reunión, no su inicio.
+  # de la tarea": el día en que termina (una tarea vence al final de su día, sin hora).
   def suggested_task_due_at
-    ends_at || starts_at
+    at = ends_at || starts_at
+    zone = ActiveSupport::TimeZone[time_zone.to_s] || Time.zone
+    at&.in_time_zone(zone)&.end_of_day
   end
 
   # Igual que CaseTask#track_completion: el quién/cuándo de `held` y `cancelled`
@@ -151,6 +161,13 @@ class CaseMeeting < ApplicationRecord
   before_save :track_signatures, if: :will_save_change_to_status?
   # Consecutivo estable por ticket (R001, R002…): no se recicla al borrar.
   before_create :assign_sequence
+
+  # Para los avisos (Notification#push_event_data) y la campanita.
+  def push_event_data
+    { id: id, title: title, starts_at: starts_at, ends_at: ends_at, case_ticket_id: case_ticket_id, is_visit: is_visit }
+  end
+
+  def participant?(user) = user.present? && participants.exists?(user_id: user.id)
 
   private
 

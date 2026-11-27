@@ -5,6 +5,9 @@
 # POST /task_reports  (multipart) { item_type: task|meeting, item_id, content,
 #                                   task_outcome_id, evidence[] }
 #   Se manda ANTES de concluir; se cierra solo cuando la tarea de verdad se concluye.
+# POST /task_reports  (multipart) { item_type: task, item_id, progress: true, content, done_at, ... }
+#   Avance: lo hecho en una tarea que sigue pendiente. Nace cerrado (cuenta y entra a la
+#   actividad del caso ya); el reporte de cierre se sigue pidiendo al concluirla.
 # POST /task_reports  (multipart) { item_type: activity, title, content, done_at,
 #                                   case_ticket_id | contact_id | organization_id, ... }
 #   Actividad reportada: algo que se hizo sin tarea. Nace cerrada; con caso entra a
@@ -38,6 +41,7 @@ class Api::V1::Accounts::TaskReportsController < Api::V1::Accounts::BaseControll
 
     item = find_item
     return render_access_denied unless reportable?(item)
+    return create_progress(item) if progress?
 
     report = TaskReport.build_for(item, report_attrs)
     TaskReport.transaction do
@@ -50,6 +54,24 @@ class Api::V1::Accounts::TaskReportsController < Api::V1::Accounts::BaseControll
   end
 
   private
+
+  def progress?
+    params[:item_type] == 'task' && ActiveModel::Type::Boolean.new.cast(params[:progress])
+  end
+
+  def create_progress(task)
+    return render json: { error: I18n.t('task_reports.progress_not_open') }, status: :unprocessable_entity if !task.pending? || task.for_client?
+
+    at = done_at
+    report = TaskReport.build_for(task, report_attrs.merge(progress: true, created_at: at))
+    TaskReport.transaction do
+      report.save!
+      report.close!(at)
+    end
+    render json: { task_report: report_json(report) }, status: :created
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages }, status: :unprocessable_entity
+  end
 
   def create_activity
     at = done_at # las listas ordenan y filtran por created_at: va la hora en que se hizo
@@ -160,6 +182,7 @@ class Api::V1::Accounts::TaskReportsController < Api::V1::Accounts::BaseControll
   def report_kind(report)
     return 'order' if report.case_time_entry_id
     return 'activity' if report.activity?
+    return 'progress' if report.progress?
 
     report.case_meeting_id ? 'meeting' : 'task'
   end

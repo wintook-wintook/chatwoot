@@ -31,8 +31,14 @@ import { useVuelidate } from '@vuelidate/core';
 import { required, minLength } from '@vuelidate/validators';
 import WootMessageEditor from 'dashboard/components/widgets/WootWriter/Editor.vue';
 import WootSubmitButton from 'dashboard/components/buttons/FormSubmitButton.vue';
-// proyecto@respuestas_predefinidas R3: la categoría, junto al nombre.
-import CategoryAPI from 'dashboard/api/cannedResponseCategory';
+// proyecto@auditoria_predefinidas: cuánto de esta respuesta recibe el agente.
+import CharMeter from './audit/CharMeter.vue';
+// proyecto@predefinidas_que_contestan: los topes que valida el servidor.
+import { MAX_CHARS, PROMPT_MAX_CHARS, agentChars } from './audit/cannedSize';
+
+// La categoría (fija: General, Ficha, Objeción) decide cómo la usa la búsqueda
+// (CannedResponse::KINDS; el campo se llama `kind`).
+const KINDS = ['general', 'ficha', 'objecion'];
 
 // Lo que alguien escribió después de un "#", hasta un espacio o una puntuación.
 const WRITTEN_TAG_RE = /#[^\s#.,;:!?¿¡()"'«»]+/g;
@@ -43,13 +49,13 @@ const MESSAGE_TAB = 0;
 const PROMPT_TAB = 1;
 
 export default {
-  components: { WootMessageEditor, WootSubmitButton },
+  components: { WootMessageEditor, WootSubmitButton, CharMeter },
   props: {
     shortCode: { type: String, default: '' },
     content: { type: String, default: '' },
     contentPrompts: { type: String, default: '' },
     contentIsPrompt: { type: Boolean, default: false },
-    categoryId: { type: Number, default: null },
+    kind: { type: String, default: 'general' },
     submitText: { type: String, default: '' },
     cancelText: { type: String, default: '' },
     loading: { type: Boolean, default: false },
@@ -65,9 +71,8 @@ export default {
         content: this.content || '',
         contentPrompts: this.contentPrompts || '',
         contentIsPrompt: this.contentIsPrompt,
-        categoryId: this.categoryId ? String(this.categoryId) : '',
+        kind: KINDS.includes(this.kind) ? this.kind : 'general',
       },
-      categories: [],
       activeTab: MESSAGE_TAB,
     };
   },
@@ -79,6 +84,13 @@ export default {
   },
   computed: {
     ...mapGetters({ labels: 'labels/getLabels' }),
+    // Pasado un tope no se guarda: el servidor lo rechazaría igual.
+    tooLong() {
+      return (
+        agentChars(this.form.shortCode, this.form.content) > MAX_CHARS ||
+        this.form.contentPrompts.length > PROMPT_MAX_CHARS
+      );
+    },
     hasPrompt() {
       return Boolean(this.form.contentPrompts.trim());
     },
@@ -117,17 +129,8 @@ export default {
   },
   mounted() {
     if (!this.labels || !this.labels.length) this.$store.dispatch('labels/get');
-    this.loadCategories();
   },
   methods: {
-    async loadCategories() {
-      try {
-        const { data } = await CategoryAPI.get();
-        this.categories = data || [];
-      } catch (error) {
-        this.categories = [];
-      }
-    },
     submit() {
       this.v$.$touch();
       if (this.v$.form.content.$invalid) {
@@ -135,12 +138,13 @@ export default {
         return;
       }
       if (this.v$.form.shortCode.$invalid) return;
+      if (this.tooLong) return;
       this.$emit('submit', {
         short_code: this.form.shortCode,
         content: this.form.content,
         content_prompts: this.form.contentPrompts,
         content_is_prompt: this.form.contentIsPrompt,
-        category_id: this.form.categoryId ? Number(this.form.categoryId) : null,
+        kind: this.form.kind,
       });
     },
     showTab(index) {
@@ -149,6 +153,7 @@ export default {
   },
   MESSAGE_TAB,
   PROMPT_TAB,
+  KINDS,
 };
 </script>
 
@@ -171,22 +176,20 @@ export default {
           @input="v$.form.shortCode.$touch"
         />
       </label>
-      <!-- R3: una categoría o ninguna (D1). Es la que buscan los agentes con
-           @buscar_predefinidas(CATEGORÍA). -->
-      <label class="w-56 !mb-0">
-        {{ $t('CANNED_MGMT.CATEGORIES.FORM_LABEL') }}
-        <select v-model="form.categoryId" class="!mb-0">
-          <option value="">{{ $t('CANNED_MGMT.TABLE.NO_CATEGORY') }}</option>
-          <option
-            v-for="categoria in categories"
-            :key="categoria.id"
-            :value="String(categoria.id)"
-          >
-            {{ categoria.name }}
+      <!-- proyecto@predefinidas_que_contestan: la categoría (fija) decide cómo la usa
+           la búsqueda de los agentes. -->
+      <label class="w-44 !mb-0">
+        {{ $t('CANNED_MGMT.KIND.LABEL') }}
+        <select v-model="form.kind" class="!mb-0" data-test="canned-kind">
+          <option v-for="k in $options.KINDS" :key="k" :value="k">
+            {{ $t(`CANNED_MGMT.KIND.${k.toUpperCase()}`) }}
           </option>
         </select>
       </label>
     </div>
+    <p class="!m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400">
+      {{ $t(`CANNED_MGMT.KIND.${form.kind.toUpperCase()}_HELP`) }}
+    </p>
 
     <woot-tabs :index="activeTab" @change="showTab">
       <woot-tabs-item
@@ -235,6 +238,7 @@ export default {
         class="flex-1 w-full min-h-0 !h-auto !mb-0 resize-none"
         :placeholder="$t('CANNED_MGMT.FORM_PROMPT.PLACEHOLDER')"
       />
+      <CharMeter :content="form.contentPrompts" prompt />
       <p
         v-for="aviso in tagWarnings"
         :key="aviso"
@@ -243,6 +247,9 @@ export default {
         {{ aviso }}
       </p>
     </div>
+
+    <!-- proyecto@auditoria_predefinidas: fuera de las pestañas, se ve en las dos. -->
+    <CharMeter :short-code="form.shortCode" :content="form.content" />
 
     <!-- Las opciones de la respuesta (menú, contenido completo, link) van afuera de las
          pestañas: no son del mensaje ni del prompt, son de la respuesta entera, y se
@@ -270,7 +277,7 @@ export default {
 
     <div class="flex flex-row justify-end w-full gap-2 px-0 py-2">
       <WootSubmitButton
-        :disabled="loading"
+        :disabled="loading || tooLong"
         :button-text="submitText"
         :loading="loading"
       />

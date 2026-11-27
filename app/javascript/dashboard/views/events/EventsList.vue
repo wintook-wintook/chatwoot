@@ -93,13 +93,16 @@ export default {
     <header
       class="flex flex-wrap items-start justify-between gap-3 px-6 pt-5 pb-3"
     >
-      <div>
-        <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
-          {{ $t('EVENTS.TITLE') }}
-        </h1>
-        <p class="m-0 text-sm text-slate-600 dark:text-slate-300">
-          {{ $t('EVENTS.DESCRIPTION') }}
-        </p>
+      <div class="flex items-start gap-2">
+        <woot-sidemenu-icon />
+        <div>
+          <h1 class="m-0 text-xl font-bold text-slate-800 dark:text-slate-100">
+            {{ $t('EVENTS.TITLE') }}
+          </h1>
+          <p class="m-0 text-sm text-slate-600 dark:text-slate-300">
+            {{ $t('EVENTS.DESCRIPTION') }}
+          </p>
+        </div>
       </div>
       <woot-button
         v-if="access.canEdit"

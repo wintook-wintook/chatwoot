@@ -17,6 +17,10 @@
 # de sus instrucciones y una sección [PENDIENTE] (los pendientes van en el mensaje).
 #
 # Una regla que la persona descartó al decidir una contradicción no se agrega.
+#
+# proyecto@crear_agente_conversando F3: `fixed` (BriefFromChat) — las [VARIABLES] y los
+# [DATOS FIJOS] que se decidieron en la conversación quedan EXACTOS, los haya copiado
+# bien el redactor o no. `fixed` en la respuesta: cuáles se pusieron.
 # ================================================================================
 
 class ContactTrackings::Assistant::BriefCoverage
@@ -35,18 +39,20 @@ class ContactTrackings::Assistant::BriefCoverage
   PENDING_SECTION = /\A\s*\[\s*PENDIENTES?:?\s*\]\s*\z/i
   SECTION_RE = ContactTrackings::Assistant::DraftPieces::SECTION_RE
 
-  def initialize(draft, ficha:, answers: {})
+  def initialize(draft, ficha:, answers: {}, fixed: nil)
     @draft = draft.to_s
+    @fixed = fixed
     @ficha = ficha || {}
     @discarded = ContactTrackings::Assistant::BriefComposer.discarded(@ficha, answers)
   end
 
-  # { draft:, added: [{ 'section' => 'REGLAS', 'text' => '…' }], over_budget: [lo que no cupo] }
+  # { draft:, added: [{ 'section' => 'REGLAS', 'text' => '…' }], over_budget: [lo que no cupo], fixed: ['VARIABLES'] }
   def call
     lineas = clean(@draft.split("\n", -1))
+    lineas = @fixed.apply(lineas) if @fixed
     agregados, no_caben = within_budget(lineas.join("\n").length, missing(lineas.join("\n")))
     agregados.group_by { |a| a['section'] }.each { |seccion, puntos| insert(lineas, seccion, puntos.pluck('text')) }
-    { draft: lineas.join("\n"), added: agregados, over_budget: no_caben }
+    { draft: lineas.join("\n"), added: agregados, over_budget: no_caben, fixed: @fixed&.sections&.keys }.compact
   end
 
   private

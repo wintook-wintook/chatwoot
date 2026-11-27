@@ -60,6 +60,13 @@ RSpec.describe AiFollowUps::KnowledgeSearch do
                            'function' => { 'name' => name, 'arguments' => args.to_json } }] }
     end
 
+    it 'el objetivo y las indicaciones mandan y van al final (quién es la persona)' do
+      follow_up.update!(instructions: 'Es nuestra distribuidora; pregúntale por su prospecto.')
+      system = AiFollowUps::Prompt.new(follow_up).system
+      expect(system).to include('mandan sobre todo lo demás', 'Es nuestra distribuidora')
+      expect(system.rindex('INDICACIONES DE QUIEN DELEGÓ')).to be > system.index('CON QUIÉN HABLAS')
+    end
+
     it 'la nota IA del contacto va en lo que sabe el agente' do
       create(:note, account: account, user: user, contact: contact, content: 'Compra cada trimestre; prefiere Lenovo.',
                     is_for_ia: true)

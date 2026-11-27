@@ -182,7 +182,26 @@ es:
       task_not_open: 'Solo se agenda una tarea pendiente.'
       meeting_not_open: 'Solo se pasa a tarea una tarea agendada pendiente y sin salida a la visita.'
       starts_at: 'Elige el día y la hora.'
+  # «Ligar a un cliente» — caso interno que pasa a ser de un cliente (Cases::AssignClient)
+  assign_client:
+    errors:
+      not_internal: 'Este caso ya tiene cliente.'
+      contact_required: 'Elige el contacto del cliente.'
+      organization_missing: 'No se encontró la organización.'
+      contact_other_organization: 'Ese contacto es de otra organización.'
+  # Plantillas de WhatsApp — «Crear con IA» (Whatsapp::TemplateDrafter)
+  whatsapp_templates:
+    ai:
+      no_key: 'Conecta la integración de OpenAI de la cuenta para crear plantillas con IA.'
+      goal_required: 'Escribe qué quieres lograr con la plantilla.'
+      failed: 'No se pudo armar la propuesta. Inténtalo otra vez.'
+  # Plantillas de seguimiento (AiFollowUpPreset)
+  ai_follow_up_presets:
+    not_editable: 'Solo quien la creó o un administrador puede cambiarla o borrarla.'
   cancellation:
+    meeting_locked: 'La tarea agendada ya está cerrada o cancelada: no se puede cambiar.'
+    meeting_not_closed: 'Solo se reabre una tarea agendada realizada o en la que el cliente no asistió.'
+    closed_locked: 'La tarea ya está concluida o cancelada: reábrela para cambiarla.'
     report: 'Cancelada: %{reason}'
     client_message: 'Hola %{name}, te avisamos que cancelamos «%{title}» del %{when}. Cualquier cosa, aquí estamos.'
     delete_restricted: 'Solo se borra lo capturado por error, en las primeras 24 horas y por quien lo creó. Si ya no se va a hacer, cancélala con su motivo.'
@@ -315,6 +334,13 @@ es:
       not_found: 'Mantenimiento no encontrado'
       asset_not_found: 'Equipo no encontrado'
   # prospeccion V4 — baja desde el enlace de un correo del Agente IA
+  public_campaign_survey:
+    title: "Tu opinión nos importa"
+    body: "Contesta estas preguntas de %{name}. Toma menos de un minuto."
+    pick: "Elige"
+    send: "Enviar respuestas"
+    done_title: "¡Gracias por tu tiempo!"
+    done_body: "%{name} ya recibió tus respuestas."
   public_opt_out:
     title: "¿Ya no quieres recibir nuestros correos?"
     body: "Confirma y %{name} no volverá a escribirte."
@@ -335,6 +361,38 @@ es:
       someone: "Alguien del equipo"
   contact_trackings:
     opt_out_footer: "¿No quieres recibir más correos? Date de baja aquí: %{url}"
+  quote_formats:
+    copy: 'copia'
+    errors:
+      last: 'Debe quedar al menos un formato.'
+      logo: 'El logo debe ser PNG, JPG o WEBP de hasta 2 MB.'
+      not_found: 'Formato no encontrado'
+    default_name: 'Formato principal'
+    client: 'Cliente'
+    bank: 'Datos para pago'
+    withholdings: 'Retenciones'
+    amount_in_words: 'Importe con letra'
+    client_signature: 'Nombre y firma de aceptación'
+    accepted_on: 'Aceptada el %{date}'
+    pdf_unavailable: 'El PDF no está disponible por ahora; usa Imprimir.'
+    company:
+      legal_name: 'Razón social'
+      tax_id: 'RFC'
+      address: 'Dirección'
+      phone: 'Tel.'
+      email: 'Correo'
+      website: 'Web'
+    client_fields:
+      name: 'Nombre'
+      organization: 'Empresa'
+      tax_id: 'RFC'
+      email: 'Correo'
+      phone: 'Tel.'
+    columns:
+      sku: 'Clave'
+      unit: 'Unidad'
+      tax: 'IVA'
+      price_with_tax: 'Precio c/IVA'
   public_quotes:
     title: 'Cotización'
     for: 'Para %{name}'
@@ -393,10 +451,16 @@ es:
       opportunity_required: 'Tu empresa pide que toda cotización tenga oportunidad'
       no_sales_type: 'Crea primero un tipo de oportunidad en Ajustes › Casos y etapas'
       no_conversation: 'El cliente no tiene conversaciones; copia el enlace y envíaselo por otro medio'
+  catalog_parameters:
+    not_found: 'No se encontró en la lista.'
+    in_use: 'Está en uso: desactívalo para que ya no se ofrezca.'
+    default_tax: 'Es el impuesto por omisión: marca otro antes de borrarlo.'
   catalog_items:
     not_found: 'Producto o servicio no encontrado'
     import:
       no_file: 'Adjunta el archivo CSV del catálogo.'
+    image:
+      invalid: 'La foto debe ser PNG, JPG o WEBP de hasta 5 MB.'
   case_tasks:
     on_close:
       kept: 'Se conservó %{count} tarea(s) sin caso.'
@@ -416,12 +480,14 @@ es:
       delegate: 'Delegar a un agente IA para que le dé seguimiento a un cliente, y preguntar cómo va o pausarlo.'
       sales: 'Ventas: ¿cómo vamos contra la meta?, ranking de vendedores y clientes, qué oportunidades cierran o están vencidas o estancadas, y la salud del embudo (cifras sin IVA).'
       sales_own: 'Tus ventas: ¿cómo vas contra tu meta?, tus mejores clientes, qué oportunidades tuyas cierran o están vencidas o estancadas (cifras sin IVA).'
+      setup: 'Armar tu cuenta: los tipos de caso con sus etapas y los motivos de cierre según tu negocio (p. ej. «ayúdame a armar mis etapas, vendemos paneles solares»).'
       guide: 'Aprender a usar la plataforma: cómo se hace algo, dónde está cada cosa y para qué sirve (p. ej. «¿cómo creo un contrato?», «¿para qué sirve el embudo?»).'
       quotes: 'Cotizaciones: armarlas con los productos y precios del catálogo, mandárselas al cliente y ver las que tiene abiertas (p. ej. «cotízale a Mario 3 mantenimientos de minisplit»).'
-      reply: 'Contestar a tus clientes: qué conversaciones esperan respuesta, qué dijeron, y la respuesta lista en una tarjeta para mandarla (p. ej. «¿quién me escribió?», «dile a Mario que llega el jueves»).'
+      reply: 'Contestar a tus clientes: qué conversaciones esperan respuesta, qué dijeron, y la respuesta lista en una tarjeta para mandarla; también llamarles por WhatsApp si la bandeja tiene llamadas (p. ej. «¿quién me escribió?», «dile a Mario que llega el jueves», «llámale a Mario»).'
       field: 'Trabajo en campo: tus visitas del día, cuál sigue, qué se le hizo la última vez al cliente, avisarle «voy en camino» y dictar el reporte de la visita (p. ej. «¿qué visitas tengo hoy?», «reporta la visita: cambié el capacitor»).'
       nfc: 'Captar en la expo: el enlace NFC del evento para grabarlo en una etiqueta («acercar el celular») y cuántos se captaron (p. ej. «quiero grabar la etiqueta NFC de la expo para Ana»).'
       client_tasks: 'Tareas con el cliente: qué le falta a un cliente, quién tiene tareas vencidas y asignarle una tarea que trabaja en su portal (p. ej. «asígnale a Acme probar la facturación para el viernes»).'
+      team_day: 'Tu equipo: el día de una persona del equipo (sus tareas, citas y atrasadas) y asignarle tareas (p. ej. «¿qué tiene hoy Ana?», «agrégale una tarea a mi compañero Luis»).'
       limits: 'Lo que no hace: no le escribe al cliente sin tu confirmación (te deja una tarjeta, un borrador o un mensaje programado) ni hace acciones masivas.'
     quotes:
       new_opportunity: 'Se crea una oportunidad nueva'
@@ -491,9 +557,111 @@ es:
     required: 'Para concluirla, escribe qué se hizo'
     note_title: 'Reporte de cierre: %{title}'
     activity_note_title: 'Actividad: %{title}'
+    progress_note_title: 'Avance: %{title}'
+    progress_not_open: 'Solo se reporta avance de una tarea pendiente'
     minutes_required: 'Indica el tiempo dedicado'
+  google_calendar_schedule:
+    agent_not_found: 'Ese agente no es de esta cuenta'
+    viewer_not_connected: 'Conecta tu Google Calendar para agendarle a un compañero'
+    agent_not_connected: 'Ese compañero no tiene Google Calendar conectado'
+    same_google: 'Ese compañero usa tu mismo Google: agéndalo para ti'
+    no_permission: 'Tu compañero no te dio permiso de hacer cambios en su calendario. Pídele que te lo dé en «Compartir mi calendario».'
+  google_calendar_delete:
+    linked_to_agenda_item: 'Este evento es una tarea agendada: cancélala para quitarlo del calendario'
+    no_permission: 'No tienes permiso para borrar en ese calendario'
+    google_error: 'Google no pudo borrar el evento. Inténtalo de nuevo.'
+    bot_note: '🗑️ %{name} eliminó la cita desde el calendario. El cliente no fue avisado.'
+  # diag/waba F1 — pestaña «Diagnóstico» de la bandeja de WhatsApp
+  whatsapp_health:
+    only_cloud: 'El diagnóstico es solo para bandejas de WhatsApp Cloud.'
+    reconnect:
+      other_number: 'En la ventana de Meta elegiste otro número (%{number}). Para reconectar esta bandeja elige su mismo número; para otro número crea una bandeja nueva.'
+    unknown: 'No se pudo revisar (%{check}). Inténtalo de nuevo.'
+    ago:
+      minutes: '%{count} min'
+      hours: '%{count} h'
+      days: '%{count} días'
+    quality:
+      green: 'alta'
+      yellow: 'media'
+      red: 'baja'
+    tiers:
+      tier_50: '50 conversaciones por día'
+      tier_250: '250 conversaciones por día'
+      tier_1k: '1 000 conversaciones por día'
+      tier_10k: '10 000 conversaciones por día'
+      tier_100k: '100 000 conversaciones por día'
+      tier_unlimited: 'sin límite'
+    errors:
+      window_24h: 'Pasaron más de 24 h desde el último mensaje del cliente: usa una plantilla.'
+      not_on_whatsapp: 'El número del cliente no tiene WhatsApp o no puede recibir el mensaje.'
+      payment: 'Problema de pago en la cuenta de WhatsApp Business.'
+      ecosystem: 'Meta frenó el envío para cuidar al cliente (demasiados mensajes de marketing).'
+      unsupported: 'Ese tipo de mensaje no está permitido.'
+      template: 'Problema con la plantilla (parámetros, pausada, rechazada o borrada): %{title}'
+      rate_limit: 'Demasiados envíos seguidos; se reintenta más lento.'
+      token: 'El permiso de Meta venció: reconecta la bandeja.'
+      blocked: 'La cuenta o el número está bloqueado por Meta.'
+      other: 'Meta respondió: %{title}'
+      no_title: 'sin detalle'
+    checks:
+      app:
+        ok: 'La app de Meta del sistema está bien configurada'
+        fail: 'La app de Meta del sistema está mal configurada (App ID o App Secret): «Reconectar con Meta» no funcionará hasta corregirla en Super Admin'
+        unknown: 'No se pudo revisar la app de Meta del sistema'
+      token:
+        ok: 'El permiso de Meta de esta bandeja está vigente'
+        warn: 'El permiso de Meta de esta bandeja necesita atención'
+        fail: 'El permiso de Meta de esta bandeja venció o fue revocado: no se reciben ni envían mensajes'
+        unknown: 'No se pudo revisar el permiso de Meta'
+        details:
+          no_app: 'No se pudo revisar cuándo vence: la app de Meta del sistema está mal configurada.'
+          permanent: 'Es permanente.'
+          expires: 'Vence el %{date}.'
+          scopes: 'Le faltan permisos: %{scopes}.'
+      webhook:
+        ok: 'Meta manda los mensajes a este sistema'
+        warn: 'Nuestra app está suscrita, pero no se pudo revisar a qué servidor manda Meta los mensajes'
+        fail: 'Meta no nos manda los mensajes que te escriben'
+        unknown: 'No se pudo revisar si Meta nos manda los mensajes'
+        details:
+          not_subscribed: 'La cuenta de WhatsApp Business no está suscrita a nuestra app.'
+          other_server: 'Meta los manda a otro servidor (%{host}). Corrige la URL del webhook en la app de Meta.'
+          unverified: 'Para revisarlo hace falta que la app de Meta del sistema esté bien configurada.'
+      last_incoming:
+        ok: 'Último mensaje recibido: hace %{ago}'
+        warn: 'Último mensaje recibido: hace %{ago}'
+        never: 'Esta bandeja nunca ha recibido mensajes'
+      number:
+        ok: 'Número conectado · calidad %{quality}'
+        warn: 'La calidad del número está en riesgo (%{quality}): Meta puede bajar su límite'
+        fail: 'El número no está listo para enviar (estado %{state}, calidad %{quality})'
+        unknown: 'No se pudo revisar el número'
+      display_name:
+        ok: 'Nombre visible aprobado: %{name}'
+        warn: 'Meta rechazó el nombre visible «%{name}»: los clientes ven el número en lugar del nombre'
+      limit:
+        ok: 'Límite de envío: %{tier}'
+        unknown: 'No se pudo consultar el límite de envío'
+      account:
+        ok: 'Cuenta de WhatsApp Business aprobada'
+        warn: 'La cuenta de WhatsApp Business está en revisión'
+        fail: 'Meta rechazó o restringió la cuenta de WhatsApp Business'
+        unknown: 'No se pudo revisar la cuenta de WhatsApp Business'
+      failed:
+        ok: 'Sin envíos fallidos en los últimos 7 días'
+        warn: '%{count} envíos fallidos en los últimos 7 días'
+        fail: 'Fallaron todos los envíos de los últimos 7 días (%{count})'
+      reauthorization:
+        ok: 'La bandeja no está marcada para reconexión'
+        fail: 'La bandeja está marcada para reconexión: Meta rechazó su permiso'
+      queue:
+        ok: 'Los envíos se están procesando'
+        warn: 'Los mensajes de WhatsApp van atrasados (%{minutes} min en cola)'
+        fail: 'Ningún proceso atiende la cola %{queues}: los mensajes de WhatsApp no avanzan'
   agenda_items:
     already_linked: 'Ese evento ya tiene una tarea agendada'
+    invalid_emails: 'Correo no válido en invitados: %{emails}'
     all_day: 'Un evento de todo el día no tiene hora: se queda solo en Google'
     untitled: 'Sin título'
   access_roles:
@@ -545,6 +713,15 @@ es:
       stage_ready: "Se terminaron las tareas de %{stage}: ¿pasar a %{next}?"
       stage_ready_doc: "Se terminaron las tareas de %{stage}: documenta para pasar a %{next}"
       rule_notice: "Regla «%{rule}»: %{title}"
+    task_recurrence_missed:
+      body: "%{assignee} · vencía el %{due} y sigue pendiente"
+    case_meeting_participant:
+      added: "Te agregaron a «%{title}»"
+      rescheduled: "Cambió la hora de «%{title}»"
+      cancelled: "Se canceló «%{title}»"
+      reminder: "Está por empezar «%{title}»"
+      declined: "%{name} no puede ir a «%{title}»"
+      removed: "Ya no participas en «%{title}»"
     notification_title:
       conversation_creation: "Una conversación (#%{display_id}) ha sido creada en %{inbox_name}"
       conversation_assignment: "Una conversación (#%{display_id}) te ha sido asignada"
@@ -562,6 +739,8 @@ es:
       case_stage_ready: "El caso %{folio} está listo para pasar de etapa"
       case_rule_notice: "Aviso de una regla en el caso %{folio}"
       client_task_update: "El cliente avanzó una tarea en el caso %{folio}"
+      case_meeting_participant: "Tarea agendada"
+      task_recurrence_missed: "No se hizo «%{title}»"
     calendar_event_reminder:
       body: "\"%{title}\" comienza en %{minutes} minutos"
       no_title: "Evento sin título"

@@ -124,14 +124,6 @@ export default {
       type: String,
       required: true,
     },
-    eventSuggestionResponseBotEva: {
-      type: Function,
-      default: () => { },
-    },
-    eventSuggestionResponseBotElyza: {
-      type: Function,
-      default: () => { },
-    },
   },
   setup() {
     const { setSignatureFlagForInbox, fetchSignatureFlagFromUISettings } =
@@ -308,13 +300,7 @@ export default {
       <AIAssistanceButton v-if="!isFetchingAppIntegrations && popoutReplyBox && showCustomerTools" :conversation-id="conversationId"
         :is-private-note="isOnPrivateNote" :message="message" @replaceText="replaceText" />
 
-      <woot-button v-if="!isFetchingAppIntegrations && popoutReplyBox && showCustomerTools" v-tooltip.top-end="'Sugerencia respuesta botEVA'"
-        icon="bot" color-scheme="primary" variant="smooth" size="small"
-        :title="$t('CONVERSATION.FOOTER.WHATSAPP_TEMPLATES')" @click="eventSuggestionResponseBotEva" />
-
-      <woot-button v-if="!isFetchingAppIntegrations && popoutReplyBox && showCustomerTools"
-        v-tooltip.top-end="'Sugerencia respuesta botEliza'" icon="wand" color-scheme="primary" variant="smooth"
-        size="small" :title="$t('CONVERSATION.FOOTER.WHATSAPP_TEMPLATES')" @click="eventSuggestionResponseBotElyza" />
+      <!-- botEVA y botEliza se quitaron: la ayuda para escribir es la de Dali (arriba). -->
 
       <transition name="modal-fade">
         <div v-show="$refs.uploadRef && $refs.uploadRef.dropActive"

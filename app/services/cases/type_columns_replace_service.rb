@@ -66,11 +66,12 @@ class Cases::TypeColumnsReplaceService
         label: raw[:label],
         color: raw[:color],
         position: raw[:position] || index,
-        statuses: raw[:statuses] || [],
-        # Plan-Clase-Comercial F3 — vacío = columna de trabajo; con valor = resultado.
-        outcome: raw[:outcome].presence,
-        probability: raw[:probability].presence
+        statuses: raw[:statuses] || []
       )
+      # Plan-Clase-Comercial F3 — vacío = columna de trabajo; con valor = resultado.
+      # Si no vienen en el payload, se quedan como estaban (antes se borraban).
+      column.outcome = raw[:outcome].presence if raw.key?(:outcome)
+      column.probability = raw[:probability].presence if raw.key?(:probability)
       column.save!
       column
     end

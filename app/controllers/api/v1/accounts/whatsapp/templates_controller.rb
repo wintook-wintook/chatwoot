@@ -58,6 +58,18 @@ class Api::V1::Accounts::Whatsapp::TemplatesController < Api::V1::Accounts::Base
                    content_type: blob.content_type, url: blob_link(blob) }, status: :created
   end
 
+  # «Crear con IA»: con lo que quiere lograr, un borrador del formulario (nombre, categoría,
+  # textos, botones y ejemplos). No guarda ni llama a Meta; el canal lo elige el usuario.
+  def ai_draft
+    result = Whatsapp::TemplateDrafter.new(account: Current.account).call(
+      goal: params[:goal], tone: params[:tone], language: params[:language],
+      previous: params[:previous].respond_to?(:to_unsafe_h) ? params[:previous].to_unsafe_h : nil, adjust: params[:adjust]
+    )
+    return render json: { error: result[:error] }, status: :unprocessable_entity if result[:error]
+
+    render json: result
+  end
+
   # Reconcilia desde Meta (upsert por fila) — fallback si el webhook no está suscrito.
   def sync
     result = Whatsapp::TemplateSyncService.new(@channel).perform

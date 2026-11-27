@@ -45,6 +45,9 @@ module ContactTrackings
     VALID_ROUTES = %w[rejected interested reschedule book_appointment cancel_appointment kbase botseller tracking].freeze
     VALID_APPOINTMENT_ACTIONS = %w[query book_new move cancel].freeze
 
+    # Todo lo fijo primero y lo del turno (fecha, cita, historial, mensaje) al final: OpenAI cobra
+    # con descuento el inicio idéntico de una llamada reciente (prompt caching, desde 1024 tokens).
+    # La fecha iba a la mitad y dejaba fijo justo el mínimo.
     CLASSIFICATION_PROMPT = <<~PROMPT.strip
       Eres un clasificador de intenciones. Analiza el mensaje del cliente y responde
       ÚNICAMENTE con un JSON con la siguiente estructura, sin explicación adicional:
@@ -106,7 +109,6 @@ module ContactTrackings
       Llena "reschedule_data" cuando el cliente mencione una fecha/hora (para "reschedule" o para
       "appointment_action": "move"); si no menciona ninguna, déjalo en null.
 
-      %{today}
       Reglas para "reschedule_data" (NO calcules fechas a mano; el sistema las resuelve):
       - Día de la semana en CUALQUIER idioma ("el martes", "next Tuesday", "terça"): poné "weekday"
         (1=lunes/Mon ... 7=domingo/Sun) y dejá "specific_date" en null. "weeks_ahead" SOLO si lo
@@ -116,6 +118,7 @@ module ContactTrackings
       - Hora concreta: "specific_time" (HH:MM 24h). Franja sin hora ("por la mañana/tarde/noche"):
         "time_of_day" (morning/afternoon/evening) y "specific_time" en null.
 
+      %{today}
       ESTADO DE LA CITA: %{appointment_state}
 
       Historial reciente de la conversación:

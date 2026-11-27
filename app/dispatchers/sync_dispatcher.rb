@@ -6,6 +6,10 @@ class SyncDispatcher < BaseDispatcher
       return InternalChannel::Events.publish_internal(listeners, InternalChannel::Events::SYNC_LISTENERS,
                                                       event_object.method_name, event_object)
     end
+    if AgentTester::Events.tester?(data)
+      return InternalChannel::Events.publish_internal(listeners, AgentTester::Events::SYNC_LISTENERS,
+                                                      event_object.method_name, event_object)
+    end
 
     publish(event_object.method_name, event_object)
   end

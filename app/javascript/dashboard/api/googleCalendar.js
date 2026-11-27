@@ -25,9 +25,35 @@ class GoogleCalendarAPI extends ApiClient {
     return axios.patch(`${this.url}/events/${eventId}`, payload);
   }
 
-  getAgentEvents(agentId, params = {}) {
-    return axios.get(`${this.url}/events/agent_events`, {
-      params: { agent_id: agentId, ...params },
+  // fix/calendario_eliminar F3 — { calendar_id, scope: 'one' | 'all', notify }.
+  deleteEvent(eventId, params = {}) {
+    return axios.delete(`${this.url}/events/${encodeURIComponent(eventId)}`, {
+      params,
+    });
+  }
+
+  // fix/calendario_google — compañeros vistos con MI conexión (Google aplica lo compartido).
+  getCoworkers() {
+    return axios.get(`${this.url}/coworkers`);
+  }
+
+  // F3c — «Compartir mi calendario»: reglas de acceso de MI Google Calendar.
+  getSharingRules() {
+    return axios.get(`${this.url}/sharing_rules`);
+  }
+
+  updateSharingRule(agentId, level) {
+    return axios.put(`${this.url}/sharing_rules/${agentId}`, { level });
+  }
+
+  // Con alguien que no es agente de la cuenta (cualquier correo). level 'none' = dejar de compartir.
+  shareCalendarWithEmail(email, level) {
+    return axios.put(`${this.url}/sharing_rules/share_email`, { email, level });
+  }
+
+  getCoworkerEvents(agentIds, params = {}) {
+    return axios.get(`${this.url}/coworkers/events`, {
+      params: { agent_ids: agentIds, ...params },
     });
   }
 

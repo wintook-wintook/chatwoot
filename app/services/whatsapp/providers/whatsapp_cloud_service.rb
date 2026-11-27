@@ -240,8 +240,14 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     else
       Rails.logger.error response.body
       message.update!(status: :failed, external_error: response.body)
+      # diag/waba F3 (D6) — permiso de Meta vencido o revocado: cuenta para «requiere reconexión».
+      whatsapp_channel.authorization_error! if token_error?(response)
       nil
     end
+  end
+
+  def token_error?(response)
+    response.code == 401 || response.parsed_response.try(:dig, 'error', 'code').to_i == 190
   end
 
   def template_body_parameters(template_info)

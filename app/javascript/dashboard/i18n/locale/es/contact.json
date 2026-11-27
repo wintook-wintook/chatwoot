@@ -308,6 +308,11 @@
       },
       "VIEW_DETAILS": "Ver detalles",
       "NEW_CONVERSATION": "Nueva conversación"
+    },
+    "LIST_PROSPECTS": {
+      "BUTTON": "Prospectos de listas",
+      "BACK": "Ver todos los contactos",
+      "HINT": "Contactos de listas frías de correo que todavía no contestan (en cuarentena): no salen en la lista normal y se borran solos si nunca contestan."
     }
   },
   "CONTACT_PROFILE": {

@@ -85,6 +85,7 @@
       "YES": "Yes",
       "NO_WORD": "No",
       "ROWS": {
+        "PHONE": "Phone",
         "TYPE": "Type",
         "CLIENT": "Customer",
         "AMOUNT": "Amount",
@@ -103,7 +104,9 @@
         "INBOX": "WhatsApp",
         "SELLER": "Seller",
         "CASE": "Case",
-        "ITEM": "What"
+        "ITEM": "What",
+        "NAME": "Name",
+        "OBJECTIVE": "Objective"
       },
       "OUTCOMES": {
         "won": "Won",
@@ -118,6 +121,7 @@
       "REMOVE_ITEM": "Remove",
       "NET": "Subtotal before tax",
       "TAX": "Tax",
+      "WITHHELD": "Withholdings",
       "TOTAL": "Total",
       "QUOTE_DRAFT": "It is created as a draft; you can review it before sending.",
       "reply": "Reply",
@@ -149,10 +153,26 @@
       "CANCEL_MINUTES_REQUIRED": "Time spent (minutes) — already worked on",
       "CANCEL_NOTIFY": "Notify the customer",
       "convert_item": "Schedule ↔ task",
+      "task_progress": "Task progress",
+      "internal_note": "Internal note (the customer does not see it)",
+      "PROGRESS_HINT": "The task stays pending. It shows in the task history and in the case activity.",
       "CONVERT_TO_MEETING": "The task leaves Tasks and is scheduled.",
       "CONVERT_KEEPS": "It is required or the customer's: the task stays and a linked session is scheduled.",
       "CONVERT_TO_TASK": "It leaves the schedule (and Google) and becomes a task with no time.",
-      "CONVERT_LINKED": "It is a session of «{task}»: it leaves the schedule and that task stays."
+      "CONVERT_LINKED": "It is a session of «{task}»: it leaves the schedule and that task stays.",
+      "NO_SHOW": "The customer did not show up",
+      "REPLACES": "An AI follow-up is running (attempt {attempts} of {max}, next {at}). Confirming cancels it and starts this one.",
+      "USED_PRESET": "I used your template «{name}».",
+      "PRESET": "Follow-up template",
+      "PRESET_NONE": "— None —",
+      "PRESETS_EMPTY": "You have no follow-up templates yet",
+      "WA_TEMPLATE": "WhatsApp template",
+      "WA_TEMPLATE_AUTO": "Let the agent choose",
+      "PRESET_NAME": "Template name",
+      "save_follow_up_preset": "Save template",
+      "account_setup": "Set up your account",
+      "whatsapp_call": "WhatsApp call",
+      "CALL_HINT": "When you confirm, the call starts from your browser and you talk (allow the microphone). If the client has not allowed calls, the request is sent by WhatsApp."
     },
     "SETTINGS": {
       "TITLE": "Assistant",
@@ -160,11 +180,48 @@
       "HINT": "Everyone will see this name. Empty = Dali.",
       "SAVE": "Save",
       "SAVED": "Assistant settings saved",
-      "MODEL": "OpenAI model",
-      "MODEL_DEFAULT": "The usual one ({model})",
-      "ANALYSIS_MODEL": "Model for sales analysis",
-      "ANALYSIS_MODEL_DEFAULT": "Same as the general one",
-      "MODEL_HINT": "The analysis model is used only when the assistant explains sales figures; a stronger one answers better but costs more per question."
+      "MODELS": {
+        "TITLE": "Platform AI models",
+        "HINT": "Just so you know what each part uses. They are the same for every account and we change them with an update when it makes sense.",
+        "GROUP": "Group",
+        "USED_FOR": "Used for",
+        "MODEL": "Model",
+        "PER_INBOX": "Its inbox's model",
+        "GROUPS": {
+          "dali": {
+            "NAME": "Dali",
+            "USE": "The platform assistant: understand, propose and do what it's asked"
+          },
+          "dali_analysis": {
+            "NAME": "Dali (figures)",
+            "USE": "When Dali explains sales figures"
+          },
+          "agents": {
+            "NAME": "Customer-facing agents",
+            "USE": "2.0 agents, ready agents and AI follow-up"
+          },
+          "review": {
+            "NAME": "Review and training",
+            "USE": "Agent tester trainer, judge and tests; «Move to 2.0»"
+          },
+          "canned_selector": {
+            "NAME": "Pick canned responses",
+            "USE": "The new search: picks which ones reach the agent"
+          },
+          "sheets": {
+            "NAME": "Google Sheets (Data)",
+            "USE": "Turns the question into a query; the system computes the number"
+          },
+          "agents_v1": {
+            "NAME": "Custom agents 1.0",
+            "USE": "Agents on the previous engine"
+          },
+          "other": {
+            "NAME": "Other AI features",
+            "USE": "Summaries, classification, suggestions and the rest"
+          }
+        }
+      }
     },
     "VIA": "via {name}",
     "MENU": "Ask {name}…",
@@ -227,8 +284,10 @@
       "LAST_TEMPLATE": "last template: {name}",
       "BUTTON": "Delegate follow-up",
       "BUTTON_HINT": "The AI agent follows up with the customer for you: writes, answers from company sources and uses templates when the WhatsApp window is closed",
-      "LEGACY": "Previous view",
-      "LEGACY_HINT": "Open the classic follow-up agent (agents from the AI Agents module)",
+      "ENGINE": {
+        "CUSTOM": "Select trained agent",
+        "CUSTOM_HINT": "Use one of your custom agents instead of this quick follow-up"
+      },
       "CONVERSATION": "Conversation the agent works in",
       "IN_CONVERSATION": "conversation #{id}",
       "NO_CONVERSATIONS": "This contact has no conversations: the agent needs one to write to them.",
@@ -240,7 +299,45 @@
       "AI_NOTE_NONE": "This contact has no AI note.",
       "AI_NOTE_ADD": "Add it on the contact page",
       "SOURCES_NONE": "The company has no canned responses: if the customer asks something not in the AI note, it will hand it to a person.",
-      "SOURCES_CANNED": "To answer questions it checks the company canned responses and the contact AI note."
+      "SOURCES_CANNED": "To answer questions it checks the company canned responses and the contact AI note.",
+      "PRESET_LABEL": "Use template",
+      "PRESET_NONE": "— No template —",
+      "PRESET_EMPTY": "You have no follow-up templates yet: start from an example and save it.",
+      "STARTER_SUFFIX": "(example)",
+      "SAVE_PRESET": "Save as template",
+      "PRESET_NAME_PLACEHOLDER": "Name, e.g. Friendly collection 3 attempts",
+      "SAVE": "Save",
+      "UPDATE_PRESET": "Update «{name}»",
+      "DELETE_PRESET": "Delete template",
+      "DELETE_CONFIRM": "Delete the template «{name}»?",
+      "PRESET_SAVED": "Template «{name}» saved",
+      "PRESET_UPDATED": "Template «{name}» updated",
+      "REPLACE_NOTICE": "A follow-up is already running (attempt {attempts} of {max}{next}). If you save, it is cancelled and this one starts with your changes.",
+      "REPLACE_SUBMIT": "Replace follow-up",
+      "REPLACED": "Follow-up changed: the previous one was cancelled",
+      "STARTERS": {
+        "COLLECTION": {
+          "NAME": "Friendly collection",
+          "OBJECTIVE": "Get the customer to pay the pending balance or say when they will.",
+          "INSTRUCTIONS": "Warm, respectful tone. Remind them of the balance and offer help with payment. If they say they paid, ask for the receipt. Never threaten or pressure."
+        },
+        "QUOTE": {
+          "NAME": "Quote follow-up",
+          "OBJECTIVE": "Get the customer to confirm the quote or learn why not.",
+          "INSTRUCTIONS": "Ask if they reviewed it and have questions; offer to adjust it. If not interested, kindly ask why."
+        },
+        "APPOINTMENT": {
+          "NAME": "Confirm appointment",
+          "OBJECTIVE": "Get the customer to confirm or reschedule the appointment.",
+          "INSTRUCTIONS": "Remind them of the day and time. If they can't make it, ask for another day and notify a person."
+        },
+        "REACTIVATE": {
+          "NAME": "Reactivate customer",
+          "OBJECTIVE": "Get the customer to buy again or book a call.",
+          "INSTRUCTIONS": "Greet them, ask how their purchase is working out and share news, without pressure."
+        }
+      },
+      "REPLACE_NEXT": " · next {at}"
     },
     "OPEN_IN_PLATFORM": "Open in Kontrolya",
     "VOICE": {
@@ -288,6 +385,909 @@
         "ASK_CONVERSATION": "What did they write in conversation #{id}?",
         "ASK_PENDING": "Which conversations do I have unanswered?"
       }
+    }
+  },
+  "AI_VOICE": {
+    "TABS": {
+      "VOICE": "How your company talks",
+      "PRESETS": "Follow-up templates"
+    },
+    "PRESETS": {
+      "HINT": "AI Follow-up recipes: pick them in «Use template» when delegating; Dali uses them too. Whatever you save from the delegate window shows up here.",
+      "NEW": "New",
+      "NEW_TITLE": "New template",
+      "EDIT_TITLE": "Edit template",
+      "NAME": "Name",
+      "LOADING": "Loading…",
+      "EMPTY": "No templates yet. Create one or add an example below.",
+      "EXAMPLES": "Examples",
+      "ADD_STARTER": "Add to my templates",
+      "RHYTHM": "{n} attempt(s) every {every} {unit}",
+      "BY": "by {name}",
+      "WA_TEMPLATE": "WhatsApp template: {name}",
+      "WA_TEMPLATE_CLEAR": "remove",
+      "WA_TEMPLATE_AUTO": "WhatsApp template: chosen by the agent (you can pin one from the delegate window).",
+      "SAVE": "Save",
+      "SAVED": "Template «{name}» saved",
+      "SAVE_ERROR": "Could not save.",
+      "LOAD_ERROR": "Could not load templates.",
+      "NEED_FIELDS": "Enter the name and what you want to achieve."
+    },
+    "BUSINESS": {
+      "TITLE": "Business data",
+      "HINT": "Your company's fixed data, for all your agents (Ready agents, AI follow-up and Engine 2.0). What an agent has of its own wins over this.",
+      "ROWS": "Other fixed data (hours, address, phone, payment methods…)",
+      "FIXED": {
+        "WHAT": "What you sell",
+        "WHO": "Who you sell to (ideal customer)",
+        "COVERAGE": "Where you serve",
+        "WHY": "Why choose you",
+        "PRACTICAL": "Starting prices, payment methods and times"
+      }
+    },
+    "TITLE": "How your company talks",
+    "SUBTITLE": "General guidance used by AI Follow-up and all Ready agents. Each agent's or follow-up's own settings win over this. Empty fields are not used.",
+    "LOADING": "Loading…",
+    "SAVE": "Save",
+    "SAVED": "Saved: agents use it from their next message.",
+    "SAVE_ERROR": "Could not save.",
+    "LOAD_ERROR": "Could not load.",
+    "TEST_ERROR": "Could not build the sample.",
+    "USED_BY": "Used by: AI Follow-up and Ready agents. Custom agents have their own training.",
+    "TEST": {
+      "TITLE": "Try it",
+      "HINT": "Builds a sample message with what you typed, without saving or sending anything.",
+      "FOLLOW_UP": "AI Follow-up: ask about a quote",
+      "PROSPECTS": "Prospects: someone asks for info",
+      "BUTTON": "Try it"
+    },
+    "FIELDS": {
+      "WHO": {
+        "LABEL": "Who we are",
+        "PLACEHOLDER": "Kontrolya, management software for service companies"
+      },
+      "TONE": {
+        "LABEL": "Tone",
+        "PLACEHOLDER": "Informal, friendly, no emojis"
+      },
+      "SIGNATURE": {
+        "LABEL": "How to sign off",
+        "PLACEHOLDER": "— The Kontrolya team"
+      },
+      "ROLES": {
+        "LABEL": "Who is who (contacts that are not customers)",
+        "PLACEHOLDER": "Distributors are partners: ask about their prospects. Suppliers: don't sell to them."
+      },
+      "AFTER_HOURS": {
+        "LABEL": "After hours, what to say",
+        "PLACEHOLDER": "We'll reply first thing tomorrow"
+      },
+      "NEVER": {
+        "LABEL": "Never",
+        "PLACEHOLDER": "No discounts. No delivery dates. Don't mention competitors."
+      },
+      "WORDS": {
+        "LABEL": "Own words or words to avoid",
+        "PLACEHOLDER": "Say \"licenses\", not \"subscriptions\""
+      }
+    }
+  },
+  "READY_AGENTS": {
+    "TITLE": "Ready agents",
+    "SUBTITLE": "Each function has its own wizard: answer a few questions, name it and you're done. You can have several of the same kind; they all go to the agents list and work in campaigns, automations and Delegate.",
+    "LOADING": "Loading…",
+    "LOAD_ERROR": "The agents could not be loaded.",
+    "SOON": "Coming soon",
+    "ON": "On",
+    "OFF": "Off",
+    "NO_INBOXES": "No inbox",
+    "FOLLOW_PLAN": {
+      "INTRO": "If they stop answering mid-conversation, the same agent reaches out again. This is what will happen:",
+      "NUDGES": "Reminders within 24 h (WhatsApp allows free text)",
+      "NUDGES_2": "2: 2 h and 20 h after their last message",
+      "NUDGES_1": "1: after 2 h",
+      "NUDGES_0": "None",
+      "RECOMMENDED": "(recommended)",
+      "TEMPLATES": "After 24 h (approved templates only), sends these, one at a time:",
+      "EVERY": "One every",
+      "DAYS": "days",
+      "NO_TEMPLATES": "After 24 h WhatsApp only allows approved templates; your inbox has none (or the agent has no WhatsApp inbox).",
+      "TIMELINE": "If they don't answer:",
+      "AT_HOURS": "at {n} h",
+      "AT_DAY": "day {n}",
+      "AFTER": "after",
+      "LAST_IN_WINDOW": " (last within 24 h)",
+      "TEMPLATE": "template «{name}»",
+      "NUDGE": {
+        "prospects": "reminder: picks up the pending question",
+        "customers": "reminder: picks up what's pending or asks if it was solved",
+        "campaign_seller": "reminder: picks up their question or the offer",
+        "collections": "Reminds them of the pending payment or the date they were going to give"
+      },
+      "END": {
+        "prospects": "marked «no answer»; if they answer, the agent picks it up",
+        "customers": "if a solution was given: «solved, unconfirmed»; if data was missing, hands it to the area team",
+        "campaign_seller": "marked «no answer»; if they answer, the agent picks it up",
+        "collections": "Ends without reply (the next collection reminder follows «When it collects»)"
+      },
+      "EXAMPLE": {
+        "prospects": "Example: «Did you get a chance to think about the budget? 😊»",
+        "customers": "Example: «Did the steps I sent solve it? Reply RESUELTO or ESCALAR.»",
+        "campaign_seller": "Example: «Any questions about the promotion?»",
+        "collections": "E.g.: «Did you get to the payment? If you already did, send me the proof.»"
+      },
+      "HINT": "If they answer, it starts over from their new message. If qualified, discarded or handed to a person, it doesn't write. Each conversation shows the next reminder and lets you cancel it.",
+      "QUOTE": "🧾 Day {n} after the quote is sent: asks about it ({how})",
+      "QUOTE_TEMPLATE": "template «{name}» after 24 h",
+      "QUOTE_NO_TEMPLATE": "no template: only within 24 h",
+      "NO_TEMPLATE_PICKED": "Without a template, after 24 h you can't write on WhatsApp anymore: when the window closes the follow-up ends with #sin-respuesta."
+    },
+    "QUOTE": {
+      "TITLE": "Quotes",
+      "NO_CATALOG": "To quote it needs products with prices in Sales › Catalog.",
+      "MODES": {
+        "off": "Doesn't quote: records the request and hands it to the seller",
+        "draft": "Builds a draft quote (Catalog prices) and alerts the seller to review and send it",
+        "send": "Builds the quote and sends it to the customer (Catalog prices only, no discounts) and alerts the seller"
+      },
+      "RECOMMENDED": "(recommended)",
+      "FOLLOW": "If they don't reply, ask about it after",
+      "DAYS": "days",
+      "PROSPECTS_HINT": "If the prospect asks for a quote, it builds it right then (even if your questions aren't done) and that qualifies them as hot: marked «interested» with the #cotizacion label and handed to the seller. First it asks for the required data you set in «When qualified».",
+      "DAYS_DRAFT": "days after the seller sends it",
+      "TEMPLATE": "Template to ask after 24 h (quotes only)",
+      "NO_TEMPLATE_OPTION": "No template",
+      "TEMPLATE_WARN": "Without a template, after 24 h since their last message it can't ask (WhatsApp doesn't allow it): the seller is notified to write.",
+      "TEMPLATE_NONE": "Your WhatsApp inbox has no approved templates: create one in Settings › Inboxes › Templates (or «Create with Dali»). Without it, after 24 h it can't ask.",
+      "TEMPLATE_HINT": "Within 24 h it writes in its own voice; after that, with this template. Separate from the Follow-up ones."
+    },
+    "SOURCE_ORDER": {
+      "TITLE": "Lookup order",
+      "HINT": "It searches in this order. Before a slow source (forum, CONTPAQi) it checks whether what's above already answers; if so, it skips it. Put your own, most reliable sources on top."
+    },
+    "FOLLOW_LINE": {
+      "TEXT": "Follow-up: {what}",
+      "NUDGES": "{n} reminder(s)",
+      "TEMPLATES": "{n} template(s) every {days} days",
+      "NONE": "No follow-up"
+    },
+    "METRICS": {
+      "BUTTON": "How it's doing",
+      "TITLE": "How «{name}» is doing",
+      "LOADING": "Loading…",
+      "ERROR": "Couldn't load the metrics.",
+      "EMPTY": "No conversations in the last {days} days.",
+      "SUMMARY": {
+        "prospects": "Served {total} in the last {days} days: {conversion}% qualified or booked.",
+        "customers": "Handled {total} conversations in the last {days} days: {conversion}% solved without handing over.",
+        "campaign_seller": "{total} replied in the last {days} days: {conversion}% were interested."
+      },
+      "RESULTS": {
+        "qualified": "Qualified",
+        "appointment": "Booked",
+        "handed_off": "Handed to a person",
+        "discarded": "Discarded",
+        "client": "Already customers",
+        "no_answer": "Stopped answering",
+        "live": "Talking now",
+        "interested": "Interested",
+        "not_interested": "Not interested",
+        "done": "Done"
+      },
+      "DROP_OFF": "Where they stop answering (the question they were missing)",
+      "ADS": "Which ad they came from",
+      "AD_LINE": "{total} · {good} qualified",
+      "GROUPS": "What they ask for"
+    },
+    "LIVE": "attending {n}",
+    "TURN_OFF": "Turn off",
+    "TURN_ON": "Turn on",
+    "ACTIVATE": "Create one",
+    "SAVED": "Agent saved",
+    "SAVE_ERROR": "The agent could not be saved.",
+    "DELETE_CONFIRM": "Delete the agent «{name}»? It stops answering. If it already handled chats or a campaign uses it, it is archived.",
+    "NEW_TITLE": "New agent · {title}",
+    "EDIT_TITLE": "Agent «{name}»",
+    "MODAL_SUBTITLE": "Answer step by step and try it on the right: you are the customer.",
+    "CANCEL": "Cancel",
+    "SAVE": "Save",
+    "FIELDS": {
+      "NAME": "Agent name (for your team)",
+      "NAME_PLACEHOLDER": "E.g. Ana – Facebook",
+      "TONE": "Tone",
+      "INBOXES": "Inboxes it attends",
+      "INBOX_TAKEN": "Another active agent already answers this inbox",
+      "OBJECTIVE": "When the prospect qualifies…",
+      "QUESTIONS": "Your own questions (optional)",
+      "QUESTIONS_PLACEHOLDER": "E.g. is your roof metal or concrete?",
+      "QUALIFIED_WHEN": "Qualified when…",
+      "QUALIFIED_PLACEHOLDER": "E.g. said what they need and want it this month",
+      "DISCARD_WHEN": "Discarded when…",
+      "DISCARD_PLACEHOLDER": "E.g. looking for a job or not interested",
+      "DISCARD_IDEAS": "is outside our service area|their budget is below what we handle|wants something we don't sell|is a supplier or looking for a job|only comparing prices, no intention to buy",
+      "HOT_WHEN": "When is a prospect hot? (optional)",
+      "HOT_PLACEHOLDER": "E.g. wants it this month and has a down payment or approved credit",
+      "HANDOFF_USER": "Hand off to (person)",
+      "HANDOFF_TEAM": "or team",
+      "NOBODY": "— Nobody: stays unassigned —",
+      "NO_TEAM": "— No team —",
+      "ONLY_PROSPECTS": "Only prospects: customers are handed to their owner",
+      "CLIENT_USER": "Customer without owner: hand off to",
+      "CLIENT_TEAM": "or team",
+      "INSTRUCTIONS": "Extra instructions (optional)",
+      "INSTRUCTIONS_PLACEHOLDER": "E.g. do not give installation prices",
+      "ENABLED": "On: starts attending these inboxes when saved",
+      "APPOINTMENT_USERS": "Book with (people with Google Calendar connected)",
+      "NO_CALENDARS": "Nobody has Google Calendar connected: connect it in Agenda › Calendar so the agent can book.",
+      "APPOINTMENT_MINUTES": "Duration",
+      "MINUTES": "{n} min",
+      "APPOINTMENT_KIND": "Kind",
+      "APPOINTMENT_LOCATION": "Place or link (optional)",
+      "APPOINTMENT_LOCATION_PLACEHOLDER": "E.g. Google Meet",
+      "APPOINTMENT_HINT": "Offers free times from their Google within the inbox working hours (or Mon–Fri 9–18). The appointment goes to the Agenda and their Google, and the conversation is assigned to them.",
+      "APPOINTMENT_NOTICE": "Reminds them of the appointment a day before (or 2 hours before if same day) and, if marked «no show», offers another time",
+      "APPOINTMENT_NOTICE_TEMPLATE": "If 24 h have passed since their last message, use this template",
+      "NO_TEMPLATE": "No template (only within 24 h)",
+      "ATTEND_HOURS": "After handing over, how soon must someone write to them?",
+      "ATTEND_HOURS_N": "Within {n} business hours",
+      "ATTEND_OFF": "No alert",
+      "ATTEND_HINT": "If nobody writes in time, it leaves a note @mentioning the seller; at three times the time, it alerts the administrators.",
+      "REQUIRED_CONTACT": "Details to collect before handing off",
+      "DISPLAY_NAME": "Name the customer sees (optional)",
+      "DISPLAY_NAME_PLACEHOLDER": "E.g. Ana",
+      "APPOINTMENT_NOTICE_NO_TEMPLATE": "Without a template, if 24 h have passed since their last message the reminder can't be sent (WhatsApp doesn't allow it): whoever handles the appointment is notified to write."
+    },
+    "TONES": {
+      "cercano": "Friendly",
+      "formal": "Formal",
+      "directo": "Direct",
+      "empresa": "The one in «How your company talks»"
+    },
+    "OBJECTIVES": {
+      "handoff": "Hand them to a team member",
+      "opportunity": "Create the opportunity for the team",
+      "collect": "Only collect their data and answers",
+      "appointment": "Book an appointment"
+    },
+    "TEST": {
+      "TITLE": "Test chat",
+      "RESET": "Start over",
+      "HINT": "Write as a prospect would. Nothing is saved or sent.",
+      "NO_MESSAGE": "(no reply)",
+      "ERROR": "Could not test.",
+      "TYPING": "Typing…",
+      "PLACEHOLDER": "Write as the customer…",
+      "SEND": "Send",
+      "TOOL": "⚙ {tool}",
+      "DECISION": "→ {decision}",
+      "NOT_DONE": "(not done)",
+      "FILES": "📎 Sent: {files}",
+      "VOICE": "🗣 Spoke as: {voice}"
+    },
+    "TOOLS": {
+      "buscar_respuesta_predefinida": "Searched canned responses",
+      "buscar_en_catalogo": "Searched the catalog",
+      "guardar_respuesta": "Saved",
+      "actualizar_contacto": "Updated the contact",
+      "prospecto_calificado": "Qualified",
+      "descartar": "Discarded",
+      "pasar_a_humano": "Hand off to a person",
+      "ver_horarios": "Checked free times",
+      "agendar_cita": "Booked",
+      "mover_cita": "Moved the appointment",
+      "cancelar_cita": "Cancelled the appointment",
+      "buscar_en_fuentes": "Searched its knowledge",
+      "canalizar": "Hands it to the team",
+      "crear_caso": "Opened the case",
+      "registrar_gestion": "Registered the request",
+      "estado_caso": "Checked their case",
+      "le_interesa": "Interested: hands over",
+      "no_le_interesa": "Not interested",
+      "confirmar_asistencia": "Confirmed or declined the event",
+      "enviar_archivo": "Sent a file"
+    },
+    "DECISIONS": {
+      "prospecto_calificado": "Qualified prospect",
+      "descartar": "Discarded: the conversation is resolved",
+      "pasar_a_humano": "Hand off to a person",
+      "qualified": "Qualified prospect",
+      "discarded": "Discarded: the conversation is resolved",
+      "handoff": "Hand off to a person",
+      "done": "Goal met",
+      "relay": "Hands over to the next one"
+    },
+    "SESSION": {
+      "NEXT_TOUCH": {
+        "nudge": "Next reminder: {when}",
+        "template": "Next template: {when}",
+        "CANCEL": "Stop reminders"
+      },
+      "FAILED": "Could not change it.",
+      "PAUSE": "Pause",
+      "RESUME": "Resume",
+      "STATUS": {
+        "active": "attending",
+        "paused": "paused",
+        "qualified": "qualified",
+        "handed_off": "handed to a person",
+        "discarded": "discarded",
+        "client": "was a customer: handed to their owner",
+        "not_client": "not a customer: handed to a person",
+        "relayed": "handed over"
+      }
+    },
+    "APPOINTMENT_KINDS": {
+      "llamada": "Call",
+      "videollamada": "Video call",
+      "visita": "Visit",
+      "oficina": "At our office"
+    },
+    "SECTIONS": {
+      "BUSINESS": "Your business",
+      "BUSINESS_HINT": "What the agent needs to know to explain and to rule out people outside your area or offer.",
+      "QUALIFY": "Qualifying questions",
+      "QUALIFY_HINT": "Turn on the ones you want and edit their wording. It asks them one at a time, conversationally; each answer is saved in the note and the opportunity.",
+      "TEMPERATURE_HINT": "When qualifying, it marks the lead as hot (needs it soon and has budget or decides), warm or cold, with a label, so your team can handle hot leads first.",
+      "OBJECTIONS": "Common objections",
+      "OBJECTIONS_HINT": "What people often say to hold off and how to answer. The agent uses the idea in its own words and never makes up discounts.",
+      "HANDOFF": "Handoff"
+    },
+    "BUSINESS": {
+      "WHAT": "What you sell",
+      "WHAT_PLACEHOLDER": "E.g. solar panels and installation for homes and businesses",
+      "USE_CATALOG": "What I sell and its prices are in my Catalog",
+      "WHO": "Who you sell to (ideal customer)",
+      "WHO_PLACEHOLDER": "E.g. homes with high power bills and mid-size businesses",
+      "COVERAGE": "Where you serve",
+      "COVERAGE_PLACEHOLDER": "E.g. Monterrey metro area",
+      "WHY": "Why choose you",
+      "WHY_PLACEHOLDER": "E.g. 10-year warranty, 5-day install, financing",
+      "PRACTICAL": "Starting prices, payment and lead times",
+      "PRACTICAL_PLACEHOLDER": "E.g. from $45,000; 12-month card plans; 2-week delivery"
+    },
+    "QUALIFY": {
+      "need": {
+        "LABEL": "What they need and why",
+        "ASK": "What do you need and what for?"
+      },
+      "when": {
+        "LABEL": "When",
+        "ASK": "When do you need it?"
+      },
+      "budget": {
+        "LABEL": "Budget",
+        "ASK": "Do you have a rough budget?"
+      },
+      "decides": {
+        "LABEL": "Decision maker",
+        "ASK": "Do you make the decision or someone else?"
+      },
+      "location": {
+        "LABEL": "Location",
+        "ASK": "What city or area are you in?"
+      },
+      "quantity": {
+        "LABEL": "Quantity or size",
+        "ASK": "What quantity or size do you need?"
+      },
+      "source": {
+        "LABEL": "How they found us",
+        "ASK": "How did you hear about us?"
+      }
+    },
+    "OBJECTIONS": {
+      "OBJECTION_PLACEHOLDER": "E.g. \"too expensive\"",
+      "ANSWER_PLACEHOLDER": "E.g. pays for itself in 4 years and financing is available",
+      "ADD": "+ Add objection",
+      "REMOVE": "Remove"
+    },
+    "CONTACT_FIELDS": {
+      "name": "Name",
+      "email": "Email",
+      "company": "Company",
+      "city": "City"
+    },
+    "TEMPERATURES": {
+      "caliente": "🔥 hot",
+      "tibio": "🌤 warm",
+      "frio": "❄️ cold"
+    },
+    "BACK": "Back",
+    "NEXT": "Next",
+    "STEPS": {
+      "NUMBERED": "{n}. {step}",
+      "follow": "Follow-up",
+      "agent": "The agent",
+      "business": "Your company",
+      "knows": "What it knows",
+      "questions": "What to ask",
+      "talk": "How it talks",
+      "qualify": "When qualified",
+      "quote": "Quotes",
+      "after": "When qualified",
+      "objections": "Objections",
+      "instructions": "Instructions",
+      "test": "Try it and save",
+      "files": "Images and files"
+    },
+    "STEP_HINTS": {
+      "agent": "Give it a name for your team, the name the customer sees and the inboxes where it answers whoever writes.",
+      "business": "Business details and how it talks: your company's or customized for this agent.",
+      "knows": "Where it looks up what it is asked. Canned responses are always on; tick the other sources this agent uses.",
+      "questions": "The questions it asks to qualify the lead, exactly as written and in this order (change it with ↑ ↓), one per message. Some examples come in: remove them, edit them or add your own.",
+      "talk": "Its voice (How your company talks), welcome, what it does when they ask something, it finds no answer or they ask for a person, and your free-text instructions (below).",
+      "qualify": "When it qualifies or discards, what it does when qualified (who gets it, appointments, quotes) and frequent objections.",
+      "after": "What it does when the lead qualifies, who gets it and which details it collects first.",
+      "objections": "What people say to stall the purchase and how to answer. It uses the idea in its own words and never invents discounts.",
+      "instructions": "Anything else it should know or do (optional). If it contradicts the above, this wins.",
+      "test": "Try it in the chat on the right as if you were a lead and save it if you like it.",
+      "files": "The images and files it sends and when. Test in the chat on the right and save.",
+      "follow": "If they stop answering: reminders, templates and the timeline of what will happen.",
+      "quote": "If they ask for a quote it builds it right away and that qualifies them (hot); first it asks for the required data."
+    },
+    "STEP_TEST": {
+      "READY": "«{name}» is ready. When saved it goes to the agents list labeled «Lead handling».",
+      "OFF": "It is off: it won't answer its inboxes until you turn it on (it can still be used in campaigns and automations)."
+    },
+    "KNOWS": {
+      "CANNED": "Canned responses (always)",
+      "NO_CANNED": "No canned responses yet: add them in Catalogs › Canned responses.",
+      "NO_OTHERS": "No other sources connected. You can add sheets, documents or a forum in Settings › Knowledge bases.",
+      "WHERE_HINT": "The agent gets what's in each source to search the right one. If a description is off, change «What's in here?» in Settings › Knowledge bases.",
+      "NO_DOUBTS": "You chose not to answer questions (step «How it talks»): it won't search any source.",
+      "PRICES": {
+        "QUESTION": "Where are your products and prices?",
+        "canned": "In my canned responses",
+        "none": "I don't give prices: an advisor does",
+        "SHEET_FAQ": "This sheet is in «FAQ» mode. For exact prices, switch it to «Data» mode in Settings › Knowledge bases."
+      }
+    },
+    "FOLLOW_UP": {
+      "TITLE": "If they stop answering",
+      "NUDGES_2": "Sends 2 reminders: 2 hours and 20 hours after their last message, picking up where it left off",
+      "NUDGES_1": "Sends 1 reminder after 2 hours",
+      "NUDGES_0": "Doesn't write again",
+      "TEMPLATES": "After 24 hours (WhatsApp only allows approved templates), sends these templates, one at a time:",
+      "EVERY": "One every",
+      "DAYS": "days",
+      "HINT": "If they answer, it starts over from their new message. If they were qualified, discarded or handed to a person, it doesn't write. If they answer after the last reminder, the agent picks it up."
+    },
+    "QUESTIONS_LIST": {
+      "SUGGEST": "Suggest questions for my business",
+      "SUGGEST_HINT": "Based on «Your business». Edit them as you like.",
+      "SUGGEST_ERROR": "Couldn't suggest them now; try again.",
+      "SMART": "It does not ask what the prospect already said (even in passing). For a question that only applies sometimes, add the condition in brackets at the end, e.g. «How many employees? [solo si es empresa]».",
+      "NUMBER": "{n}.",
+      "PLACEHOLDER": "Write the question as you want it asked",
+      "REMOVE": "Remove this question",
+      "ADD": "+ Add question",
+      "EMPTY": "Without questions it will only ask what they're looking for.",
+      "UP": "Move up",
+      "DOWN": "Move down"
+    },
+    "TALK": {
+      "WELCOME": "Welcome message (optional)",
+      "WELCOME_PLACEHOLDER": "E.g. Hi! I'm Ana from Autos Guadalajara, thanks for writing 🚗",
+      "WELCOME_HINT": "Goes as-is at the start of its first reply, in the same message: then it answers what they asked and continues with question 1. Better without a question at the end (your list asks); if it ends with a question and the customer only greeted, that first message skips question 1. Without it, it greets in its own words.",
+      "RECOMMENDED": "(recommended)",
+      "doubts": {
+        "QUESTION": "If the customer asks something instead of answering:",
+        "answer": "It answers with what it knows and goes back to the pending question",
+        "defer": "It doesn't answer questions: says an advisor will help and keeps asking (searches no source)"
+      },
+      "not_found": {
+        "QUESTION": "If it searches and can't find the answer:",
+        "advisor": "It says it doesn't have that info, an advisor will confirm it, and keeps asking",
+        "silent": "It says it doesn't have that info and keeps asking (no advisor promised)"
+      },
+      "off_topic": {
+        "QUESTION": "If they write something unrelated to your business:",
+        "redirect": "It politely brings them back and keeps asking",
+        "answer": "It answers in 1–2 lines (without searching your sources) and keeps asking"
+      },
+      "ONLY_IF_ANSWERS": "Only applies if it answers questions (first option above).",
+      "human": {
+        "QUESTION": "If they ask to talk to a person:",
+        "finish_first": "It asks to finish the remaining questions (2 at most) and hands off; if they insist or get upset, it hands off right away",
+        "now": "It hands off right away: it pauses and assigns to whoever you chose in «When qualified»"
+      }
+    },
+    "CUSTOMERS": {
+      "SUBTITLE": "Serves your customers: tells support, sales and admin apart, answers from your sources and opens a case or hands it to the right team.",
+      "NAME_PLACEHOLDER": "e.g. WhatsApp customers",
+      "PAIR_HINT": "An inbox can have this agent and a «Prospect care» one: existing customers come here, everyone else goes to prospects.",
+      "STEPS": {
+        "agent": "The agent",
+        "business": "Your company",
+        "areas": "What it handles",
+        "knows": "What it knows",
+        "talk": "How it talks",
+        "quote": "Quotes",
+        "follow": "Follow-up",
+        "instructions": "Instructions",
+        "test": "Test and save",
+        "files": "Images and files"
+      },
+      "STEP_HINTS": {
+        "agent": "Its name, tone and the inboxes where it serves your customers.",
+        "business": "Business details and how it talks: your company's or customized for this agent.",
+        "areas": "What it handles and who gets it. Each message is classified by what the customer wants, not by a single word: the examples teach it.",
+        "knows": "Where it looks up answers. It only answers with what it finds there.",
+        "talk": "Its voice (How your company talks), welcome, what it does if they ask for a person or are not a customer, and your free-text instructions (below).",
+        "instructions": "Anything else it should know or do (optional).",
+        "test": "Check every example lands in its area and chat with it as your customer.",
+        "files": "The images and files it sends and when. Test in the chat on the right and save.",
+        "follow": "If they stop answering, how soon your team must write and appointment reminders.",
+        "quote": "When the customer asks Sales for a quote and the products and quantities are known, it builds it with Catalog prices."
+      },
+      "AREAS": {
+        "support": {
+          "TITLE": "Support",
+          "ABOUT": "Failures, errors, something not working or how-to questions."
+        },
+        "sales": {
+          "TITLE": "Sales",
+          "ABOUT": "Plans, prices, quotes, demos, visits or buying."
+        },
+        "admin": {
+          "TITLE": "Billing & admin",
+          "ABOUT": "Invoices, payments, balance, tax ID or account data."
+        },
+        "other": {
+          "TITLE": "Other area",
+          "ABOUT": "Something else your company handles (name it)."
+        }
+      },
+      "AREAS_NONE": "Turn on at least one area.",
+      "EXAMPLES": {
+        "YES": "It is this area (examples)",
+        "NO": "It is not this area (examples)",
+        "PLACEHOLDER": "What a customer would write",
+        "ADD": "+ Add example",
+        "REMOVE": "Remove"
+      },
+      "OTHER": {
+        "NAME": "Area name",
+        "NAME_PLACEHOLDER": "e.g. Human resources",
+        "DESCRIPTION": "What it handles",
+        "DESCRIPTION_PLACEHOLDER": "e.g. job openings, applications, certificates"
+      },
+      "SUPPORT": {
+        "ACTION": "If it can't be solved with what it knows",
+        "ACTIONS": {
+          "case": "Opens a case and gives the ticket number",
+          "handoff": "Hands it to a support person",
+          "visit": "If it can't be solved here, books a technical visit"
+        },
+        "DETAILS": "Before opening the case, asks since when it happens or how many are affected (a single question)",
+        "VISIT_HINT": "Asks for the address and, if possible, a photo of the equipment; offers times from whoever you choose and books the visit (for on-site businesses: AC, installations…).",
+        "SEVERITY": "Priority is automatic: can't operate → urgent (opened right away); works with a failure → high; how-to → medium.",
+        "DEFAULT_SERVICE": "If the customer doesn't say which equipment, product or service, assume",
+        "DEFAULT_SERVICE_NONE": "Don't assume any",
+        "DEFAULT_SERVICE_HELP": "Just a frame of reference: the AI decides which module it is with your Affected services (Cases › Classification) and, if not said, uses this one. The case gets that service and its category.",
+        "EVIDENCE": "Answers only with what your sources say: with an exact solution it gives the steps as written, with links, and closes with RESUELTO / ESCALAR; if it is for another system it says so; if several apply it asks which; if nothing, it says so and hands it over. Each conversation gets labels showing how it was classified (#soporte-falla, #respondida, #canalizada…)."
+      },
+      "SALES": {
+        "quote": {
+          "LABEL": "Quote, buying or talking to a salesperson",
+          "opportunity": "Creates the opportunity for the salesperson",
+          "handoff": "Hands it to the salesperson"
+        },
+        "demo": {
+          "LABEL": "If they ask for a demo",
+          "handoff": "The salesperson arranges it",
+          "appointment": "Schedules it"
+        },
+        "visit": {
+          "LABEL": "If they ask for a salesperson visit",
+          "handoff": "The salesperson arranges it",
+          "appointment": "Schedules it"
+        },
+        "EVIDENCE": "It only states what your sources confirm; the rest it says it can't confirm. It never offers a demo instead of a visit."
+      },
+      "ADMIN": {
+        "CASE": "Opens an admin case (otherwise hands it to the person or team)",
+        "NO_SOURCES": "It doesn't search your sources or give balances: it asks what's missing in one question and hands it over."
+      },
+      "CASE_TYPE": "Case type",
+      "CASE_TYPE_FIRST": "The first of that class",
+      "AREA_USER": "Hands it to",
+      "AREA_TEAM": "Team",
+      "GENERAL": "The one in «How it talks»",
+      "KNOWS_HINT": "Sales and Support search here; Admin doesn't.",
+      "SUGGEST_EXAMPLES": "Build examples for my business",
+      "SUGGEST_EXAMPLES_HINT": "Replaces the yes/no examples of the enabled areas with ones using your business vocabulary («Your business»).",
+      "SUGGEST_DONE": "Done: review each area's examples.",
+      "SUGGEST_ERROR": "Couldn't build them now; try again.",
+      "WELCOME_PLACEHOLDER": "e.g. Hi! I'm Sofi, from customer care.",
+      "TALK": {
+        "human": {
+          "LABEL": "If they ask to talk to a person",
+          "understand_first": "First asks what they need, to hand them to the right team (recommended)",
+          "now": "Hands them over right away"
+        },
+        "not_client": {
+          "LABEL": "If the person writing is not a customer",
+          "serve": "Serves them anyway (recommended)",
+          "handoff": "Hands them to the person or team below without serving them"
+        },
+        "identify": {
+          "LABEL": "If we don't know their company",
+          "ask": "Asks once which company they write from and their email, and links them to their organization (recommended). From a company email it links them by domain on its own",
+          "no": "Doesn't ask"
+        },
+        "MULTI": "If they ask for several things, it handles them one by one; anything pending goes in the note when it hands over."
+      },
+      "GENERAL_USER": "What belongs to no area goes to",
+      "GENERAL_TEAM": "Team",
+      "MATRIX": {
+        "TITLE": "Test the matrix",
+        "RUN": "Run",
+        "HINT": "Runs every «yes» and «no» example of your areas and tells you if it landed where it should.",
+        "RESULT": "{ok} of {total} right",
+        "NOT": "not {area}",
+        "LINE": "expected {expected}, got {got}",
+        "NONE": "none",
+        "ERROR": "Could not test the matrix.",
+        "ROW": "{icon} «{example}» — {line}"
+      },
+      "TEST_HINT": "Write as your customer: «I can't log in», «I want a quote», «my invoice has the wrong tax ID»…",
+      "TEST_AREA": "Area: {area}",
+      "RULES": {
+        "LABEL": "Rules for this area (optional)",
+        "PLACEHOLDER": {
+          "support": "E.g. Before giving steps, confirm they have the latest version.",
+          "sales": "E.g. Never offer discounts; prices already include VAT.",
+          "admin": "E.g. Invoices can only be corrected within the same month.",
+          "other": "E.g. Ask for their order number before handing over."
+        },
+        "HOURS": "Area hours (optional): from",
+        "TO": "to",
+        "DAYS": {
+          "weekdays": "Monday to Friday",
+          "saturday": "Monday to Saturday",
+          "all": "every day"
+        },
+        "HOURS_HINT": "Outside those hours, it takes what they need and says the team will write as soon as it opens. Without hours, it always serves the same."
+      },
+      "AREA_ON": "Handle this area",
+      "AREA_OFF": "(off)",
+      "QUOTE_NEEDS_SALES": "It only quotes when the Sales area is on (in «What it handles»).",
+      "QUOTE_HINT": "When the customer asks Sales for a quote and the products and quantities are known, it builds it with Catalog prices."
+    },
+    "CAMPAIGN": {
+      "SUBTITLE": "Knocks on the door in your campaigns: the campaign sends the first message and it follows up when they reply. It sparks interest, answers the first questions and hands the interested ones over.",
+      "NAME_PLACEHOLDER": "e.g. Ana – campaigns",
+      "WHERE_USED": "It doesn't serve inboxes: you pick it on the campaigns screen, under «What?».",
+      "STEPS": {
+        "agent": "The agent",
+        "business": "Your company",
+        "knows": "What it knows",
+        "talk": "How it talks and the handover",
+        "quote": "Quotes",
+        "follow": "Follow-up",
+        "instructions": "Instructions",
+        "test": "Test and save",
+        "files": "General files"
+      },
+      "STEP_HINTS": {
+        "agent": "Its name and tone.",
+        "knows": "The basics of your business and where it looks up answers.",
+        "talk": "Its voice (How your company talks), the default relay, general objections, quotes and your free-text instructions (below).",
+        "instructions": "Anything else it should know or do (optional).",
+        "test": "The chat starts with the campaign message: reply as your contact would.",
+        "files": "Ones that work for any campaign: catalog, company deck, price list. Images for one offer (the promo photo, the event flyer) go in the campaign, «Offer» step.",
+        "follow": "If they reply and go quiet mid-conversation: reminders and timeline; handoff time and appointment reminder.",
+        "quote": "If they are interested in the offer and ask for a quote, it builds it with Catalog prices.",
+        "business": "Business details and how it talks: your company's or customized for this agent."
+      },
+      "PURPOSE": "What is the campaign for?",
+      "PURPOSES": {
+        "offer": {
+          "TITLE": "Offer",
+          "ABOUT": "A product, service or promotion. If they're interested, it hands them over."
+        },
+        "invite": {
+          "TITLE": "Invite",
+          "ABOUT": "To an event. Confirms whether they'll come and updates the event list."
+        },
+        "reactivate": {
+          "TITLE": "Win back",
+          "ABOUT": "Customers who haven't bought in a while. If interested, it hands them over."
+        },
+        "renew": {
+          "TITLE": "Remind or renew",
+          "ABOUT": "Something expiring (license, policy, service). If interested, it hands them over."
+        },
+        "survey": {
+          "TITLE": "Survey",
+          "ABOUT": "Up to 3 satisfaction questions. A low score opens a case."
+        }
+      },
+      "EVENT": "The event",
+      "EVENT_CHOOSE": "Choose the event",
+      "NO_EVENTS": "No upcoming events: create one in Events.",
+      "INVITE_WHAT": "What to tell them about the event (optional)",
+      "OFFER_WHAT": "What you offer",
+      "OFFER_DETAILS": "Price, validity and conditions (optional)",
+      "OFFER_DETAILS_PLACEHOLDER": "e.g. 20% off if you sign up before November 30",
+      "PLACEHOLDERS": {
+        "offer": "e.g. Training for your sales team",
+        "invite": "e.g. Live demo and coffee break",
+        "reactivate": "e.g. We miss you: 15% off your next purchase",
+        "renew": "e.g. Your license expires this month; renew at the same price",
+        "survey": ""
+      },
+      "GOAL": "If they're interested",
+      "GOALS": {
+        "relay": "Hands them over (agent or person)",
+        "appointment": "Books an appointment"
+      },
+      "SURVEY": {
+        "QUESTIONS": "The questions (up to 3, asked as written and in order)",
+        "PLACEHOLDER_1": "From 0 to 10, how likely are you to recommend us?",
+        "PLACEHOLDER_2": "What do you like most?",
+        "PLACEHOLDER_3": "What can we improve?",
+        "ADD": "+ Add question",
+        "LOW_SCORE": "Low score: below"
+      },
+      "MISSING": {
+        "offer": "Say what you offer.",
+        "invite": "Choose the event.",
+        "survey": "Add at least one question."
+      },
+      "RELAY": "Default relay: the interested contact goes to (each campaign can change it)",
+      "RELAYS": {
+        "agent": "The inbox agent: «Prospect care» (or «Customer care» if already a customer). If none, the person or team below.",
+        "person": "The person or team below (if the campaign has a handover board, it goes there with its deadline)"
+      },
+      "PERSON": "Person",
+      "TEAM": "Team",
+      "RULES": "Always: one question per message; if they say no, it says goodbye without insisting; «stop messaging me» opts them out; it never makes up prices or dates.",
+      "OBJECTIONS": "General objections (for every campaign; offer-specific ones go in the campaign)",
+      "OBJECTION_PLACEHOLDER": "What they say («too expensive»)",
+      "ANSWER_PLACEHOLDER": "How to answer",
+      "ADD_OBJECTION": "+ Add objection",
+      "REMOVE": "Remove",
+      "OPENER_LABEL": "Campaign message",
+      "OPENERS": {
+        "offer": "Hi! I'm writing about this: {what}. Want to hear more?",
+        "invite": "Hi! You're invited to {event}. Shall we save you a spot?",
+        "reactivate": "Hi! It's been a while: {what}. Interested?",
+        "renew": "Hi! A reminder: {what}. Shall I help you renew?",
+        "survey": "Hi! Could you spare a minute for a short survey?",
+        "SOMETHING": "our offer",
+        "EVENT": "our event"
+      },
+      "IN_CAMPAIGNS": "In {n} campaigns",
+      "NO_CAMPAIGNS": "Not in any campaign yet",
+      "QUOTE_NOT_FOR_PURPOSE": "Invite and Survey campaigns do not quote.",
+      "QUOTE_HINT": "If they are interested in the offer and ask for a quote, it builds it with Catalog prices.",
+      "TEST_IN_CAMPAIGN": "«{name}» is ready. To test it, create or open a campaign and in «Review and launch» use «Simulate the campaign», «Chat with the seller» or «Real test»: that is where it is tested with the real offer.",
+      "APPOINTMENT_HINT": "When a campaign's goal is «Book an appointment», the seller books on these people's calendars.",
+      "EMAIL_SIGNATURE": "Email signature",
+      "EMAIL_SIGNATURE_PLACEHOLDER": "Ana López · Sales\nGrúas del Norte · 81 1234 5678"
+    },
+    "FILES": {
+      "HINT": "Upload images or files the agent can send (product photos, flyer, catalog, map…). Give each one a description: the agent can't see the image, so that's how it knows when it helps and doesn't make up what it shows.",
+      "FIRST_MESSAGE": "The image in the campaign's first message goes in the WhatsApp template (Settings › WhatsApp templates, image header). Here go the ones it sends afterwards.",
+      "ABOUT_PLACEHOLDER": "What it is (e.g. photo of the Basic package with its price)",
+      "ABOUT_MISSING": "Without a description the agent doesn't know when to send it.",
+      "WHEN": {
+        "interest": "When they show interest",
+        "ask": "When they ask or it helps",
+        "confirm": "When they confirm the event",
+        "welcome": "With the welcome",
+        "booking": "When the appointment is booked",
+        "tickets": "When a case is opened",
+        "touch": "On touch {n}"
+      },
+      "ADD": "Upload images or files",
+      "UPLOADING": "Uploading…",
+      "PENDING": "Uploads when you save the agent",
+      "REMOVE": "Remove",
+      "LIMITS": "At most 2 per message and never repeats one unless asked. WhatsApp accepts JPG or PNG images up to 5 MB, video up to 16 MB and PDF up to 100 MB. On a touch it only goes out if the 24 h window is open.",
+      "IMAGE_TYPE": "«{name}»: the image must be JPG or PNG.",
+      "TOO_BIG": "«{name}» is bigger than WhatsApp accepts.",
+      "UPLOAD_ERROR": "Could not upload the file."
+    },
+    "AGENT_VOICE": {
+      "TITLE": "How this agent talks",
+      "MODE_COMPANY": "Use the company's (How your company talks)",
+      "MODE_OWN": "Customize for this agent",
+      "HINT_COMPANY": "Uses «How your company talks»: if you change it there, this agent changes too.",
+      "HINT_OWN": "Only for this agent: starts from the company's and you change what you want. It no longer follows company changes. Going back to «Use the company's» removes the customization.",
+      "EMPTY": "Your company hasn't filled it in yet: do it in «How your company talks» or customize it here.",
+      "EDIT_COMPANY": "Change it in «How your company talks» ↗"
+    },
+    "SUBTABS": {
+      "WHEN": "When it qualifies",
+      "AFTER": "What it does",
+      "OBJECTIONS": "Objections",
+      "REMINDERS": "If they stop answering",
+      "HANDOFF": "Team time and appointments"
+    },
+    "AGENT_BUSINESS": {
+      "TITLE": "Business details",
+      "MODE_COMPANY": "Use the company's (How your company talks)",
+      "MODE_OWN": "Customize for this agent",
+      "HINT_COMPANY": "Uses what you sell, to whom, where, why choose you and prices from «How your company talks»: if you change them there, this agent changes too.",
+      "HINT_OWN": "Only for this agent: starts from the company's and you change what you want (e.g. another product line). It no longer follows company changes.",
+      "EMPTY": "Your company hasn't filled them in yet: do it in «How your company talks» or customize them here.",
+      "EDIT_COMPANY": "Change them in «How your company talks» ↗"
+    },
+    "COLLECTIONS": {
+      "EDIT_TITLE": "Collections: {name}",
+      "SUBTITLE": "Writes to customers with a balance (from your receivables in Sales › Collections), gives the summary and payment details, records payment promises and proofs, and hands off what needs a person.",
+      "STEPS": {
+        "agent": "The agent",
+        "business": "Your company",
+        "channel": "Channel and templates",
+        "rules": "When it collects",
+        "pay": "Payment details",
+        "talk": "How it talks",
+        "follow": "Follow-up",
+        "test": "Test"
+      },
+      "HINTS": {
+        "agent": "Its name and who gets customers that need a person (if the receivables don't name a collector).",
+        "business": "Business details and voice: your company's or customized.",
+        "channel": "Where it collects: WhatsApp (one approved template per stage) or email.",
+        "rules": "At what time, how often and how many customers per day.",
+        "pay": "What it gives the customer when they ask how to pay, as is.",
+        "talk": "The tone and your instructions.",
+        "follow": "If they reply and go quiet mid-conversation: the reminders.",
+        "test": "Test with a customer from your receivables (the first with a balance, as an example)."
+      },
+      "NAME": "Agent name",
+      "DISPLAY_NAME": "Name the customer sees (optional)",
+      "DISPLAY_NAME_PLACEHOLDER": "E.g. Acme Collections",
+      "COLLECTOR": "Default collector",
+      "TEAM": "Team",
+      "NOBODY": "— None —",
+      "COLLECTOR_HINT": "If the receivables have a Collector column, each customer goes to theirs.",
+      "CHANNEL": "Channel",
+      "CHANNEL_PICK": "Pick a WhatsApp or email inbox",
+      "TEMPLATES_HINT": "WhatsApp only allows writing first with an approved template. Use balance variables: {{cobranza_saldo}}, {{cobranza_vencido}}, {{cobranza_facturas}}, {{cobranza_dias}}, {{cobranza_vence}} and {{nombre}}.",
+      "STAGES": {
+        "preventive": "Before due",
+        "due": "Overdue 1–15 days",
+        "overdue_30": "Overdue 16–30 days",
+        "overdue_60": "Overdue 31–60 days",
+        "overdue_plus": "Overdue 60+ days"
+      },
+      "NO_TEMPLATE": "No template (not contacted at that stage)",
+      "NO_TEMPLATE_HINT": "A stage without a template isn't contacted on WhatsApp. Once the customer replies, the agent writes freely with the exact summary.",
+      "SIGNATURE": "Email signature",
+      "OUTREACH_ON": "Collect automatically",
+      "OUTREACH_HINT": "Off, it only answers whoever writes. On, it writes to whoever is due by these rules.",
+      "SEND_AT": "Sends at",
+      "HOUR": "{h}:00",
+      "WEEKDAYS": "weekdays only",
+      "REMIND_BEFORE": "Reminds before due",
+      "DAYS_BEFORE": "days before (0 = off)",
+      "EVERY": "For those still owing, writes again every",
+      "DAYS": "days",
+      "MAX_PER_DAY": "Max customers per day",
+      "MIN_BALANCE": "Doesn't collect balances under",
+      "RULES_HINT": "It won't write to customers with an active payment promise, a proof pending review, disputed invoices, or someone already handling them.",
+      "PAYMENT_INFO": "Payment details",
+      "PAYMENT_PLACEHOLDER": "Bank: …\nAccount: …\nReference: your customer code",
+      "PAYMENT_HINT": "Without details, when asked how to pay it hands off to the collector.",
+      "TONE": "Tone",
+      "TONES": {
+        "cercano": "Friendly (informal)",
+        "formal": "Formal and respectful"
+      },
+      "INSTRUCTIONS": "Instructions (optional)",
+      "INSTRUCTIONS_PLACEHOLDER": "E.g. Cash payments are made at the branch. Don't offer payment plans: hand off.",
+      "TEST_HINT": "Write as the customer: «how much do I owe?», «I'll pay Friday», «I already paid», «that invoice isn't mine».",
+      "CHAT_HINT": "You are the customer (one from your receivables, as an example). Nothing is saved.",
+      "CANCEL": "Cancel",
+      "SAVE": "Save",
+      "SAVE_ERROR": "It couldn't be saved.",
+      "IN_LIST": "{n} customers with balance · {contacted} contacted in 7 days",
+      "OUTREACH_OFF": "auto-collect: off"
     }
   }
 }

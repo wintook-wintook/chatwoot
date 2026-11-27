@@ -366,7 +366,7 @@ class Api::V1::Accounts::ContactTrackingsController < Api::V1::Accounts::BaseCon
 
       # Campos existentes
       ai_context: tracking.ai_context,
-      complementary_prompt: tracking.complementary_prompt,  # ⭐ NUEVO - Instrucciones para preguntas
+      complementary_prompt: tracking.raw_complementary_prompt, # sin sustituir los %DATOS_FIJOS% (F2)
       quote_id: tracking.quote_id,
       status: tracking.status,
       paused_at: tracking.paused_at,  # ⭐ NUEVO - Fecha/hora de pausa

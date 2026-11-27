@@ -11,6 +11,16 @@ class Public::QuotesController < PublicController
     @quote.update_column(:viewed_at, Time.current) if @quote.sent? && @quote.viewed_at.nil? # rubocop:disable Rails/SkipsModelValidations
   end
 
+  # Cotizaciones › Formatos: el PDF con su formato (si el servidor no puede, regresa a la página).
+  def pdf
+    pdf = Quotes::Pdf.new(@quote)
+    send_data pdf.render, filename: pdf.filename, type: 'application/pdf', disposition: 'inline'
+  rescue Quotes::Pdf::Error => e
+    Rails.logger.warn("[Public::Quotes#pdf] #{@quote.id}: #{e.message}")
+    flash[:error] = I18n.t('quote_formats.pdf_unavailable')
+    redirect_to public_quote_path(@quote.public_token)
+  end
+
   def accept
     return redirect_to(public_quote_path(@quote.public_token)) unless @quote.open?
 
@@ -36,7 +46,7 @@ class Public::QuotesController < PublicController
   private
 
   def set_quote
-    @quote = Quote.includes(:account, :contact, :assignee, :items).find_by!(public_token: params[:token])
+    @quote = Quote.includes(:account, :contact, :assignee, :quote_format, items: :catalog_item).find_by!(public_token: params[:token])
     @account = @quote.account
   end
 

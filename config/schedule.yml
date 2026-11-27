@@ -284,3 +284,54 @@ client_tasks_reminder:
   class: "ClientTasks::ReminderJob"
   queue: scheduled_jobs
   description: "Remind customers (and case owners) of client tasks due soon or overdue"
+
+# Probador de agentes: cierra las pláticas de prueba abiertas y borra las de más de 7 días
+# (salvo las que cita la bitácora). Solo en las bandejas marcadas del probador.
+agent_tester_cleanup_job:
+  cron: '30 3 * * *'
+  class: 'AgentTester::CleanupJob'
+  queue: scheduled_jobs
+
+# Probador de agentes: las corridas que llevan 30 min sin avanzar se marcan fallidas con su motivo.
+agent_tester_stale_runs_job:
+  cron: '*/10 * * * *'
+  class: 'AgentTester::StaleRunsJob'
+  queue: scheduled_jobs
+
+# Campaña con Vendedor IA: borra los contactos de listas frías de correo que nunca contestaron (pasados sus días)
+prospect_lists_cleanup_job:
+  cron: '45 3 * * *'
+  class: 'ProspectLists::CleanupJob'
+  queue: scheduled_jobs
+
+# Agenda: recordatorio a los participantes de las tareas agendadas que empiezan en la próxima media hora
+meeting_participants_reminder_job:
+  cron: '*/5 * * * *'
+  class: 'Cases::MeetingParticipantsReminderJob'
+  queue: scheduled_jobs
+
+# Tareas que se repiten: crea las que tocan hoy y cuenta las no hechas
+task_recurrences_run_job:
+  cron: '7 * * * *'
+  class: 'TaskRecurrences::RunJob'
+  queue: scheduled_jobs
+
+# Cobranza: cada hora, los agentes de cobranza cuya hora de envío es esta le cobran a quien le toca
+receivables_outreach_job:
+  cron: '5 * * * *'
+  class: 'Receivables::OutreachJob'
+  queue: scheduled_jobs
+
+# Campaña con IA · Invitar — recordatorios a los que confirmaron (un día antes y una hora antes del evento).
+tracking_campaigns_event_reminder_job:
+  cron: "*/10 * * * *"
+  class: "TrackingCampaigns::EventReminderJob"
+  queue: scheduled_jobs
+  description: "Remind confirmed contacts one day and one hour before the campaign event"
+
+# Campaña con IA · Recordar — cada mañana mete a los contratos que ya entran en sus días antes de vencer.
+tracking_campaigns_renew_enroll_job:
+  cron: "0 13 * * *"
+  class: "TrackingCampaigns::RenewEnrollJob"
+  queue: scheduled_jobs
+  description: "Enroll contracts due soon into running renew campaigns (touches by due date)"

@@ -101,6 +101,14 @@ export const routes = [
     component: () =>
       import('../../../views/gestorTickets/quotes/QuotesList.vue'),
   },
+  // Cotizaciones › Formatos (antes de :id para que no lo tome como cotización).
+  {
+    path: frontendURL('accounts/:accountId/tickets/quotes/formats'),
+    name: 'gestorTickets_quote_formats',
+    meta: AGENT,
+    component: () =>
+      import('../../../views/gestorTickets/quotes/QuoteFormats.vue'),
+  },
   {
     path: frontendURL('accounts/:accountId/tickets/quotes/new'),
     name: 'gestorTickets_quote_new',
@@ -204,6 +212,14 @@ export const routes = [
     component: () => import('../../../views/gestorTickets/TaskReports.vue'),
   },
   {
+    // Tareas que se repiten: tareas fijas que se vuelven a crear cada cierto tiempo.
+    path: frontendURL('accounts/:accountId/tickets/recurring-tasks'),
+    name: 'gestorTickets_recurring_tasks',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () =>
+      import('../../../views/gestorTickets/recurring/RecurringTasks.vue'),
+  },
+  {
     path: frontendURL('accounts/:accountId/tickets/task-outcomes'),
     name: 'gestorTickets_task_outcomes',
     meta: { permissions: ['administrator'] },
@@ -225,6 +241,13 @@ export const routes = [
     name: 'my_summary',
     meta: AGENT,
     component: () => import('../../../views/gestorTickets/home/MySummary.vue'),
+  },
+  // Academia Kontrolya — «Mi capacitación»: cada quien su avance (los módulos van por su rol).
+  {
+    path: frontendURL('accounts/:accountId/academy'),
+    name: 'academy',
+    meta: AGENT,
+    component: () => import('../../../views/academy/AcademyIndex.vue'),
   },
   // «Resumen del negocio»: la ruta es de agente; el backend decide quién lo ve
   // (administradores y autorizados) y el menú lo oculta a los demás.

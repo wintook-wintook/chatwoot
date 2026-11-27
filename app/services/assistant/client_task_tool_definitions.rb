@@ -14,7 +14,7 @@ module Assistant::ClientTaskToolDefinitions
                                 'aprobar, estudiar…) y avisarle con el enlace.',
          { case_id: D.int('Id del caso (case_id de client_tasks o de search)'), folio: D.str('O el folio del caso, p. ej. IMA-00002'),
            title: D.str('Qué tiene que hacer el cliente'), description: D.str('Instrucciones'),
-           due_at: D.str('Fecha límite YYYY-MM-DDTHH:MM, si la dijo'),
+           due_at: D.str('Día límite YYYY-MM-DD, si lo dijo (vence al final del día)'),
            requires_file: { type: 'boolean', description: 'Si debe subir un archivo (documento, evidencia)' },
            notify: { type: 'boolean', description: 'Avisarle con el enlace (true salvo que diga que no)' } },
          %w[title])

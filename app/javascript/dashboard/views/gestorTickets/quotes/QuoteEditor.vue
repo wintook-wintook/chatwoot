@@ -5,11 +5,16 @@
   enviar al cliente (por su conversación), copiar o abrir el enlace, marcar
   ganada / perdida / pospuesta / cancelada, reabrir, nueva versión.
   Nueva: /tickets/quotes/new?contact_id=&opportunity_id=&origin_ticket_id=
+  Impuestos de Productos y servicios › Parámetros: «Imp.» se elige de la lista; las retenciones de cada partida
+  (Ret. IVA, Ret. ISR…) se restan del total solo con «Aplicar retenciones» (se marca sola si el cliente es
+  persona moral: RFC de 12).
 -->
 <script>
 import { mapGetters } from 'vuex';
 import { useAlert } from 'dashboard/composables';
 import QuotesAPI from 'dashboard/api/quotes';
+import CatalogItemsAPI from 'dashboard/api/catalogItems';
+import QuoteFormatsAPI from 'dashboard/api/quoteFormats';
 import ContactAPI from 'dashboard/api/contacts';
 import CaseTicketsAPI from 'dashboard/api/caseTickets';
 import Spinner from 'shared/components/Spinner.vue';
@@ -46,6 +51,8 @@ export default {
       outcomeStatus: null,
       showMore: false,
       prompt: null,
+      taxes: [], // Productos y servicios › Parámetros: trasladados y retenciones
+      formats: [], // Cotizaciones › Formatos
     };
   },
   computed: {
@@ -107,6 +114,7 @@ export default {
       let gross = 0;
       let net = 0;
       let tax = 0;
+      let withheld = 0;
       this.items.forEach(item => {
         const lineGross =
           (Number(item.quantity) || 0) * (Number(item.unit_price) || 0);
@@ -116,12 +124,18 @@ export default {
         gross += lineGross;
         net += lineNet;
         tax += round((lineNet * (Number(item.tax_percent) || 0)) / 100);
+        if (this.form.apply_withholdings) {
+          (item.withholdings || []).forEach(row => {
+            withheld += round((lineNet * Number(row.percent)) / 100);
+          });
+        }
       });
       return {
         subtotal: round(gross),
         discount: round(gross - net),
         tax: round(tax),
-        total: round(net + tax),
+        withheld: round(withheld),
+        total: round(net + tax - withheld),
       };
     },
     statusActions() {
@@ -136,13 +150,40 @@ export default {
     defaultTax() {
       return (this.caseSettings && this.caseSettings.default_tax_percent) || 0;
     },
+    transferTaxes() {
+      return this.taxes.filter(tax => tax.kind !== 'withholding');
+    },
+    withholdingRates() {
+      return this.taxes.filter(tax => tax.kind === 'withholding' && tax.active);
+    },
+    // El formato elegido o el de por omisión (sus condiciones salen si la cotización no trae).
+    currentFormat() {
+      return (
+        this.formats.find(f => f.id === Number(this.form.quote_format_id)) ||
+        this.formats.find(f => f.is_default) ||
+        null
+      );
+    },
+    termsPlaceholder() {
+      const text =
+        this.currentFormat &&
+        this.currentFormat.settings.terms &&
+        this.currentFormat.settings.terms.text;
+      return text || this.$t('QUOTES.EDITOR.TERMS_PLACEHOLDER');
+    },
+    defaultRate() {
+      return this.transferTaxes.find(tax => tax.is_default) || null;
+    },
   },
   watch: {
     quoteId: 'load',
+    'form.organization': 'fetchWithholdingsDefault',
   },
   mounted() {
     if (!this.agents.length) this.$store.dispatch('agents/get');
     this.$store.dispatch('caseTickets/fetchSettings');
+    this.fetchTaxes();
+    this.fetchFormats();
     this.load();
   },
   methods: {
@@ -157,7 +198,61 @@ export default {
         notes: '',
         opportunity_id: '',
         origin_ticket_id: '',
+        apply_withholdings: false,
+        quote_format_id: '',
       };
+    },
+    async fetchFormats() {
+      try {
+        const { data } = await QuoteFormatsAPI.list();
+        this.formats = data.formats || [];
+      } catch {
+        this.formats = [];
+      }
+    },
+    async fetchTaxes() {
+      try {
+        const { data } = await CatalogItemsAPI.parameters();
+        this.taxes = data.taxes || [];
+      } catch {
+        this.taxes = []; // sin lista: «Imp. %» se escribe a mano
+      }
+    },
+    // Retenciones: se marca sola si el cliente (o su organización) es persona moral.
+    async fetchWithholdingsDefault() {
+      if (!this.isNew || !this.form.contact) return;
+      try {
+        const { data } = await QuotesAPI.withholdingsDefault({
+          contact_id: this.form.contact.id,
+          organization_id: this.form.organization && this.form.organization.id,
+        });
+        this.form.apply_withholdings = !!data.apply;
+      } catch {
+        // se queda como está
+      }
+    },
+    // La opción del select «Imp.»: su impuesto de la lista o «custom» (un % escrito antes de las listas).
+    taxKey(item) {
+      const rate = this.transferTaxes.find(tax => tax.id === item.tax_rate_id);
+      return rate ? rate.id : 'custom';
+    },
+    setTax(item, value) {
+      const rate = this.transferTaxes.find(tax => tax.id === Number(value));
+      if (!rate) return;
+      this.$set(item, 'tax_rate_id', rate.id);
+      item.tax_percent = rate.exempt ? 0 : rate.percent;
+    },
+    addWithholding(item, value) {
+      const rate = this.withholdingRates.find(tax => tax.id === Number(value));
+      const list = item.withholdings || [];
+      if (!rate || list.some(row => row.id === rate.id)) return;
+      this.$set(item, 'withholdings', [
+        ...list,
+        { id: rate.id, name: rate.name, percent: rate.percent },
+      ]);
+    },
+    removeWithholding(item, index) {
+      item.withholdings.splice(index, 1);
     },
     money(value) {
       if (value === null || value === undefined) return '—';
@@ -193,8 +288,13 @@ export default {
         notes: quote.notes || '',
         opportunity_id: quote.opportunity ? quote.opportunity.id : '',
         origin_ticket_id: quote.origin_ticket ? quote.origin_ticket.id : '',
+        apply_withholdings: !!quote.apply_withholdings,
+        quote_format_id: quote.quote_format_id || '',
       };
-      this.items = (quote.items || []).map(item => ({ ...item }));
+      this.items = (quote.items || []).map(item => ({
+        ...item,
+        withholdings: item.withholdings || [],
+      }));
       if (quote.contact && !this.opportunityLocked)
         this.fetchOpenOpportunities(quote.contact.id);
     },
@@ -238,6 +338,7 @@ export default {
       this.form.contact = { id: contact.id, name: contact.name };
       this.form.opportunity_id = this.opportunityRequired ? 'new' : '';
       this.fetchOpenOpportunities(contact.id);
+      this.$nextTick(this.fetchWithholdingsDefault);
     },
     clearContact() {
       this.form.contact = null;
@@ -258,9 +359,13 @@ export default {
         kind: item.kind,
         unit: item.unit,
         quantity: 1,
-        unit_price: item.price,
+        // Productos y servicios › Parámetros: su impuesto y, si el precio ya lo incluye, sin él.
+        unit_price: item.quote_price ?? item.price,
         discount_percent: 0,
-        tax_percent: this.defaultTax,
+        tax_percent: item.tax_percent ?? this.defaultTax,
+        tax_rate_id:
+          item.tax_rate_id || (this.defaultRate && this.defaultRate.id),
+        withholdings: item.withholdings || [],
       });
       if (!this.form.currency) this.form.currency = item.currency;
     },
@@ -273,7 +378,11 @@ export default {
         quantity: 1,
         unit_price: 0,
         discount_percent: 0,
-        tax_percent: this.defaultTax,
+        tax_percent: this.defaultRate
+          ? this.defaultRate.percent
+          : this.defaultTax,
+        tax_rate_id: this.defaultRate && this.defaultRate.id,
+        withholdings: [],
       });
     },
     lineTotal(item) {
@@ -312,6 +421,8 @@ export default {
           unit_price: item.unit_price,
           discount_percent: item.discount_percent,
           tax_percent: item.tax_percent,
+          tax_rate_id: item.tax_rate_id || null,
+          withholdings: item.withholdings || [],
         })),
       };
     },
@@ -377,6 +488,10 @@ export default {
     },
     reopen() {
       return this.run(() => QuotesAPI.transition(this.quote.id, 'reopen'));
+    },
+    // Pospuesta → Enviada (el servidor lo permite; también retoma la oportunidad).
+    resume() {
+      return this.run(() => QuotesAPI.transition(this.quote.id, 'sent'));
     },
     async copyLink() {
       await copyTextToClipboard(this.quote.public_url);
@@ -500,6 +615,15 @@ export default {
             @click="outcomeStatus = status"
           >
             {{ $t(`QUOTES.ACTIONS.${status.toUpperCase()}`) }}
+          </woot-button>
+          <woot-button
+            v-if="quote.status === 'postponed'"
+            size="small"
+            variant="smooth"
+            color-scheme="secondary"
+            @click="resume"
+          >
+            {{ $t('QUOTES.ACTIONS.RESUME') }}
           </woot-button>
           <woot-button
             v-if="quote.status === 'lost' || quote.status === 'cancelled'"
@@ -645,6 +769,26 @@ export default {
             class="!mb-0"
           />
         </label>
+        <!-- Cotizaciones › Formatos: cómo se ve (liga del cliente y PDF) -->
+        <label v-if="formats.length > 1 || form.quote_format_id">
+          {{ $t('QUOTES.EDITOR.FORMAT') }}
+          <select
+            v-model="form.quote_format_id"
+            class="!mb-0"
+            :disabled="!editable"
+          >
+            <option value="">
+              {{
+                $t('QUOTES.EDITOR.FORMAT_DEFAULT', {
+                  name: (formats.find(f => f.is_default) || {}).name || '—',
+                })
+              }}
+            </option>
+            <option v-for="f in formats" :key="f.id" :value="f.id">
+              {{ f.name }}
+            </option>
+          </select>
+        </label>
         <label>
           {{ $t('QUOTES.EDITOR.CURRENCY') }}
           <input
@@ -731,6 +875,20 @@ export default {
         >
           {{ $t('QUOTES.EDITOR.ITEMS') }}
         </h2>
+        <label class="flex items-start gap-2 mb-3 text-sm">
+          <input
+            v-model="form.apply_withholdings"
+            type="checkbox"
+            class="m-0 mt-1"
+            :disabled="!editable"
+          />
+          <span>
+            {{ $t('QUOTES.EDITOR.APPLY_WITHHOLDINGS') }}
+            <span class="block text-xs text-slate-500 dark:text-slate-400">
+              {{ $t('QUOTES.EDITOR.APPLY_WITHHOLDINGS_HINT') }}
+            </span>
+          </span>
+        </label>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
@@ -750,7 +908,7 @@ export default {
                 <th class="w-20 px-1 py-1 font-medium">
                   {{ $t('QUOTES.EDITOR.DISCOUNT') }}
                 </th>
-                <th class="w-20 px-1 py-1 font-medium">
+                <th class="px-1 py-1 font-medium w-36">
                   {{ $t('QUOTES.EDITOR.TAX') }}
                 </th>
                 <th class="py-1 pl-1 font-medium text-right w-28">
@@ -760,81 +918,163 @@ export default {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(item, index) in items" :key="index" class="align-top">
-                <td class="py-1 pr-2">
-                  <input
-                    v-model="item.description"
-                    type="text"
-                    class="!mb-0"
-                    :disabled="!editable"
-                  />
-                </td>
-                <td class="px-1 py-1">
-                  <input
-                    v-model="item.quantity"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    class="!mb-0"
-                    :disabled="!editable"
-                  />
-                </td>
-                <td class="px-1 py-1">
-                  <input
-                    v-model="item.unit"
-                    type="text"
-                    class="!mb-0"
-                    :disabled="!editable"
-                  />
-                </td>
-                <td class="px-1 py-1">
-                  <input
-                    v-if="!amountsHidden"
-                    v-model="item.unit_price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    class="!mb-0"
-                    :disabled="!editable"
-                  />
-                  <span v-else class="leading-10">—</span>
-                </td>
-                <td class="px-1 py-1">
-                  <input
-                    v-model="item.discount_percent"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    class="!mb-0"
-                    :disabled="!editable"
-                  />
-                </td>
-                <td class="px-1 py-1">
-                  <input
-                    v-model="item.tax_percent"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    class="!mb-0"
-                    :disabled="!editable"
-                  />
-                </td>
-                <td class="py-1 pl-1 leading-10 text-right whitespace-nowrap">
-                  {{ amountsHidden ? '—' : money(lineTotal(item)) }}
-                </td>
-                <td class="py-1 text-center">
-                  <woot-button
-                    v-if="editable"
-                    size="tiny"
-                    variant="clear"
-                    color-scheme="secondary"
-                    icon="dismiss"
-                    @click="removeItem(index)"
-                  />
-                </td>
-              </tr>
+              <template v-for="(item, index) in items">
+                <tr :key="`i${index}`" class="align-top">
+                  <td class="py-1 pr-2">
+                    <input
+                      v-model="item.description"
+                      type="text"
+                      class="!mb-0"
+                      :disabled="!editable"
+                    />
+                  </td>
+                  <td class="px-1 py-1">
+                    <input
+                      v-model="item.quantity"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      class="!mb-0"
+                      :disabled="!editable"
+                    />
+                  </td>
+                  <td class="px-1 py-1">
+                    <input
+                      v-model="item.unit"
+                      type="text"
+                      class="!mb-0"
+                      :disabled="!editable"
+                    />
+                  </td>
+                  <td class="px-1 py-1">
+                    <input
+                      v-if="!amountsHidden"
+                      v-model="item.unit_price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      class="!mb-0"
+                      :disabled="!editable"
+                    />
+                    <span v-else class="leading-10">—</span>
+                  </td>
+                  <td class="px-1 py-1">
+                    <input
+                      v-model="item.discount_percent"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      class="!mb-0"
+                      :disabled="!editable"
+                    />
+                  </td>
+                  <td class="px-1 py-1">
+                    <select
+                      v-if="transferTaxes.length"
+                      :value="taxKey(item)"
+                      class="!mb-0"
+                      :disabled="!editable"
+                      @change="setTax(item, $event.target.value)"
+                    >
+                      <option
+                        v-if="taxKey(item) === 'custom'"
+                        value="custom"
+                        disabled
+                      >
+                        {{ Number(item.tax_percent) }} %
+                      </option>
+                      <option
+                        v-for="tax in transferTaxes"
+                        :key="tax.id"
+                        :value="tax.id"
+                        :disabled="!tax.active && tax.id !== item.tax_rate_id"
+                      >
+                        {{ tax.name }}
+                      </option>
+                    </select>
+                    <input
+                      v-else
+                      v-model="item.tax_percent"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      class="!mb-0"
+                      :disabled="!editable"
+                    />
+                  </td>
+                  <td class="py-1 pl-1 leading-10 text-right whitespace-nowrap">
+                    {{ amountsHidden ? '—' : money(lineTotal(item)) }}
+                  </td>
+                  <td class="py-1 text-center">
+                    <woot-button
+                      v-if="editable"
+                      size="tiny"
+                      variant="clear"
+                      color-scheme="secondary"
+                      icon="dismiss"
+                      @click="removeItem(index)"
+                    />
+                  </td>
+                </tr>
+                <!-- Retenciones de la partida (solo con «Aplicar retenciones») -->
+                <tr
+                  v-if="form.apply_withholdings"
+                  :key="`w${index}`"
+                  class="text-xs"
+                >
+                  <td colspan="8" class="pb-2">
+                    <div class="flex flex-wrap items-center gap-2 pl-1">
+                      <span class="text-slate-500">
+                        {{ $t('QUOTES.EDITOR.WITHHOLDINGS') }}:
+                      </span>
+                      <span
+                        v-for="(row, wIndex) in item.withholdings"
+                        :key="row.id || row.name"
+                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700"
+                      >
+                        {{ row.name }}
+                        <button
+                          v-if="editable"
+                          type="button"
+                          class="text-slate-400 hover:text-red-600"
+                          :aria-label="$t('QUOTES.EDITOR.WITHHOLDING_REMOVE')"
+                          @click="removeWithholding(item, wIndex)"
+                        >
+                          <fluent-icon icon="dismiss" size="12" />
+                        </button>
+                      </span>
+                      <span
+                        v-if="!(item.withholdings || []).length && !editable"
+                        class="text-slate-400"
+                      >
+                        —
+                      </span>
+                      <select
+                        v-if="editable && withholdingRates.length"
+                        class="!mb-0 !h-7 !py-0 !w-48 text-xs"
+                        value=""
+                        @change="
+                          addWithholding(item, $event.target.value);
+                          $event.target.value = '';
+                        "
+                      >
+                        <option value="">
+                          {{ $t('QUOTES.EDITOR.WITHHOLDING_ADD') }}
+                        </option>
+                        <option
+                          v-for="rate in withholdingRates"
+                          :key="rate.id"
+                          :value="rate.id"
+                        >
+                          {{ rate.name }}
+                        </option>
+                      </select>
+                    </div>
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -856,6 +1096,12 @@ export default {
           <template v-if="totals.tax">
             <dt class="text-slate-500">{{ $t('QUOTES.EDITOR.TAX_TOTAL') }}</dt>
             <dd class="m-0 text-right">{{ money(totals.tax) }}</dd>
+          </template>
+          <template v-if="totals.withheld">
+            <dt class="text-slate-500">
+              {{ $t('QUOTES.EDITOR.WITHHOLDING_TOTAL') }}
+            </dt>
+            <dd class="m-0 text-right">−{{ money(totals.withheld) }}</dd>
           </template>
           <dt
             class="pt-1 font-semibold border-t border-slate-75 dark:border-slate-700"
@@ -879,7 +1125,7 @@ export default {
           <textarea
             v-model="form.terms"
             rows="4"
-            :placeholder="$t('QUOTES.EDITOR.TERMS_PLACEHOLDER')"
+            :placeholder="termsPlaceholder"
             :disabled="!editable"
           />
         </label>

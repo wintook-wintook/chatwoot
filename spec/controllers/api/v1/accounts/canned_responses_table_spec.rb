@@ -31,4 +31,23 @@ RSpec.describe 'Canned Responses API — tabla', type: :request do
     expect(account.canned_responses.pluck(:short_code)).to eq(%w[TRES])
     expect(CannedResponse.exists?(ajena.id)).to be(true)
   end
+
+  # proyecto@predefinidas_que_contestan: la categoría es fija (campo kind).
+  it 'filtra por categoría fija y la cambia en varias, solo de la cuenta' do
+    ficha = create(:canned_response, account: account, short_code: 'Plan X', kind: 'ficha')
+    general = create(:canned_response, account: account, short_code: 'Horario')
+    ajena = create(:canned_response, short_code: 'Ajena')
+
+    get url, params: { page: 1, kind: 'ficha' }, headers: agent.create_new_auth_token, as: :json
+    expect(response.parsed_body['payload'].pluck('short_code')).to eq(['Plan X'])
+
+    post "#{url}/assign_kind", params: { ids: [general.id, ajena.id], kind: 'objecion' }, headers: agent.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(general.reload.kind).to eq('objecion')
+    expect(ajena.reload.kind).to eq('general')
+    expect(ficha.reload.kind).to eq('ficha')
+
+    post "#{url}/assign_kind", params: { ids: [general.id], kind: 'proceso' }, headers: agent.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+  end
 end

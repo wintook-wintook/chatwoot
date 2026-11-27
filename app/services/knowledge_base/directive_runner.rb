@@ -64,8 +64,13 @@ class KnowledgeBase::DirectiveRunner
     end
   end
 
+  # Las secciones del item que tienen que ver con la consulta (KnowledgeBase::SectionFit).
+  def fit(item)
+    KnowledgeBase::SectionFit.call(item.content, @context.query, MAX_ITEM_CHARS, title: item.title)
+  end
+
   def compose_reply(items)
-    context_text = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{i.content.truncate(MAX_ITEM_CHARS)}" }
+    context_text = items.map.with_index(1) { |i, n| "#{n}. #{i.title}\n#{fit(i)}" }
                         .join("\n\n")
                         .truncate(KnowledgeBaseResponseService.kbase_setting(@account, 'max_context_chars').to_i)
 

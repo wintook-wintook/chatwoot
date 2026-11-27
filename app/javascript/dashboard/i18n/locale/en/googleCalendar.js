@@ -74,6 +74,127 @@ export default {
       FREE: 'Free',
       NOT_CONNECTED: 'No calendar',
     },
+    SCHEDULE_FOR: {
+      LABEL: 'Schedule for',
+      ME: 'Me',
+      HINT: 'To schedule for a teammate, ask them for "Make changes" in "Share my calendar".',
+      FOR_OTHER_HINT:
+        'It is saved to your teammate calendar, not yours. They become the owner.',
+    },
+    SHARE_CALENDAR: {
+      BUTTON: 'Share my calendar',
+      TITLE: 'Share my calendar',
+      DESCRIPTION:
+        'Choose what each teammate sees of your schedule. It is saved to your Google Calendar right away and no email is sent.',
+      LEVELS: {
+        NONE: 'Nothing',
+        FREE_BUSY: 'Free/busy only',
+        DETAILS: 'See all details',
+        SCHEDULE: 'Make changes (can schedule me)',
+      },
+      STATUS: {
+        NOT_CONNECTED: 'No Google',
+        SAME_GOOGLE: 'Same Google as you',
+        OWNER_RULE: 'Manages your calendar (change it in Google)',
+      },
+      LOADING: 'Loading…',
+      SAVING: 'Saving…',
+      SAVED: 'Saved',
+      EMPTY: 'There are no other agents in this account.',
+      LOAD_ERROR: 'Could not read who you share your calendar with.',
+      RECONNECT:
+        'Your Google connection expired. Reconnect to share your calendar.',
+      TABS: {
+        COWORKERS: 'Teammates',
+        OTHERS: 'Other people',
+      },
+      ADD: {
+        LABEL: 'Share with someone else',
+        PLACEHOLDER: 'email@example.com',
+        BUTTON: 'Share',
+        HINT: 'For someone who is not an agent in this account. They need a Google account to see your calendar.',
+      },
+      REMOVE: 'Stop sharing',
+      OTHERS_EMPTY:
+        'You do not share your calendar with anyone outside the account yet.',
+      LEVEL_HELP: {
+        FREE_BUSY: 'sees your busy times, without titles or details.',
+        DETAILS:
+          'sees your events with title, place and description (private ones only as busy).',
+        SCHEDULE: 'can also create events on your calendar.',
+      },
+      GENERAL: {
+        PUBLIC:
+          'In Google your calendar is also public ({level}). Change it in Google Calendar.',
+        DOMAIN:
+          'In Google you share it with all of {value} ({level}). Change it in Google Calendar.',
+        GROUP:
+          'In Google you share it with the group {value} ({level}). Change it in Google Calendar.',
+      },
+      ERRORS: {
+        INVALID_EMAIL: 'Enter a valid email.',
+        OWN_EMAIL: 'That is your own email.',
+        OWNER_RULE:
+          'That person manages your calendar: change it in Google Calendar.',
+        NOT_CONNECTED: 'That teammate has no Google connected.',
+        SAME_GOOGLE: 'That teammate uses your same Google.',
+        RECONNECT:
+          'Your Google connection expired. Reconnect to share your calendar.',
+      },
+      CLOSE: 'Close',
+    },
+    COWORKERS: {
+      // fix/calendario_eliminar F4 — teammate colors (only the person who picks sees them).
+      COLOR: {
+        OPEN: 'Color settings',
+        TITLE: '{name} color',
+        BACKGROUND: 'Background',
+        TEXT: 'Text',
+        TEXT_AUTO: 'Automatic',
+        TEXT_WHITE: 'White',
+        TEXT_BLACK: 'Black',
+        SAMPLE: '{name} · Meeting 10:00',
+        DESCRIPTION:
+          'This is how their events look in your calendar. Only you see this color; nothing changes in Google.',
+        PREVIEW: 'Preview',
+        RESET: 'Reset',
+        CANCEL: 'Cancel',
+        SAVE: 'Save',
+      },
+      TITLE: 'Teammates',
+      HINT: 'Check a teammate to see their schedule. You only see what they shared with you in Google.',
+      EMPTY: 'There are no other agents in this account.',
+      CONNECT_FIRST:
+        "Connect your Google Calendar to see your teammates' schedules.",
+      RECONNECT:
+        'Your Google connection expired. Reconnect to see your teammates.',
+      NO_EVENTS: 'No events in these dates',
+      BUSY_NOW: 'Busy now',
+      FREE_NOW: 'Free now',
+      ACCESS: {
+        NOT_CONNECTED: 'No Google',
+        NONE: 'Not shared',
+        FREE_BUSY: 'Busy only',
+        DETAILS: 'Sees details',
+        CAN_SCHEDULE: 'You can schedule',
+        SAME_GOOGLE: 'Same Google as you',
+        ERROR: 'Unavailable',
+      },
+      NONE_HELP: 'Ask them to share their Google calendar with {email}.',
+      BUSY: 'Busy',
+      EVENT_MODAL: {
+        TITLE: "{name}'s schedule",
+        READ_ONLY: "Read only: this event is on your teammate's calendar.",
+        // feat/ventana_evento_calendario F5
+        CAN_EDIT:
+          'It is on your teammate\'s calendar. They gave you "Make changes": you can cancel or delete it.',
+        DELETE_DESC: "It will be deleted from {name}'s calendar.",
+        PRIVATE: "Your teammate doesn't share the details of this event.",
+        WHEN: 'When',
+        WHERE: 'Where',
+        CLOSE: 'Close',
+      },
+    },
     CREATE_EVENT: {
       TITLE: 'Create Event',
       TYPE: {
@@ -125,15 +246,67 @@ export default {
         'Google is not connected: what you schedule stays in Kontrolya only.',
       LEGEND_NO_TASK: 'Dashed border: event without a task',
     },
+    // feat/ventana_evento_calendario F2 — one search for participants.
+    PEOPLE: {
+      LABEL: 'Add agents or guests',
+      LABEL_AGENTS: 'Add agents',
+      LABEL_GUESTS: 'Guests',
+      PLACEHOLDER_GUESTS: 'Search a contact or type an email',
+      AGENTS: 'Agents',
+      PLACEHOLDER: 'Type a name or an email',
+      PLACEHOLDER_AGENTS: 'Type an agent name',
+      HINT: 'Separate several emails with commas. You can also paste them all at once.',
+      AGENT: 'Agent',
+      GUEST: 'Guest',
+      CONTACT: 'contact',
+      INVITE_EMAIL: 'Invite "{email}" by email',
+      INVITE_CLIENT: 'Invite the client: {name} · {email}',
+      INVITE: 'Invite',
+      INVALID: '"{text}" is not a valid email',
+      INVALID_SUBMIT:
+        'There is a mistyped email in Participants: fix it or remove it.',
+      BUSY: '● busy: {what}',
+      DECLINED: 'Cannot go',
+      REMOVE: 'Remove',
+    },
+    // feat/ventana_evento_calendario F1
+    EVENT_TABS: {
+      CLIENT: 'Client',
+      PEOPLE: 'Participants',
+    },
     EDIT_EVENT: {
-      TITLE: 'Edit Event',
+      TITLE: 'Edit event',
+      TITLE_ITEM: 'Edit scheduled task',
       SUBMIT: 'Save Changes',
       SUCCESS: 'Event updated successfully',
       ERROR: 'Could not update event. Please try again.',
+      // fix/calendario_eliminar F2
+      CLOSE: 'Close',
+      CANCEL_ITEM: 'Cancel scheduled task',
+      CANCEL_ITEM_DONE: 'Scheduled task cancelled',
+    },
+    // fix/calendario_eliminar F3
+    DELETE_EVENT: {
+      DELETE: 'Delete event',
+      DELETE_TITLE: 'Delete "{title}"?',
+      DELETE_DESC: 'It will be deleted from your Google Calendar.',
+      DELETE_CONFIRM: 'Delete',
+      DELETE_DONE: 'Event deleted',
+      REMOVE: 'Remove from my calendar',
+      REMOVE_TITLE: 'Remove "{title}" from your calendar?',
+      REMOVE_DESC:
+        'You were invited to this event: it is only removed from your calendar. The organizer and the others keep it.',
+      REMOVE_CONFIRM: 'Remove',
+      REMOVE_DONE: 'Removed from your calendar',
+      ONLY_THIS: 'Only this one',
+      ALL_SERIES: 'The whole series',
+      NOTIFY: 'Notify guests ({count})',
+      BACK: 'Back',
+      ERROR: 'Could not delete the event. Please try again.',
     },
     CREATE_FROM_CONVERSATION: 'Create Calendar Event',
     SHARE_AGENDA: {
-      TITLE: 'Send my agenda',
+      TITLE: 'Send agenda to a contact',
       DESCRIPTION: 'Choose the period and who to send the agenda to.',
       PERIOD: 'Period',
       TODAY: 'Today',

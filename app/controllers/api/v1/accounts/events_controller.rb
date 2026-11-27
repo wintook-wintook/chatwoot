@@ -205,7 +205,7 @@ class Api::V1::Accounts::EventsController < Api::V1::Accounts::BaseController
 
   # Con sus campañas (Plan-Eventos E3): las que tienen este evento en su apartado «Evento».
   def render_event
-    campaigns = Current.account.tracking_campaigns.where(event_id: @event.id).order(created_at: :desc)
+    campaigns = Current.account.tracking_campaigns.real.where(event_id: @event.id).order(created_at: :desc)
                        .map { |c| c.slice(:id, :name, :mode, :status, :event_status, :scheduled_for) }
     render json: { event: event_json(@event.reload, @event.counts).merge(campaigns: campaigns) }
   end

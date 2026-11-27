@@ -5,27 +5,40 @@
 // de audiencia debajo) y "Volver a campañas" regresa. Una campaña Guardada no corre
 // hasta "Poner en curso" (proyecto@automatizacion_campanas, TrackingCampaigns::Launch);
 // mientras siga Guardada se puede modificar (clic en su fila, o ?edit=<id> desde el detalle).
+// fix/campanas: cualquier campaña se puede duplicar (botón de la fila, o ?duplicate=<id> desde
+// el detalle): abre «Nueva campaña» llena con sus datos y la copia nace Guardada.
 // La tabla es la de Contactos (VeTable): clic en una columna la ordena (en cliente).
 // ================================================================================
 import { VeTable } from 'vue-easytable';
 import { useAlert } from 'dashboard/composables';
 import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
+import Motor2CampaignsAPI from 'dashboard/api/motor2Campaigns';
 import CampaignForm from 'dashboard/components/contacts/BulkTrackingAssign/CampaignForm.vue';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import CampaignLaunchModal from './CampaignLaunchModal.vue';
+import CampaignKindPicker from 'dashboard/views/campaigns2/CampaignKindPicker.vue';
 import { progressPct, sortCampaigns, sortFromParams } from './campaignsTable';
 
 const STATUS_COLOR = {
   saved: 'text-woot-700 bg-woot-50 dark:text-woot-300 dark:bg-woot-900/30',
-  draft: 'text-slate-500 bg-slate-100 dark:bg-slate-700',
+  draft: 'text-sky-700 bg-sky-100 dark:text-sky-300 dark:bg-sky-900/30', // Programada: no se confunde con Terminada
   running: 'text-green-700 bg-green-100 dark:bg-green-900/30',
   paused: 'text-amber-800 bg-amber-100 dark:bg-amber-900/30',
   finished: 'text-slate-600 bg-slate-100 dark:bg-slate-700',
 };
 
 export default {
-  components: { CampaignForm, TableFooter, VeTable },
+  components: {
+    CampaignForm,
+    CampaignLaunchModal,
+    CampaignKindPicker,
+    TableFooter,
+    VeTable,
+  },
   data() {
     return {
+      // Campaña con Vendedor IA: el modal «¿Qué campaña?» (1.0 o 2.0)
+      showEngineChoice: false,
       campaigns: [],
       isLoading: false,
       // Actualizar recarga solo la tabla: no la quita ni muestra "Cargando".
@@ -40,10 +53,7 @@ export default {
       // de indicadores. Los botones de la fila cortan la propagación.
       eventCustomOption: {
         bodyRowEvents: ({ row }) => ({
-          click: () =>
-            row.status === 'saved'
-              ? this.openEdit(row)
-              : this.openCampaign(row),
+          click: () => this.openRow(row),
         }),
       },
       rowStyleOption: {
@@ -59,11 +69,15 @@ export default {
       launchingId: null,
       // Pausar / reanudar desde la fila
       campaignToPause: null,
+      campaignToFinish: null,
+      finishingId: null,
       pausingId: null,
       resumingId: null,
       activeTab: 'list', // 'list' · 'new' · 'edit'
       // La campaña Guardada que se está modificando (tab 'edit')
       campaignToEdit: null,
+      // fix/campanas: la campaña que se duplica (tab 'new' lleno con sus datos)
+      campaignToCopy: null,
       // proyecto@automatizacion_campanas: la campaña continua recién creada, para
       // ofrecer el siguiente paso (crear la automatización que la llena).
       createdContinuous: null,
@@ -72,6 +86,7 @@ export default {
       // Filtro + paginado (cliente) de la tabla de campañas.
       searchQuery: '',
       statusFilter: 'all',
+      engineFilter: 'all', // clásica (1.0) o con Vendedor IA (2.0)
       currentPage: 1,
       perPage: 10,
     };
@@ -87,8 +102,14 @@ export default {
         if (this.statusFilter !== 'all' && c.status !== this.statusFilter) {
           return false;
         }
+        if (
+          this.engineFilter !== 'all' &&
+          (c.engine || '1') !== this.engineFilter
+        ) {
+          return false;
+        }
         if (!query) return true;
-        const haystack = [c.name, c.template_name, c.inbox_name]
+        const haystack = [c.name, c.inbox_name]
           .filter(Boolean)
           .join(' ')
           .toLowerCase();
@@ -108,6 +129,11 @@ export default {
       const start = (this.currentPage - 1) * this.perPage;
       return this.sortedCampaigns.slice(start, start + this.perPage);
     },
+    // Ancho total: la tabla se mueve de lado en vez de esconder las columnas de la derecha
+    // (Plan-Pantallas-Responsive #2).
+    tableWidth() {
+      return this.columns.reduce((sum, c) => sum + (c.width || 120), 0);
+    },
     columns() {
       const col = (field, key, extra = {}) => ({
         field,
@@ -119,6 +145,8 @@ export default {
       });
       return [
         col('name', 'NAME', {
+          width: 240,
+          fixed: 'left', // al moverse de lado no se pierde de qué campaña es
           renderBodyCell: ({ row }) => (
             <div class="flex flex-col leading-5">
               <span class="font-medium text-woot-600 dark:text-woot-400">
@@ -138,10 +166,9 @@ export default {
             </div>
           ),
         }),
-        col('template_name', 'AGENT', {
-          renderBodyCell: ({ row }) => row.template_name || '—',
-        }),
+        // «Agente IA» quitada: en las de Vendedor IA solo repetía «Campaña N · tipo» (su agente interno).
         col('inbox_name', 'CHANNEL', {
+          width: 160,
           renderBodyCell: ({ row }) => row.inbox_name || '—',
         }),
         // Fecha arriba y hora abajo (como Ventana), para que no se pegue a Tipo
@@ -261,6 +288,25 @@ export default {
                   onClick={() => this.resumeCampaign(row)}
                 />
               )}
+              {['saved', 'draft', 'running', 'paused'].includes(row.status) && (
+                <woot-button
+                  variant="smooth"
+                  color-scheme="alert"
+                  size="small"
+                  icon="dismiss-circle"
+                  isLoading={this.finishingId === row.id}
+                  title={this.$t('TRACKING_CAMPAIGNS_VIEW.FINISH')}
+                  onClick={() => this.openFinish(row)}
+                />
+              )}
+              <woot-button
+                variant="smooth"
+                color-scheme="secondary"
+                size="small"
+                icon="copy"
+                title={this.$t('TRACKING_CAMPAIGNS_VIEW.DUPLICATE')}
+                onClick={() => this.openDuplicate(row)}
+              />
               <woot-button
                 variant="smooth"
                 color-scheme="alert"
@@ -304,6 +350,24 @@ export default {
         this.filteredCampaigns.length === 0
       );
     },
+    // Título sobre el formulario: modificar, duplicar o nueva.
+    formTitle() {
+      if (this.activeTab === 'edit') {
+        return this.$t('TRACKING_CAMPAIGNS_VIEW.EDIT_CAMPAIGN', {
+          name: this.campaignToEdit.name,
+        });
+      }
+      if (this.campaignToCopy) {
+        return this.$t('TRACKING_CAMPAIGNS_VIEW.DUPLICATE_CAMPAIGN', {
+          name: this.campaignToCopy.name,
+        });
+      }
+      return this.$t('TRACKING_CAMPAIGNS_VIEW.NEW_CAMPAIGN');
+    },
+    // Otro formulario al pasar de «nueva» a «duplicar» (o duplicar otra).
+    newFormKey() {
+      return this.campaignToCopy ? `copy-${this.campaignToCopy.id}` : 'new';
+    },
     deleteMessageValue() {
       return this.campaignToDelete ? ` «${this.campaignToDelete.name}»?` : '';
     },
@@ -314,6 +378,9 @@ export default {
       this.currentPage = 1;
     },
     statusFilter() {
+      this.currentPage = 1;
+    },
+    engineFilter() {
       this.currentPage = 1;
     },
     // Si el listado se encoge (borrado/refetch), evitar quedar en página vacía.
@@ -337,6 +404,9 @@ export default {
     }
     this.fetchCampaigns();
     if (this.$route.query.edit) this.openEdit({ id: this.$route.query.edit });
+    if (this.$route.query.duplicate) {
+      this.openDuplicate({ id: this.$route.query.duplicate });
+    }
   },
   methods: {
     async fetchCampaigns() {
@@ -375,10 +445,32 @@ export default {
     goToList() {
       this.activeTab = 'list';
       this.campaignToEdit = null;
-      if (this.$route.query.edit) this.$router.replace({ query: {} });
+      this.campaignToCopy = null;
+      if (this.$route.query.edit || this.$route.query.duplicate) {
+        this.$router.replace({ query: {} });
+      }
+    },
+    // fix/campanas: trae la campaña completa y abre «Nueva campaña» con sus datos.
+    async openDuplicate(campaign) {
+      if (campaign.engine === '2') {
+        this.duplicateMotor2(campaign);
+        return;
+      }
+      try {
+        const { data } = await TrackingCampaignsAPI.show(campaign.id);
+        this.presetFilter = null;
+        this.campaignToCopy = data;
+        this.activeTab = 'new';
+      } catch (error) {
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.DUPLICATE_ERROR'));
+      }
     },
     // Trae la campaña completa (audiencia incluida) y abre el formulario con sus datos.
     async openEdit(campaign) {
+      if (campaign.engine === '2') {
+        this.openMotor2(campaign, 'edit');
+        return;
+      }
       try {
         const { data } = await TrackingCampaignsAPI.show(campaign.id);
         if (data.status !== 'saved') {
@@ -409,12 +501,50 @@ export default {
     onPageChange(page) {
       this.currentPage = page;
     },
+    // Nueva campaña: solo Motor 2.0 (la 1.0 ya no se crea); se elige el tipo y se entra directo a su asistente.
     goToNew() {
-      this.presetFilter = null;
-      this.activeTab = 'new';
+      this.showEngineChoice = true;
     },
+    newMotor2Kind(kind) {
+      this.showEngineChoice = false;
+      this.$router.push({ name: 'campaigns2_new', query: { kind } });
+    },
+    // Una 2.0 abre su pantalla nueva (Guardada: el asistente; si no, su tablero).
+    openRow(row) {
+      if (row.engine === '2') {
+        this.$router.push({
+          name:
+            row.status === 'saved' ? 'campaigns2_edit' : 'campaigns2_detail',
+          params: { campaignId: row.id },
+        });
+        return;
+      }
+      if (row.status === 'saved') this.openEdit(row);
+      else this.openCampaign(row);
+    },
+    // Una 2.0 se lanza desde «Revisar y lanzar» de su asistente: ahí pasa por su revisión (Motor2Check).
     openLaunch(campaign) {
+      if (campaign.engine === '2') {
+        this.openMotor2(campaign, 'review');
+        return;
+      }
       this.campaignToLaunch = campaign;
+    },
+    openMotor2(campaign, step) {
+      this.$router.push({
+        name: 'campaigns2_edit',
+        params: { campaignId: campaign.id },
+        query: step === 'review' ? { step: 'review' } : {},
+      });
+    },
+    // Duplicar una 2.0: copia Guardada con su motor y se abre para editarla.
+    async duplicateMotor2(campaign) {
+      try {
+        const { data } = await Motor2CampaignsAPI.duplicate(campaign.id);
+        this.openMotor2(data, 'edit');
+      } catch (error) {
+        useAlert(this.$t('TRACKING_CAMPAIGNS_VIEW.DUPLICATE_ERROR'));
+      }
     },
     closeLaunch() {
       this.campaignToLaunch = null;
@@ -519,6 +649,32 @@ export default {
         this.pausingId = null;
       }
     },
+    openFinish(campaign) {
+      this.campaignToFinish = campaign;
+    },
+    // Terminar a mano: Terminada sin vuelta, cancela lo pendiente y conserva los Resultados.
+    async confirmFinish() {
+      const campaign = this.campaignToFinish;
+      if (!campaign) return;
+      this.campaignToFinish = null;
+      this.finishingId = campaign.id;
+      try {
+        const { data } = await TrackingCampaignsAPI.finish(campaign.id);
+        useAlert(
+          this.$t('TRACKING_CAMPAIGNS_VIEW.FINISH_SUCCESS', {
+            count: data.cancelled,
+          })
+        );
+        this.refreshTable();
+      } catch (error) {
+        useAlert(
+          error.response?.data?.error ||
+            this.$t('TRACKING_CAMPAIGNS_VIEW.FINISH_ERROR')
+        );
+      } finally {
+        this.finishingId = null;
+      }
+    },
     async resumeCampaign(campaign) {
       this.resumingId = campaign.id;
       try {
@@ -581,7 +737,9 @@ export default {
         );
       }
       this.presetFilter = null;
+      this.campaignToCopy = null;
       this.activeTab = 'list';
+      if (this.$route.query.duplicate) this.$router.replace({ query: {} });
       this.fetchCampaigns();
     },
   },
@@ -619,13 +777,7 @@ export default {
 
     <div v-if="activeTab !== 'list'" class="mb-4 shrink-0">
       <h2 class="text-base font-semibold text-slate-700 dark:text-slate-200">
-        {{
-          activeTab === 'edit'
-            ? $t('TRACKING_CAMPAIGNS_VIEW.EDIT_CAMPAIGN', {
-                name: campaignToEdit.name,
-              })
-            : $t('TRACKING_CAMPAIGNS_VIEW.NEW_CAMPAIGN')
-        }}
+        {{ formTitle }}
       </h2>
     </div>
 
@@ -641,7 +793,9 @@ export default {
     <!-- Tab: Nueva campaña -->
     <div v-else-if="activeTab === 'new'" class="flex-1 min-h-0 overflow-y-auto">
       <CampaignForm
+        :key="newFormKey"
         :preset-filter-payload="presetFilter"
+        :copy-from="campaignToCopy"
         @created="onCampaignCreated"
       />
     </div>
@@ -736,6 +890,20 @@ export default {
               {{ statusLabel(s) }}
             </option>
           </select>
+          <select
+            v-model="engineFilter"
+            class="box-border shrink-0 w-44 h-9 text-sm rounded-md border border-solid border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-2 outline-none focus:border-woot-500 dark:focus:border-woot-600"
+          >
+            <option value="all">
+              {{ $t('TRACKING_CAMPAIGNS_VIEW.FILTER_ENGINE.all') }}
+            </option>
+            <option value="2">
+              {{ $t('TRACKING_CAMPAIGNS_VIEW.FILTER_ENGINE.motor2') }}
+            </option>
+            <option value="1">
+              {{ $t('TRACKING_CAMPAIGNS_VIEW.FILTER_ENGINE.classic') }}
+            </option>
+          </select>
         </div>
 
         <div
@@ -753,6 +921,7 @@ export default {
             fixed-header
             max-height="100%"
             row-key-field-name="id"
+            :scroll-width="tableWidth"
             :columns="columns"
             :table-data="pagedCampaigns"
             :border-around="false"
@@ -795,15 +964,33 @@ export default {
       :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
     />
     <woot-delete-modal
-      :show="!!campaignToLaunch"
-      :on-close="closeLaunch"
-      :on-confirm="confirmLaunch"
-      :title="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH')"
-      :message="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_CONFIRM')"
-      :message-value="campaignToLaunch ? ` «${campaignToLaunch.name}»?` : ''"
-      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_YES')"
+      :show="!!campaignToFinish"
+      :on-close="() => (campaignToFinish = null)"
+      :on-confirm="confirmFinish"
+      :title="$t('TRACKING_CAMPAIGNS_VIEW.FINISH')"
+      :message="$t('TRACKING_CAMPAIGNS_VIEW.FINISH_CONFIRM')"
+      :message-value="campaignToFinish ? ` «${campaignToFinish.name}»?` : ''"
+      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.FINISH_YES')"
       :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
     />
+    <CampaignLaunchModal
+      :campaign="campaignToLaunch"
+      @close="closeLaunch"
+      @confirm="confirmLaunch"
+    />
+    <!-- Nueva campaña (Motor 2.0): elegir el tipo -->
+    <woot-modal
+      :show="showEngineChoice"
+      :on-close="() => (showEngineChoice = false)"
+    >
+      <woot-modal-header
+        :header-title="$t('CAMPAIGNS2.CHOICE.KIND_TITLE')"
+        :header-content="$t('CAMPAIGNS2.CHOICE.KIND_SUBTITLE')"
+      />
+      <div class="px-8 pb-8">
+        <CampaignKindPicker @pick="newMotor2Kind" />
+      </div>
+    </woot-modal>
   </div>
 </template>
 

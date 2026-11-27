@@ -96,6 +96,12 @@ class Whatsapp::IncomingMessageBaseService
     @message.save!
   end
 
+  # diag/waba (H14) — por defecto nada es saliente. Solo Cloud/UnoAPI reciben el eco de lo que
+  # manda el negocio y lo redefinen. Sin esto, las bandejas de 360dialog tronaban al recibir.
+  def outgoing_message_type?
+    false
+  end
+
   def set_contact
     contact_params = @processed_params[:contacts]&.first
     return if contact_params.blank?
@@ -173,7 +179,22 @@ class Whatsapp::IncomingMessageBaseService
       in_reply_to_external_id: @in_reply_to_external_id,
       in_reply_to_interactive_id: @in_reply_to_interactive_id
     )
+    note_ad_referral(message)
     @message
+  end
+
+  # Anuncio de clic a WhatsApp (Meta manda `referral`): de qué anuncio viene, en el mensaje y en la
+  # conversación (la primera vez). Lo usan el agente de Atención a prospectos y sus métricas.
+  def note_ad_referral(message)
+    referral = message[:referral]
+    return unless referral.is_a?(Hash) || referral.respond_to?(:to_unsafe_h)
+
+    data = referral.to_h.stringify_keys.slice('source_url', 'source_id', 'source_type', 'headline', 'body', 'ctwa_clid').compact_blank
+    return if data.empty?
+
+    @message.content_attributes = @message.content_attributes.to_h.merge('referral' => data)
+    attrs = @conversation.additional_attributes.to_h
+    @conversation.update(additional_attributes: attrs.merge('ad_referral' => data)) unless attrs.key?('ad_referral')
   end
 
   def attach_contact(contact)

@@ -24,9 +24,14 @@
       filtro y se oculta el selector de segmento/etiqueta (y el tipo: es por lote).
     - campaign: una campaña Guardada para modificarla (el formulario arranca con sus
       datos). Ya puesta en curso no se modifica.
+    - copyFrom: fix/campanas — una campaña a DUPLICAR (de cualquier estado): el formulario
+      arranca con sus datos y el nombre «(copia)», pero crea una campaña nueva.
+  fix/campanas: el formulario solo GUARDA (la campaña queda Guardada); ponerla en curso es
+  aparte, desde la tabla o el detalle (CampaignLaunchModal, con los avisos de sus fechas).
+  Junto a las fechas, los avisos de la ventana (campaignDates.js).
   Emits:
-    - created(result): tras lanzar la campaña ({ queued, campaign_id, campaign_name }).
-    - updated(result): tras guardar los cambios de la Guardada (y ponerla en curso, si se pidió).
+    - created(result): tras guardar la campaña nueva ({ campaign_id, campaign_name }).
+    - updated(result): tras guardar los cambios de la Guardada.
   ================================================================================
 -->
 
@@ -38,6 +43,8 @@ import contactTrackingBulkAssignsAPI from 'dashboard/api/contactTrackingBulkAssi
 import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import { getMinDateTime } from '../../../helper/trackingHelpers';
 import AudiencePreview from './AudiencePreview.vue';
+import CampaignDateAlerts from 'dashboard/views/contactTrackings/CampaignDateAlerts.vue';
+import { campaignDateAlerts } from 'dashboard/views/contactTrackings/campaignDates';
 import EventsAPI from 'dashboard/api/events';
 import { ATTENDEE_STATUSES } from 'dashboard/views/events/eventHelpers';
 
@@ -48,7 +55,7 @@ const MAX_BULK_ASSIGN = 1000;
 const FILTER_TYPE_CONTACT = 'contact';
 
 // Fecha → valor de un <input type="datetime-local"> (hora local). Se muestra aunque ya
-// haya pasado: al ponerla en curso, un inicio pasado se corre a ese momento.
+// haya pasado: al ponerla en curso, un inicio pasado se corre a ese momento (y se avisa).
 const toLocalInput = value => {
   if (!value) return '';
   const d = new Date(value);
@@ -125,10 +132,11 @@ const campaignState = campaign => {
 };
 
 export default {
-  components: { AudiencePreview },
+  components: { AudiencePreview, CampaignDateAlerts },
   props: {
     presetFilterPayload: { type: Array, default: null },
     campaign: { type: Object, default: null },
+    copyFrom: { type: Object, default: null },
   },
   emits: ['created', 'updated'],
   data() {
@@ -163,7 +171,7 @@ export default {
       savedFilterPayload: null,
       // Al reconocer el segmento de la Guardada no se borran sus excluidos
       restoringAudience: false,
-      ...campaignState(this.campaign),
+      ...campaignState(this.campaign || this.copyFrom),
       totalCount: 0,
       previewData: null,
       isLoadingPreview: false,
@@ -185,6 +193,9 @@ export default {
     },
     isEditing() {
       return !!this.campaign;
+    },
+    isCopy() {
+      return !this.campaign && !!this.copyFrom;
     },
     // Cuando llega un filtro preestablecido (desde Contactos) no se elige audiencia.
     allowAudienceSelection() {
@@ -249,15 +260,19 @@ export default {
         date: this.shortDate(this.scheduledFor),
       });
     },
-    // El fin, si lo hay, después del inicio (o de ahora, si la continua no tiene inicio).
-    // Modificando una Guardada: su inicio ya pasó (se corre a cuando la pongan en curso)
-    startPassed() {
-      return (
-        this.isEditing &&
-        !!this.scheduledFor &&
-        new Date(this.scheduledFor) <= new Date()
+    // fix/campanas: avisos de la ventana (los errores los da windowError). Sin inicio
+    // solo se avisa en la continua: por lote el inicio es obligatorio.
+    dateWarnings() {
+      return campaignDateAlerts({
+        scheduledFor: this.scheduledFor,
+        endsAt: this.endsAt,
+      }).filter(
+        alert =>
+          alert.level !== 'error' &&
+          (alert.key !== 'NO_START' || this.isContinuous)
       );
     },
+    // El fin, si lo hay, después del inicio (o de ahora, si la continua no tiene inicio).
     windowError() {
       if (!this.endsAt) return '';
       if (new Date(this.endsAt) <= new Date()) {
@@ -395,6 +410,14 @@ export default {
         this.showSendOptions = true;
       }
     },
+  },
+  created() {
+    // fix/campanas: la copia lleva otro nombre (el nombre admite hasta 120).
+    if (this.isCopy) {
+      this.campaignName = this.$t('TRACKING_CAMPAIGNS_VIEW.DUPLICATE_NAME', {
+        name: this.copyFrom.name,
+      }).slice(0, 120);
+    }
   },
   async mounted() {
     this.loadTemplates();
@@ -589,7 +612,8 @@ export default {
       return { ...data, ...launched };
     },
     // launch=false → solo guarda: la campaña queda Guardada hasta "Poner en curso".
-    async onConfirm(launch = true) {
+    // fix/campanas: el botón del formulario siempre guarda (launch=false).
+    async onConfirm(launch = false) {
       this.isSubmitting = true;
       try {
         if (this.isEditing) {
@@ -638,6 +662,13 @@ export default {
 
 <template>
   <div class="flex flex-col gap-4">
+    <!-- fix/campanas: duplicando otra campaña -->
+    <p
+      v-if="isCopy"
+      class="m-0 p-3 rounded-md border border-woot-100 dark:border-woot-800 bg-woot-25 dark:bg-woot-900/20 text-sm text-slate-700 dark:text-slate-200"
+    >
+      {{ $t('TRACKING_CAMPAIGNS_VIEW.DUPLICATE_HINT') }}
+    </p>
     <div
       class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-md p-4"
     >
@@ -885,12 +916,11 @@ export default {
         <p v-if="windowError" class="m-0 mt-2 text-sm text-red-600">
           {{ windowError }}
         </p>
-        <p
-          v-else-if="startPassed"
-          class="m-0 mt-2 text-sm text-amber-800 dark:text-amber-300"
-        >
-          {{ $t('BULK_TRACKING_ASSIGN.MODAL.START_PASSED') }}
-        </p>
+        <CampaignDateAlerts
+          v-else-if="dateWarnings.length"
+          :alerts="dateWarnings"
+          class="mt-2"
+        />
 
         <button
           type="button"
@@ -1010,20 +1040,11 @@ export default {
         </span>
         <span class="flex items-center gap-2 shrink-0">
           <woot-button
-            variant="smooth"
-            color-scheme="secondary"
             :is-loading="isSubmitting"
             :disabled="!canConfirm"
             @click="onConfirm(false)"
           >
             {{ $t('BULK_TRACKING_ASSIGN.MODAL.SAVE') }}
-          </woot-button>
-          <woot-button
-            :is-loading="isSubmitting"
-            :disabled="!canConfirm"
-            @click="onConfirm(true)"
-          >
-            {{ $t('BULK_TRACKING_ASSIGN.MODAL.SAVE_AND_LAUNCH') }}
           </woot-button>
         </span>
       </div>

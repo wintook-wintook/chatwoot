@@ -30,6 +30,20 @@ class TaskReportsAPI extends ApiClient {
     return axios.post(this.url, data);
   }
 
+  // Avance: lo hecho en una tarea que sigue pendiente (no la completa).
+  sendProgress(taskId, { content, doneAt, outcomeId, files, minutes }) {
+    const data = new FormData();
+    data.append('item_type', 'task');
+    data.append('item_id', taskId);
+    data.append('progress', 'true');
+    data.append('content', content);
+    if (minutes) data.append('minutes', minutes);
+    if (doneAt) data.append('done_at', doneAt);
+    if (outcomeId) data.append('task_outcome_id', outcomeId);
+    files.forEach(file => data.append('evidence[]', file));
+    return axios.post(this.url, data);
+  }
+
   // Actividad reportada: algo que se hizo sin tarea. Caso, contacto y organización
   // son opcionales; sin ninguno es interna.
   sendActivity({

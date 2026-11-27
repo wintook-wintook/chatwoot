@@ -25,9 +25,12 @@ class KnowledgeItemSyncJob < ApplicationJob
     job.mark_failed(error.message.presence || 'temporary')
   end
 
-  def perform(action:, source_type:, source_id:, account_id:)
+  # audit: proyecto@auditoria_predefinidas — con el vector nuevo listo, revisar esta
+  # predefinida contra sus vecinas (solo al guardarla desde el formulario).
+  def perform(action:, source_type:, source_id:, account_id:, audit: false)
     @source_type = source_type
     @source_id = source_id
+    @audit = audit
     account = Account.find_by(id: account_id)
     return unless account
 
@@ -57,13 +60,7 @@ class KnowledgeItemSyncJob < ApplicationJob
   end
 
   def upsert_item(account, source_type, source_id)
-    source = find_knowledge_source(account, source_type)
-    return unless source
-
-    record = find_record(account, source_type, source_id)
-    return unless record
-
-    content = extract_content(source_type, record)
+    source, record, content = item_input(account, source_type, source_id)
     return if content.blank?
 
     embedding = generate_embedding(account, content)
@@ -71,8 +68,16 @@ class KnowledgeItemSyncJob < ApplicationJob
 
     save_item(account, source, record, content, embedding)
     mark(embedding_status: 'ready', embedding_error: nil, embedded_at: Time.current)
+    CannedResponses::AuditOneJob.perform_later(record.id) if @audit && source_type == 'canned_response'
   rescue PermanentError => e
     mark(embedding_status: 'failed', embedding_error: e.message)
+  end
+
+  # [fuente, registro, texto a vectorizar], o nil si falta alguno.
+  def item_input(account, source_type, source_id)
+    source = find_knowledge_source(account, source_type)
+    record = source && find_record(account, source_type, source_id)
+    record && [source, record, extract_content(source_type, record)]
   end
 
   def save_item(account, source, record, content, embedding)
@@ -132,8 +137,9 @@ class KnowledgeItemSyncJob < ApplicationJob
   def build_metadata(source_type, record)
     case source_type
     when 'canned_response'
-      # R3: la categoría la lee la búsqueda (R4); no entra al texto vectorizado (D2).
-      { short_code: record.short_code, category: record.category&.name }.compact
+      # proyecto@predefinidas_que_contestan: la categoría fija la lee la búsqueda
+      # (KnowledgeBase::Candidates, CannedGroup); no entra al texto vectorizado.
+      { short_code: record.short_code, kind: record.kind }.compact
     when 'article' # @tickets_cases 2H
       { article_id: record.id, portal_id: record.portal_id, category_id: record.category_id,
         slug: record.slug, status: record.status }

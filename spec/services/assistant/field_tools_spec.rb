@@ -88,6 +88,15 @@ RSpec.describe Assistant::FieldTools do
     expect(visit.reload).to be_held
   end
 
+  it 'si el cliente no asistió, la visita queda «No asistió» con su reporte' do
+    proposal = tools.call('propose_visit_report', { 'kind' => 'visit', 'id' => visit.id, 'notes' => 'No había nadie.',
+                                                    'no_show' => true })[:proposal]
+    expect(proposal['labels']['no_show']).to be(true)
+    result = executor.call('visit_report', proposal['payload'].merge('minutes' => 20))
+    expect(result['label']).to include('no asistió')
+    expect(visit.reload).to be_no_show
+  end
+
   it 'no deja reportar visitas ajenas' do
     other = create(:user, account: account)
     alien = CaseMeeting.create!(account: account, contact: contact, title: 'Ajena', starts_at: Time.current, ends_at: 1.hour.from_now,

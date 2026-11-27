@@ -6,8 +6,9 @@ require 'rails_helper'
 RSpec.describe ContactTrackings::ProspectReply do
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account, timezone: 'America/Mexico_City') }
+  let(:campaign) { create(:tracking_campaign, account: account, inbox: inbox) }
   let(:tracking) do
-    create(:contact_tracking, account: account, inbox: inbox, status: 'scheduled',
+    create(:contact_tracking, account: account, inbox: inbox, status: 'scheduled', tracking_campaign: campaign,
                               scheduled_for: 5.minutes.from_now, max_attempts: 3, attempt_count: 1)
   end
 
@@ -42,6 +43,15 @@ RSpec.describe ContactTrackings::ProspectReply do
       tracking.update_columns(status: status) # rubocop:disable Rails/SkipsModelValidations
       expect { described_class.call(tracking.reload, at: thursday) }.not_to(change { tracking.reload.scheduled_for })
     end
+  end
+
+  it 'no toca un Agente IA asignado fuera de campaña: conserva sus intentos y su fecha' do
+    tracking.update_columns(tracking_campaign_id: nil) # rubocop:disable Rails/SkipsModelValidations
+
+    before = tracking.reload.attributes.slice('scheduled_for', 'max_attempts')
+
+    expect(described_class.call(tracking, at: thursday)).to be(false)
+    expect(tracking.reload.attributes.slice('scheduled_for', 'max_attempts')).to eq(before)
   end
 
   describe 'desde el analizador de respuestas' do

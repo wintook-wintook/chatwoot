@@ -148,8 +148,23 @@ Rails.application.routes.draw do
             end
           end
           # Plan-Catalogo-Cotizaciones V1 — Ventas › Cotizaciones
+          # Cotizaciones › Formatos (y los datos de la empresa para el encabezado)
+          resources :quote_formats, only: [:index, :create, :update, :destroy] do
+            collection do
+              patch :company
+              post :company_logo
+              delete :company_logo, action: :remove_company_logo
+              post :preview
+            end
+            member do
+              post :duplicate
+              post :logo
+              delete :logo, action: :remove_logo
+            end
+          end
           resources :quotes, only: [:index, :show, :create, :update, :destroy] do
             get :summary, on: :collection
+            get :withholdings_default, on: :collection # retenciones: ¿el cliente es persona moral?
             member do
               post :transition
               post :new_version
@@ -198,12 +213,21 @@ Rails.application.routes.draw do
             # CrmZeus Q3.1 — parámetros de la cuenta
             resource :settings, only: [:show, :update]
           end
+          # Productos y servicios › Parámetros: categorías, impuestos y unidades
+          get 'catalog_parameters', to: 'catalog_parameters#index'
+          post 'catalog_parameters/:list', to: 'catalog_parameters#create'
+          patch 'catalog_parameters/:list/:id', to: 'catalog_parameters#update'
+          delete 'catalog_parameters/:list/:id', to: 'catalog_parameters#destroy'
           # Plan-Catalogo-Cotizaciones C1 — Ventas › Catálogo
           resources :catalog_items, only: [:index, :create, :update] do
             collection do
               get :categories
               get :export
               post :import
+            end
+            member do
+              post :image
+              delete :image, action: :remove_image
             end
           end
           resources :agent_bots, only: [:index, :create, :show, :update, :destroy] do
@@ -224,16 +248,32 @@ Rails.application.routes.draw do
               post :reauthorize_page
             end
           end
-          # proyecto@respuestas_predefinidas R3
-          resources :canned_response_categories, only: [:index, :create, :update, :destroy] do
-            get :suggestions, on: :collection
-          end
           resources :canned_responses, only: [:index, :create, :update, :destroy] do
             # proyecto@respuestas_predefinidas R1: meterlas a la fuente de datos (una o hasta 20)
             post :vectorize, on: :member
             post :vectorize, on: :collection, action: :vectorize_many
             post :destroy_many, on: :collection
-            post :assign_category, on: :collection
+            post :assign_kind, on: :collection # proyecto@predefinidas_que_contestan
+            # proyecto@arreglar_predefinidas
+            get :fix, on: :member, to: 'canned_response_fixes#latest', as: :latest_fix
+            post :fix, on: :member, to: 'canned_response_fixes#create_oversize'
+          end
+          resources :canned_response_fixes, only: [:index, :show, :create] do
+            collection do
+              post :resolve_preview
+              post :bulk_writing
+            end
+            member do
+              post :check
+              post :apply
+              post :discard
+              post :undo
+            end
+          end
+          # proyecto@auditoria_predefinidas
+          resource :canned_response_audit, only: [:show, :create] do
+            patch 'findings/:finding_id', action: :update_finding, as: :finding
+            post 'findings/:finding_id/keep', action: :keep, as: :keep_finding
           end
           # Sinónimos nativos (esquema legacy wintook; reemplaza al servicio WINTOOK_BOT)
           resources :palabras_sinonimos, only: [:index, :create, :update, :destroy]
@@ -259,6 +299,67 @@ Rails.application.routes.draw do
               post :initiate
             end
           end
+          # Probador de agentes (Agentes IA › Probador): motor 1.0 y 2.0, entrenador, lotes y bitácora
+          get 'agent_tester/agents', to: 'agent_tester#agents'
+          post 'agent_tester/agents/:template_id/testing', to: 'agent_tester#testing'
+          post 'agent_tester/sessions', to: 'agent_tester#start'
+          get 'agent_tester/sessions/:conversation_id', to: 'agent_tester#show'
+          post 'agent_tester/sessions/:conversation_id/say', to: 'agent_tester#say'
+          post 'agent_tester/sessions/:conversation_id/feedback', to: 'agent_tester#feedback'
+          post 'agent_tester/sessions/:conversation_id/save_case', to: 'agent_tester#save_case'
+          post 'agent_tester/apply', to: 'agent_tester#apply'
+          post 'agent_tester/fix_source', to: 'agent_tester#fix_source'
+          post 'agent_tester/fix_kind', to: 'agent_tester#fix_kind' # proyecto@predefinidas_que_contestan
+          post 'agent_tester/fix_start', to: 'agent_tester#fix_start'
+          post 'agent_tester/fix_purpose', to: 'agent_tester#fix_purpose' # «¿Qué hay aquí?» de una fuente
+          get 'agent_tester/logs', to: 'agent_tester#logs'
+          post 'agent_tester/logs/:id/retest', to: 'agent_tester#retest'
+          post 'agent_tester/sessions/:conversation_id/good', to: 'agent_tester#good' # revisión aparte de la prueba
+          get 'agent_tester/review', to: 'agent_tester_reviews#index'
+          get 'agent_tester/review/:conversation_id', to: 'agent_tester_reviews#show'
+          post 'agent_tester/logs/retest_group', to: 'agent_tester_reviews#retest_group'
+          post 'agent_tester/logs/:id/dismiss', to: 'agent_tester_reviews#dismiss'
+          post 'agent_tester/logs/:id/rediagnose', to: 'agent_tester_reviews#rediagnose'
+          get 'agent_tester/sessions/:conversation_id/history', to: 'agent_tester#history'
+          resources :agent_test_batches, only: [:index, :create, :update, :destroy] do
+            collection do
+              get 'runs(/:run_id)', action: :runs
+              post :run_corrections
+              post :import # proyecto@predefinidas_que_contestan
+              post :import_pila
+            end
+            member do
+              post :run
+              post :compare
+              post :cases, action: :add_case
+              patch 'cases/:case_id', action: :update_case
+              delete 'cases/:case_id', action: :remove_case
+            end
+          end
+          # Motor 2.0 de Agentes a medida (Plan-Motor-Agentes.md §11.11): su ficha, probador y versiones
+          resources :motor2_agents, only: [:show, :create, :update] do
+            collection do
+              get :options
+              post :test
+              get :convertible
+              post :convert
+              post :correct_message
+            end
+            member do
+              post :back_to_v1
+              get :readiness
+              post :activate
+              get :versions
+              post :restore
+            end
+            resources :tests, only: [:index, :create, :destroy], controller: 'motor2_tests' do
+              collection do
+                post :run
+                post :correct
+                post :fix_source
+              end
+            end
+          end
           resources :tracking_templates, only: [:index, :show, :create, :update, :destroy] do # proyecto@tracking_templates
             collection do
               get :calendar_integrations
@@ -266,6 +367,24 @@ Rails.application.routes.draw do
               get :route_catalog # proyecto@asistente_agentes_ia — las ramas que la cuenta ya escribió
               get :section_catalog # proyecto@asistente_agentes_ia — las secciones enteras que ya escribió
               post :training_preview # proyecto@asistente_agentes_ia — texto ↔ bloques + comprobador
+              # feat/ficha_agente_ia: crear un agente desde la ficha en unos cuantos clics
+              get :ficha_catalog, to: 'tracking_templates/fichas#catalog'
+              post :ficha_preview, to: 'tracking_templates/fichas#preview'
+              post :ficha_create, to: 'tracking_templates/fichas#create'
+              post :ficha_suggest, to: 'tracking_templates/fichas#suggest'
+              get 'ficha_sheet/:source_id', to: 'tracking_templates/fichas#sheet_preview'
+              post 'ficha_sheet/:source_id/suggest', to: 'tracking_templates/fichas#sheet_suggest'
+              post 'ficha_ticket/:case_type_id/suggest', to: 'tracking_templates/fichas#ticket_suggest'
+              post 'ficha_questions/suggest', to: 'tracking_templates/fichas#questions_suggest'
+              post 'ficha_variables/suggest', to: 'tracking_templates/fichas#variables_suggest'
+              post :ficha_test, to: 'tracking_templates/fichas#run_test'
+              get 'ficha_test/:turn_id', to: 'tracking_templates/fichas#test_result'
+            end
+            # feat/ficha_agente_ia: la ficha de un agente que ya existe y sus cambios contra el prompt
+            resource :ficha, only: [:show, :update], module: :tracking_templates do
+              post :apply
+              post :activate
+              post :test, action: :test_existing
             end
             # proyecto@ai_agent_attachments: archivos del Agente IA referenciados por {{name}}
             resources :attachments, only: [:index, :create, :update, :destroy], module: :tracking_templates
@@ -309,17 +428,68 @@ Rails.application.routes.draw do
             get :templates, on: :collection
             get :context, on: :collection
             get :inboxes, on: :collection
+            get :running, on: :collection # quién le da seguimiento (IA o agente a medida)
             member do
               post :pause
               post :resume
               post :cancel
             end
           end
+          # Plantillas de seguimiento: la receta de un Seguimiento IA para volver a usarla
+          resources :ai_follow_up_presets, only: [:index, :create, :update, :destroy]
+          # Cobranza: la cartera por cortes (Excel/CSV y, después, los sistemas administrativos) y su agente
+          resources :collections, only: [] do
+            collection do
+              get :overview
+              get :template
+              post :preview
+              get :imports
+              post :imports, action: :create_import
+              get :customers
+              post 'customers/create_pending', action: :create_pending
+              get 'customers/:id', action: :customer
+              post 'customers/:id/link', action: :link
+              post 'customers/:id/create', action: :create_customer
+              post 'customers/:id/ignore', action: :ignore
+              get :promises
+              get :claims
+              post 'claims/:id/review', action: :review_claim
+            end
+          end
+          # Campaña con Vendedor IA (Motor 2.0): pantalla nueva; pausar/reanudar son los de tracking_campaigns
+          resources :motor2_campaigns, only: [:show, :create, :update] do
+            collection do
+              get :options
+              post :preview
+              post :preview_csv
+              post :test
+              post :test_email
+              post :cases
+              post :run_case
+            end
+            member do
+              post :list
+              get :check
+              post :launch
+              get :results
+              get :contacts
+              post :insights
+              post :follow_up
+              post :duplicate
+              post :simulate
+              get :test_run
+              post :test_run, action: :start_test_run
+              delete :test_run, action: :stop_test_run
+              post :copy, to: 'motor2_campaigns/copies#create' # «Redactar con Dali» (TrackingCampaigns::CopyWriter)
+            end
+            resources :files, only: [:index, :create, :update, :destroy], controller: 'motor2_campaigns/files'
+          end
           resources :tracking_campaigns, only: [:index, :show, :create, :update, :destroy] do
             get :entries, on: :member # proyecto@automatizacion_campanas: inscritos y omitidos
             post :launch, on: :member, to: 'tracking_campaigns/launches#create' # proyecto@automatizacion_campanas: poner en curso una Guardada
             post :pause, on: :member, to: 'tracking_campaigns/pauses#create' # pausar a mano
             post :resume, on: :member, to: 'tracking_campaigns/resumes#create' # proyecto@automatizacion_campanas: reanudar pausada
+            post :finish, on: :member, to: 'tracking_campaigns/finishes#create' # terminar a mano (conserva Resultados)
             post :hand_off, on: :member, to: 'tracking_campaigns/hand_offs#create' # prospeccion V6: entregar un interesado
             patch :handoff_settings, on: :member, to: 'tracking_campaigns/handoff_settings#update' # prospeccion P2: tablero, plazo y escalar
             post :subject_winner, on: :member, to: 'tracking_campaigns/subject_winners#create' # prospeccion P3: quedarse con un asunto
@@ -336,6 +506,8 @@ Rails.application.routes.draw do
             post 'assistant/save',      to: 'assistant#save'
             get  'assistant/session',   to: 'assistant#resume'
             get  'assistant/sessions',      to: 'assistant#sessions'
+            get  'assistant/sessions/previous', to: 'assistant#previous_session' # feat/ficha_agente_ia
+            post 'assistant/sessions/:id/continue', to: 'assistant#continue_session' # feat/ficha_agente_ia
             get  'assistant/sessions/:id',  to: 'assistant#show_session'
             delete 'assistant/sessions/:id', to: 'assistant#discard_session'
             get  'assistant/sessions/:id/versions/:number', to: 'assistant#show_version'
@@ -368,9 +540,26 @@ Rails.application.routes.draw do
             post 'assistant/test_battery', to: 'assistant_test_battery#create'
             get  'assistant/test_battery/:id', to: 'assistant_test_battery#show'
             get  'assistant/test_battery/:id/report', to: 'assistant_test_battery#report'
+            # proyecto@diagrama_agente_ia F3: la pila guardada de cada agente
+            get    'assistant/test_cases',          to: 'assistant_test_cases#index'
+            post   'assistant/test_cases',          to: 'assistant_test_cases#create'
+            post   'assistant/test_cases/generate', to: 'assistant_test_cases#generate'
+            post   'assistant/test_cases/run_dry',  to: 'assistant_test_cases#run_dry'
+            post   'assistant/test_cases/run_live', to: 'assistant_test_cases#run_live'
+            post   'assistant/test_cases/compare',  to: 'assistant_test_cases#compare'
+            post   'assistant/test_cases/:id/dry',  to: 'assistant_test_cases#dry_one'
+            patch  'assistant/test_cases/:id',      to: 'assistant_test_cases#update'
+            delete 'assistant/test_cases/:id',      to: 'assistant_test_cases#destroy'
             # armar un agente desde cero conversando (llena las instrucciones iniciales)
             post 'assistant/drafting_chat', to: 'assistant_drafting#create'
-            put  'assistant/autosave', to: 'assistant_autosave#update'
+            # proyecto@crear_agente_conversando F3: lo corregido a mano en Definición/Variables/Datos fijos
+            patch 'assistant/drafting_chat/fields', to: 'assistant_drafting#fields'
+            # F4: el .md de las instrucciones del agente, para otra IA
+            post 'assistant/export', to: 'assistant_export#create'
+            # §15: probar las fuentes del agente como las busca él
+            post 'assistant/source_probe', to: 'assistant_source_probe#index'
+            post 'assistant/source_probe/run', to: 'assistant_source_probe#run'
+            put 'assistant/autosave', to: 'assistant_autosave#update'
             patch 'assistant/sessions/:id/name', to: 'assistant_autosave#rename'
             post 'assistant/conversation_review', to: 'assistant_review#create'
             # proyecto@adaptar_prompts_publicados — pestaña «Configurar»: qué falta y aplicarlo
@@ -389,7 +578,8 @@ Rails.application.routes.draw do
           patch  'knowledge_base/sources/:id',      to: 'knowledge_base#update'
           delete 'knowledge_base/sources/:id',      to: 'knowledge_base#destroy'
           post   'knowledge_base/sources/:id/sync', to: 'knowledge_base#sync'
-          post   'knowledge_base/search',           to: 'knowledge_base#search'
+          patch  'knowledge_base/sources/:id/purpose', to: 'knowledge_base#purpose' # «¿Qué hay aquí?» (Motor2::SourceMap)
+          post   'knowledge_base/search', to: 'knowledge_base#search'
           post   'knowledge_base/discourse_categories', to: 'knowledge_base#discourse_categories'
           get    'knowledge_base/search_settings',  to: 'knowledge_base#search_settings'
           patch  'knowledge_base/search_settings',  to: 'knowledge_base#update_search_settings'
@@ -457,6 +647,7 @@ Rails.application.routes.draw do
               patch :resume   # Plan-Clase-Comercial F3
               post :work_order # Plan-Clase-Orden-de-Trabajo F2b — crear orden desde este caso
               post :project # Plan-Clase-Proyecto P2 — crear proyecto desde una oportunidad ganada
+              patch :assign_client # el caso interno pasa a ser de un cliente (organización y contacto)
             end
             resources :case_events, only: [:index]
             # @tickets_cases — ligar (o crear) la conversación de un caso que no tiene
@@ -503,6 +694,15 @@ Rails.application.routes.draw do
           resources :case_notices, only: [:index]
           # @tickets_cases — «Mi resumen» de la página Inicio
           resource :my_summary, only: [:show], controller: 'my_summary'
+          # Academia Kontrolya — «Mi capacitación» (Inicio): módulos, ejercicios y Cliente de práctica
+          resource :academy, only: [:show], controller: 'academy' do
+            post 'steps/:module_key/:step_key/start', action: :start
+            post 'steps/:module_key/:step_key/check', action: :check
+            post 'steps/:module_key/:step_key/confirm', action: :confirm
+            get 'guides/:key', action: :guide
+            post :practice, action: :create_practice
+            delete :practice, action: :destroy_practice
+          end
           # @tickets_cases — Bandeja de tareas: índice a nivel cuenta (no anidado bajo un ticket)
           resources :task_reports, only: [:index, :create] do # Reporte de cierre
             get :suggestion, on: :collection
@@ -530,13 +730,39 @@ Rails.application.routes.draw do
             post :schedule, on: :member # pasarla a la agenda
           end
           # Plan-Agenda — lo agendado desde el calendario: con caso o solo con su contacto.
+          resources :task_recurrences, only: [:index, :create, :update, :destroy] # Tareas que se repiten
           resources :agenda_items, only: [:index, :create, :update, :destroy] do
             get :cases, on: :collection
+            get :tasks, on: :collection # tareas pendientes para «Reportar avance»
             post :to_task, on: :member # pasarla a tarea sin hora
+            post :decline, on: :member # participante: «No puedo ir»
+            get :busy, on: :collection # ¿los participantes ya tienen algo a esa hora?
           end
           resources :case_tasks, only: [:index], controller: 'case_tasks_index' do
             put :my_day_plan, on: :collection # Plan-Bandeja-Prioridad F2 — orden propio de «Mi día»
             post :my_day_ai, on: :collection  # Plan-Bandeja-Prioridad F4 — «Plan de mi día» con IA
+          end
+          # Tareas con el cliente — «Esperando al cliente» en Mi día y «Recordarle»
+          get 'case_tasks/client_watch', to: 'client_task_watches#index'
+          post 'case_tasks/:id/remind_client', to: 'client_task_watches#remind'
+          get 'case_tasks/:id/history', to: 'task_histories#show', as: :case_task_history # historial de la tarea
+          # «Cómo habla tu empresa»: base común de Seguimiento IA y Agentes listos
+          resource :ai_voice, only: [:show, :update], controller: 'ai_voice' do
+            post :preview
+          end
+          # Agentes listos: puestos empaquetados que la empresa activa en sus bandejas
+          resources :ready_agents, only: [:index, :create, :update, :destroy] do
+            post :test, on: :collection # chat de prueba (no guarda ni manda nada)
+            post :matrix, on: :collection # «Atención a clientes»: probar los ejemplos sí/no de las áreas
+            get :metrics, on: :member # «Atención a prospectos»: cómo terminan, dónde se van y de qué anuncio vienen
+            post :suggest, on: :collection # ejemplos por área o preguntas para calificar, según «Tu negocio»
+          end
+          resources :ready_agent_sessions, only: [:index] do
+            member do
+              patch :pause
+              patch :resume
+              patch :cancel_follow_up # «no le escribas más»: alguien del equipo lo va a atender
+            end
           end
           resources :case_types, only: [:index, :create, :update, :destroy] do
             post :change_class, on: :member # cambiar de clase: tipo nuevo + retirar el de antes
@@ -568,6 +794,13 @@ Rails.application.routes.draw do
           # proyecto@waba_chatwoot
           namespace :whatsapp do
             resource :authorization, only: [:create]
+            # diag/waba F1 — pestaña «Diagnóstico» de la bandeja (id = inbox_id)
+            resources :health_checks, only: [:show] do
+              member do
+                post :run
+                post :subscribe
+              end
+            end
             # @waba_templates — gestión de plantillas (crear/submit/editar/borrar en Meta).
             resources :templates, only: [:index, :show, :create, :update, :destroy] do
               collection do
@@ -575,6 +808,7 @@ Rails.application.routes.draw do
                 post :import
                 # feat/plantillas_whatsapp_mejoras F6: subir el archivo de muestra del encabezado
                 post :header_samples
+                post :ai_draft # «Crear con IA»: borrador con lo que quiere lograr
               end
               # feat/plantillas_whatsapp_mejoras: dónde se usa, antes de borrarla
               get :usage, on: :member
@@ -886,9 +1120,11 @@ Rails.application.routes.draw do
 
           namespace :google_calendar do
             resource :authorization, only: [:create, :destroy]
-            resources :events, only: [:index, :create, :update] do
+            resources :events, only: [:index, :create, :update, :destroy]
+            # fix/calendario_google — calendario de compañeros visto con la conexión de quien mira.
+            resources :coworkers, only: [:index] do
               collection do
-                get :agent_events
+                get :events
               end
             end
             resource :calendars, only: [:show, :update], controller: 'calendars' do
@@ -900,6 +1136,12 @@ Rails.application.routes.draw do
             end
             resource :availability, only: [:show], controller: 'availability'
             resource :sharing, only: [:create], controller: 'sharing'
+            # fix/calendario_google F3c — «Compartir mi calendario» (reglas de acceso de Google).
+            resources :sharing_rules, only: [:index, :update] do
+              collection do
+                put :share_email
+              end
+            end
           end
 
           resources :webhooks, only: [:index, :create, :update, :destroy]
@@ -1149,6 +1391,7 @@ Rails.application.routes.draw do
   # Plan-Catalogo-Cotizaciones V1 — la cotización que ve el cliente (enlace sin usuario).
   get  'cotizacion/:token',          to: 'public/quotes#show', as: :public_quote
   get  'reporte/:token',             to: 'public/service_reports#show', as: :public_service_report # Plan-Trabajo-Campo R1
+  get  'cotizacion/:token/pdf',      to: 'public/quotes#pdf', as: :public_quote_pdf # Cotizaciones › Formatos
   post 'cotizacion/:token/aceptar',  to: 'public/quotes#accept', as: :public_quote_accept
   # CrmZeus Q4.1 — la cotización de CrmZeus que ve el cliente por su enlace (solo ver e imprimir).
   get  'cotizacion-crm/:token',      to: 'public/crm_quotes#show', as: :public_crm_quote
@@ -1156,6 +1399,11 @@ Rails.application.routes.draw do
   # prospeccion V4 — baja desde el enlace de un correo del Agente IA (GET confirma, POST da de baja)
   get  'baja/:token', to: 'public/opt_outs#show', as: :public_opt_out
   post 'baja/:token', to: 'public/opt_outs#create'
+  # Campaña con Vendedor IA — clic en una liga de un correo de campaña (TrackingCampaigns::ClickLink)
+  get 'c/:token', to: 'public/campaign_clicks#show', as: :public_campaign_click
+  # Campaña con IA — Encuesta por correo (TrackingCampaigns::SurveyLink): GET las preguntas, POST las guarda
+  get  'encuesta/:token', to: 'public/campaign_surveys#show', as: :public_campaign_survey
+  post 'encuesta/:token', to: 'public/campaign_surveys#create'
 
   # Plan-Trabajo-Campo R5 — portal del cliente de su orden y visita del técnico externo.
   get  'servicio/:token', to: 'public/service_portals#show', as: :public_service_portal
@@ -1257,6 +1505,7 @@ Rails.application.routes.draw do
       resource :instance_status, only: [:show]
       # Asistente (Dali) — preguntas que no supo contestar, de todas las empresas
       resources :assistant_guide_gaps, only: [:index, :update]
+      resources :motor2_reports, only: [:index, :update] # Motor 2.0: lo que el entrenador no pudo corregir
 
       resource :settings, only: [:show] do
         get :refresh, on: :collection

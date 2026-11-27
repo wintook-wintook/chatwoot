@@ -6,6 +6,7 @@
 -->
 <script>
 import { mapGetters } from 'vuex';
+import { dueDateInput, dueToIso, formatDueDay } from 'dashboard/helper/taskDue'; // vence: solo fecha
 import { useAlert } from 'dashboard/composables';
 import { VeTable } from 'vue-easytable';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
@@ -18,9 +19,19 @@ import MessageFormatter from 'shared/helpers/MessageFormatter';
 import caseAiWriter from 'dashboard/mixins/caseAiWriter';
 import TaskReportModal from 'dashboard/views/gestorTickets/tasks/TaskReportModal.vue';
 import taskReportFlow from 'dashboard/mixins/taskReportFlow';
-import TaskReportsDialog from 'dashboard/views/gestorTickets/tasks/TaskReportsDialog.vue';
+import rowMenuMixin from 'dashboard/helper/rowMenu'; // menú de la fila (⋮ a la derecha)
+import WootDropdownDivider from 'shared/components/ui/dropdown/DropdownDivider.vue';
+import ScheduleTaskModal from 'dashboard/components/convert/ScheduleTaskModal.vue'; // pasarla a la agenda
+import TaskHistoryModal from 'dashboard/views/gestorTickets/tasks/TaskHistoryModal.vue';
 import ClientTaskEntries from 'dashboard/components/clientPortal/ClientTaskEntries.vue'; // tareas con el cliente
 import CancelItemModal from 'dashboard/components/cancel/CancelItemModal.vue'; // cancelar con motivo
+import TaskRecurrencesAPI from 'dashboard/api/taskRecurrences'; // tareas que se repiten
+import RecurrenceFields from 'dashboard/components/recurrence/RecurrenceFields.vue';
+import {
+  defaultRecurrence,
+  caseRecurrencePayload,
+  describeRecurrence,
+} from 'dashboard/components/recurrence/recurrence';
 import {
   ESTIMATE_OPTIONS,
   formatMinutes,
@@ -44,17 +55,20 @@ const PRIORITY_RANK = { low: 0, medium: 1, high: 2, urgent: 3 };
 export default {
   name: 'TicketTasks',
   components: {
+    RecurrenceFields,
     VeTable,
     TableFooter,
     WootMessageEditor,
     WootDropdownMenu,
     WootDropdownItem,
+    WootDropdownDivider,
+    ScheduleTaskModal,
     TaskReportModal,
-    TaskReportsDialog,
+    TaskHistoryModal,
     ClientTaskEntries,
     CancelItemModal,
   },
-  mixins: [caseAiWriter, taskReportFlow],
+  mixins: [caseAiWriter, taskReportFlow, rowMenuMixin],
   props: {
     ticketId: { type: [Number, String], required: true },
     // Ticket cerrado/cancelado = solo lectura: se ocultan las acciones para no
@@ -68,12 +82,20 @@ export default {
   },
   data() {
     return {
+      // «Se repite» (solo al crear): la tarea sale sola cada cierto tiempo, ligada a este caso.
+      repeats: false,
+      recurrence: defaultRecurrence(),
       audiences: ['internal', 'visible', 'client'], // tareas con el cliente
       // Cancelar con motivo: la tarea a cancelar, si está guardando y el error.
       cancelTarget: null,
+      scheduleTarget: null,
+      scheduleBusy: false,
+      scheduleError: '',
       cancelBusy: false,
       cancelError: '',
-      reportsFilter: null,
+      historyTaskId: null, // «Ver historial» de la tarea
+      askUnassigned: false, // ¿guardar sin responsable?
+      unassignedOk: false,
       tasks: [],
       // Plan-Plantilla-Tareas-Etapa — etapa actual y las siguientes con plantilla.
       stagePlan: { current: null, upcoming: [] },
@@ -159,10 +181,7 @@ export default {
     },
     // «Programada para» después del vencimiento: se avisa, no se bloquea.
     plannedLate() {
-      return plannedAfterDue(
-        this.form.planned_on,
-        this.toIsoUtc(this.form.due_at)
-      );
+      return plannedAfterDue(this.form.planned_on, dueToIso(this.form.due_at));
     },
     // Filtro de texto: título, descripción y responsable.
     filteredTasks() {
@@ -210,7 +229,8 @@ export default {
         bodyRowEvents: ({ row }) => ({
           click: event => {
             if (event.target.closest('button, input, a')) return;
-            if (this.isFrozen) this.openView(row);
+            // Caso cerrado, o tarea concluida/cancelada: solo lectura (se reabre primero).
+            if (this.isFrozen || row.status !== 'pending') this.openView(row);
             else this.openEdit(row);
           },
         }),
@@ -227,29 +247,25 @@ export default {
           key: 'sequence',
           title: this.$t('CASE_TICKETS.TASKS.TABLE.NUM'),
           align: 'left',
-          width: 104,
+          width: 72,
           sortBy: this.sortConfig.sequence || '',
           // Color del folio según estado: verde concluida, rojo atrasada, azul
           // en tiempo. Tonos claros (shade 300/400) para que no pesen.
           renderBodyCell: ({ row }) => (
             <div class="flex items-center gap-2">
-              {this.isFrozen ? null : (
-                <woot-button
-                  size="small"
-                  variant="smooth"
-                  color-scheme="secondary"
-                  icon="navigation"
-                  title={this.$t('CASE_TICKETS.TASKS.ACTIONS')}
-                  onClick={e => this.openRowMenu(e, row)}
-                />
-              )}
-              <span
-                class={`font-mono text-sm font-semibold whitespace-nowrap ${this.seqClass(
+              <button
+                type="button"
+                title={this.$t('TASK_HISTORY.MENU')}
+                class={`p-0 font-mono text-sm font-semibold whitespace-nowrap hover:underline ${this.seqClass(
                   row
                 )}`}
+                onClick={e => {
+                  e.stopPropagation();
+                  this.historyTaskId = row.id;
+                }}
               >
                 {this.seqLabel(row.sequence)}
-              </span>
+              </button>
             </div>
           ),
         },
@@ -368,7 +384,7 @@ export default {
                     : 'text-xs text-slate-600 dark:text-slate-300'
                 }
               >
-                {this.formatDate(row.due_at) || '—'}
+                {formatDueDay(row.due_at) || '—'}
               </span>
               {/* @tickets_cases F6 (§11.4) — la tarea tiene reuniones agendadas
                   DESPUÉS de su vencimiento. Es el marcador hermano del de tarea
@@ -469,10 +485,40 @@ export default {
             );
           },
         },
+        // Acciones: los tres puntos al final, en una columna FIJA a la derecha
+        // (la tabla es más ancha que la pantalla y se mueve de lado).
+        {
+          field: 'id',
+          key: 'actions',
+          title: '',
+          width: 48,
+          fixed: 'right',
+          align: 'center',
+          renderBodyCell: ({ row }) =>
+            this.isFrozen ? null : (
+              <woot-button
+                size="small"
+                variant="clear"
+                color-scheme="secondary"
+                icon="more-vertical"
+                title={this.$t('CASE_TICKETS.TASKS.ACTIONS')}
+                onClick={e => this.openRowMenu(e, row)}
+              />
+            ),
+        },
       ];
+    },
+    // Ancho total de las columnas: con él la tabla se mueve de lado dentro de su
+    // caja y la columna de acciones queda fija a la derecha.
+    tableWidth() {
+      return this.columns.reduce((sum, c) => sum + (c.width || 0), 0);
     },
   },
   watch: {
+    // Si elige a alguien con el aviso abierto, el aviso sobra.
+    'form.assignee_id'(value) {
+      if (value) this.askUnassigned = false;
+    },
     ticketId() {
       this.currentPage = 1;
       this.load();
@@ -480,6 +526,11 @@ export default {
     // @tickets_cases P4 — reporta el total al padre (badge del tab "Tareas").
     tasks() {
       this.$emit('count', this.tasks.length);
+      // Las que faltan: la pestaña dice «pendientes/total».
+      this.$emit(
+        'pending',
+        this.tasks.filter(t => t.status === 'pending').length
+      );
       // Si borrar dejó la última página vacía, retroceder para no ver un hueco.
       if (this.currentPage > this.totalPages)
         this.currentPage = this.totalPages;
@@ -498,42 +549,7 @@ export default {
     refresh() {
       this.load();
     },
-    // ── Menú de acciones por fila ──────────────────────────────────
-    // Abre el menú anclado al botón "…" con posición FIJA (fuera de la tabla,
-    // que recorta con overflow). Decide arriba/abajo según el espacio libre.
-    openRowMenu(event, row) {
-      const btn = (event.target && event.target.closest('button')) || null;
-      if (!btn) return;
-      const rect = btn.getBoundingClientRect();
-      const MENU_W = 224;
-      const MENU_H = 150;
-      const up = rect.bottom + MENU_H > window.innerHeight;
-      // Se abre hacia la DERECHA (borde izquierdo alineado al botón); si no cabe,
-      // se recorta para no salirse por el lado derecho de la ventana.
-      this.rowMenu = {
-        row,
-        left: Math.min(rect.left, window.innerWidth - MENU_W - 8),
-        top: up ? rect.top - MENU_H : rect.bottom + 4,
-      };
-      // Al hacer scroll (rueda o tabla) el menú fijo quedaría descolgado: se cierra.
-      this.$nextTick(() => {
-        window.addEventListener('scroll', this.closeRowMenu, {
-          capture: true,
-          once: true,
-        });
-      });
-    },
-    closeRowMenu() {
-      this.rowMenu = null;
-      window.removeEventListener('scroll', this.closeRowMenu, {
-        capture: true,
-      });
-    },
-    menuViewNotes() {
-      const task = this.rowMenu && this.rowMenu.row;
-      this.closeRowMenu();
-      if (task) this.onNotesClick(task);
-    },
+    // ── Menú de acciones por fila: openRowMenu/closeRowMenu en rowMenuMixin ──
     menuAddNote() {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
@@ -545,6 +561,71 @@ export default {
       if (task) this.remove(task);
     },
     // Cancelar (ya no se va a hacer) o reabrir una cancelada.
+    // Desde Tareas agendadas («Ver la tarea»): la abre como la abriría el clic en su fila.
+    openTaskById(id) {
+      const task = this.tasks.find(t => t.id === id);
+      if (!task) return;
+      if (this.isFrozen || task.status !== 'pending') this.openView(task);
+      else this.openEdit(task);
+    },
+    // Pendiente se edita; concluida o cancelada solo se ve (para cambiarla, Reabrir).
+    menuEdit() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (!task) return;
+      if (task.status === 'pending') this.openEdit(task);
+      else this.openView(task);
+    },
+    async menuReopen() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) await this.reopenTask(task);
+    },
+    // ¿Se puede pasar a la agenda? Pendiente, sin sesiones agendadas, y que no sea
+    // obligatoria, de la etapa ni del cliente (esas solo se agendan por sesión).
+    canMoveToAgenda(task) {
+      return (
+        task.status === 'pending' &&
+        task.replaceable !== false &&
+        !task.meetings_count
+      );
+    },
+    // Pasar a la agenda: la tarea sale de Tareas y queda como UNA tarea agendada.
+    menuMoveToAgenda() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (!task) return;
+      this.scheduleError = '';
+      this.scheduleTarget = task;
+    },
+    async submitMoveToAgenda(data) {
+      this.scheduleBusy = true;
+      this.scheduleError = '';
+      try {
+        const { data: res } = await CaseTasksAPI.schedule(
+          this.ticketId,
+          this.scheduleTarget.id,
+          data
+        );
+        this.scheduleTarget = null;
+        await this.load();
+        this.$emit('saved');
+        this.$emit('meetingsChanged');
+        this.$emitter.emit('caseToastMessage', {
+          message: this.$t(
+            res.mode === 'linked'
+              ? 'CONVERT_ITEM.LINKED'
+              : 'CONVERT_ITEM.SCHEDULED',
+            { title: res.meeting.title }
+          ),
+          icon: 'calendar',
+        });
+      } catch (e) {
+        this.scheduleError = e.response?.data?.error || '';
+      } finally {
+        this.scheduleBusy = false;
+      }
+    },
     menuCancelTask() {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
@@ -586,25 +667,6 @@ export default {
       const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
       if (task) this.$emit('addMeeting', task);
-    },
-    menuViewMeetings() {
-      const task = this.rowMenu && this.rowMenu.row;
-      this.closeRowMenu();
-      if (task) this.$emit('viewMeetings', task);
-    },
-    // Click en el contador de notas: si hay notas las muestra; si no, solo avisa
-    // (no tiene sentido ir a Notas para no encontrar nada).
-    onNotesClick(task) {
-      if (task.notes_count > 0) {
-        this.$emit('viewNotes', task);
-      } else {
-        this.$emitter.emit('caseToastMessage', {
-          message: this.$t('CASE_TICKETS.TASKS.NOTES_NONE_TOAST', {
-            folio: this.seqLabel(task.sequence),
-          }),
-          icon: 'clipboard',
-        });
-      }
     },
     // VeTable emite { field: 'asc'|'desc'|'' }. Solo una columna activa a la vez.
     onSortChange(params) {
@@ -674,7 +736,7 @@ export default {
     // firma (fecha + quién) del cambio de estado, así que basta con el status.
     complete(task) {
       if (this.completingId) return;
-      // La lista de verificación de una orden cierra con su reporte de servicio.
+      // Las del cliente no llevan reporte (lo hace el cliente en su portal).
       if (task.report_required === false) {
         this.continueComplete(task);
         return;
@@ -751,10 +813,35 @@ export default {
         this.completingId = null;
       }
     },
-    menuViewReports() {
-      const row = this.rowMenu && this.rowMenu.row;
+    // Avance: solo de una pendiente y no del cliente (esa la avanza él en su portal).
+    canReportProgress(task) {
+      return task.status === 'pending' && task.audience !== 'client';
+    },
+    menuHistory() {
+      const task = this.rowMenu && this.rowMenu.row;
       this.closeRowMenu();
-      if (row) this.reportsFilter = { case_task_id: row.id };
+      if (task) this.historyTaskId = task.id;
+    },
+    // Los botones del historial hacen lo mismo que el menú de la fila.
+    onHistoryAction({ kind, task }) {
+      const row = this.tasks.find(t => t.id === task.id) || task;
+      if (kind === 'progress') this.reportProgress(row);
+      if (kind === 'note') this.$emit('addNote', row);
+      if (kind === 'schedule') this.$emit('addMeeting', row);
+      if (kind === 'complete') this.complete(row);
+    },
+    menuReportProgress() {
+      const task = this.rowMenu && this.rowMenu.row;
+      this.closeRowMenu();
+      if (task) this.reportProgress(task);
+    },
+    reportProgress(task) {
+      this.$emitter.emit('topbar:reportProgress', {
+        id: task.id,
+        title: task.title,
+        sequence: task.sequence,
+        case_ticket_id: Number(this.ticketId),
+      });
     },
     priorityDot(priority) {
       return PRIORITY_DOT[priority] || PRIORITY_DOT.medium;
@@ -822,6 +909,8 @@ export default {
     openCreate() {
       this.editingId = null;
       this.viewing = false;
+      this.askUnassigned = false;
+      this.unassignedOk = false;
       this.form = {
         title: '',
         description: '',
@@ -843,13 +932,56 @@ export default {
         requester_id: '',
         requester_locked: true,
       };
+      this.repeats = false;
+      this.recurrence = defaultRecurrence();
       this.resetAi();
       this.showModal = true;
       this.$nextTick(() => this.$refs.titleInput?.focus());
     },
+    // Tarea que se repite en este caso: se programa (TaskRecurrence) y la primera sale hoy si toca.
+    async createRecurring(title) {
+      const start =
+        this.form.planned_on || new Date().toISOString().slice(0, 10);
+      if (
+        this.recurrence.mode === 'fixed' &&
+        this.recurrence.unit === 'week' &&
+        !this.recurrence.weekdays.length
+      ) {
+        useAlert(this.$t('RECURRING_TASKS.WEEKDAYS_REQUIRED'));
+        return;
+      }
+      this.isSaving = true;
+      try {
+        await TaskRecurrencesAPI.create(
+          caseRecurrencePayload(
+            { ...this.form, title },
+            this.recurrence,
+            this.ticketId,
+            start
+          )
+        );
+        useAlert(
+          this.$t('CASE_TICKETS.TASKS.MODAL.REPEATS_SAVED', {
+            when: describeRecurrence(this.recurrence, this),
+          })
+        );
+        this.showModal = false;
+        await this.load();
+        this.$emit('saved');
+      } catch (e) {
+        useAlert(
+          e.response?.data?.error ||
+            this.$t('CASE_TICKETS.TASKS.MODAL.REPEATS_ERROR')
+        );
+      } finally {
+        this.isSaving = false;
+      }
+    },
     openEdit(task) {
       this.editingId = task.id;
       this.viewing = false;
+      this.askUnassigned = false;
+      this.unassignedOk = false;
       this.loadForm(task);
       this.resetAi();
       this.showModal = true;
@@ -868,8 +1000,9 @@ export default {
         title: task.title || '',
         description: task.description || '',
         assignee_id: task.assignee_id || '',
-        due_at: this.toInputDate(task.due_at),
+        due_at: dueDateInput(task.due_at),
         status: task.status || 'pending',
+        cancel_reason: task.cancel_reason || '',
         priority: task.priority || 'medium',
         milestone: !!task.milestone,
         audience: task.audience || 'internal',
@@ -886,9 +1019,29 @@ export default {
         requester_locked: !!task.requester,
       };
     },
+    // Sin responsable: confirmar antes de guardar. Solo al quedarse sin nadie (si ya no
+    // tenía, no vuelve a preguntar) y nunca en las del cliente (esas las hace el cliente).
+    needsAssigneeConfirm(previousAssigneeId, wasExisting) {
+      if (this.unassignedOk || this.form.assignee_id) return false;
+      if (this.form.audience === 'client') return false;
+      return !wasExisting || !!previousAssigneeId;
+    },
+    chooseAssignee() {
+      this.askUnassigned = false;
+      this.$nextTick(() => this.$refs.assigneeSelect?.focus());
+    },
+    saveUnassigned() {
+      this.askUnassigned = false;
+      this.unassignedOk = true;
+      this.submitForm();
+    },
     async submitForm(reported = false) {
       const title = this.form.title.trim();
       if (!title || this.isSaving) return;
+      if (this.repeats && !this.isEditing) {
+        this.createRecurring(title);
+        return;
+      }
       // Concluirla desde el formulario también pide el reporte.
       const editing = this.tasks.find(t => t.id === this.editingId);
       const concludes =
@@ -901,11 +1054,15 @@ export default {
         );
         return;
       }
+      if (this.needsAssigneeConfirm(editing?.assignee_id, !!editing)) {
+        this.askUnassigned = true;
+        return;
+      }
       const payload = {
         title,
         description: this.form.description.trim(),
         assignee_id: this.form.assignee_id || '',
-        due_at: this.toIsoUtc(this.form.due_at),
+        due_at: dueToIso(this.form.due_at),
         status: this.form.status || 'pending',
         priority: this.form.priority || 'medium',
         estimated_minutes: this.form.estimated_minutes || null,
@@ -1101,6 +1258,7 @@ export default {
         fixed-header
         max-height="100%"
         row-key-field-name="id"
+        :scroll-width="tableWidth"
         :columns="columns"
         :table-data="paginatedTasks"
         :event-custom-option="eventCustomOption"
@@ -1181,12 +1339,13 @@ export default {
           :header-content="modalDescription"
         />
 
+        <!-- Compacto: campos cortos lado a lado, editor bajo; cabe sin scroll. -->
         <form
-          class="flex flex-col self-stretch w-full gap-3 pb-8"
+          class="task-form flex flex-col self-stretch w-full gap-2.5 pb-6"
           @submit.prevent="submitForm()"
         >
-          <label class="block mb-3">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <label class="block">
+            <span class="field-label">{{
               $t('CASE_TICKETS.TASKS.MODAL.TITLE_LABEL')
             }}</span>
             <input
@@ -1200,49 +1359,22 @@ export default {
             />
           </label>
 
-          <!-- Tareas con el cliente — quién la hace (la del cliente se trabaja en su portal). -->
-          <label class="block mb-3">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CLIENT_TASKS.WHO')
-            }}</span>
-            <select v-model="form.audience" :disabled="viewing">
-              <option v-for="a in audiences" :key="a" :value="a">
-                {{ $t(`CLIENT_TASKS.AUDIENCE.${a}`) }}
-              </option>
-            </select>
-            <span class="text-xs text-slate-500">{{
-              $t(`CLIENT_TASKS.AUDIENCE_HINT.${form.audience}`)
-            }}</span>
-          </label>
-          <label
-            v-if="form.audience === 'client'"
-            class="flex items-center gap-2 mb-3"
-          >
-            <input
-              v-model="form.requires_file"
-              type="checkbox"
-              class="!mb-0"
-              :disabled="viewing"
-            />
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CLIENT_TASKS.REQUIRES_FILE')
-            }}</span>
-          </label>
-          <label
-            v-if="form.audience === 'client' && !editingId"
-            class="flex items-center gap-2 mb-3"
-          >
-            <input v-model="form.notify_client" type="checkbox" class="!mb-0" />
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CLIENT_TASKS.NOTIFY')
-            }}</span>
-          </label>
-
-          <!-- Solicitante + Responsable (editable). El solicitante es fijo si la
-               tarea ya lo tiene; si no (tarea antigua), se elige de la lista. -->
-          <div class="flex gap-3 mb-3">
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <!-- Quién la hace · Solicitante · Responsable (la del cliente no lleva responsable).
+               El solicitante es fijo si la tarea ya lo tiene; si no (antigua), se elige. -->
+          <div class="grid grid-cols-3 gap-3">
+            <label class="block">
+              <span class="field-label">{{ $t('CLIENT_TASKS.WHO') }}</span>
+              <select v-model="form.audience" :disabled="viewing">
+                <option v-for="a in audiences" :key="a" :value="a">
+                  {{ $t(`CLIENT_TASKS.AUDIENCE.${a}`) }}
+                </option>
+              </select>
+              <span class="field-hint">{{
+                $t(`CLIENT_TASKS.AUDIENCE_HINT.${form.audience}`)
+              }}</span>
+            </label>
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.REQUESTER_LABEL')
               }}</span>
               <input
@@ -1261,12 +1393,15 @@ export default {
                 </option>
               </select>
             </label>
-
-            <label v-if="form.audience !== 'client'" class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label v-if="form.audience !== 'client'" class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.ASSIGNEE_LABEL')
               }}</span>
-              <select v-model="form.assignee_id" :disabled="viewing">
+              <select
+                ref="assigneeSelect"
+                v-model="form.assignee_id"
+                :disabled="viewing"
+              >
                 <option value="">
                   {{ $t('CASE_TICKETS.TASKS.UNASSIGNED') }}
                 </option>
@@ -1276,14 +1411,82 @@ export default {
               </select>
             </label>
           </div>
+          <div
+            v-if="form.audience === 'client'"
+            class="flex flex-wrap items-center gap-x-4 gap-y-1 -mt-1"
+          >
+            <label class="flex items-center gap-2">
+              <input
+                v-model="form.requires_file"
+                type="checkbox"
+                class="!h-auto"
+                :disabled="viewing"
+              />
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CLIENT_TASKS.REQUIRES_FILE')
+              }}</span>
+            </label>
+            <label v-if="!editingId" class="flex items-center gap-2">
+              <input
+                v-model="form.notify_client"
+                type="checkbox"
+                class="!h-auto"
+              />
+              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                $t('CLIENT_TASKS.NOTIFY')
+              }}</span>
+            </label>
+          </div>
 
           <!-- OJO: contenedor <div>, NO <label>. El editor incluye un
                <input type=file> oculto; si estuviera dentro de un <label>,
                cualquier click reenviaría al input y abriría "adjuntar archivo". -->
-          <div class="block mb-3">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_LABEL')
-            }}</span>
+          <div class="block">
+            <div class="flex flex-wrap items-center gap-2 mb-1">
+              <span class="field-label !mb-0">{{
+                $t('CASE_TICKETS.TASKS.MODAL.DESCRIPTION_LABEL')
+              }}</span>
+              <!-- Escritura asistida por Dali (mixin caseAiWriter), en la misma línea. -->
+              <template v-if="!viewing && aiEnabled">
+                <woot-button
+                  type="button"
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="wand"
+                  class="ml-auto"
+                  :is-loading="aiLoading === 'fix_spelling_grammar'"
+                  :disabled="!form.description.trim() || !!aiLoading"
+                  @click="aiImprove('fix_spelling_grammar')"
+                >
+                  {{ $t('CASE_TICKETS.AI.FIX') }}
+                </woot-button>
+                <woot-button
+                  type="button"
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="wand"
+                  :is-loading="aiLoading === 'rephrase'"
+                  :disabled="!form.description.trim() || !!aiLoading"
+                  @click="aiImprove('rephrase')"
+                >
+                  {{ $t('CASE_TICKETS.AI.IMPROVE') }}
+                </woot-button>
+                <woot-button
+                  v-if="canRevertAi"
+                  type="button"
+                  size="tiny"
+                  variant="clear"
+                  color-scheme="secondary"
+                  icon="arrow-undo"
+                  :disabled="!!aiLoading"
+                  @click="aiRevert"
+                >
+                  {{ $t('CASE_TICKETS.AI.REVERT') }}
+                </woot-button>
+              </template>
+            </div>
             <!-- Editor enriquecido, montado igual que en Respuestas predefinidas. -->
             <div v-if="!viewing" class="editor-wrap">
               <WootMessageEditor
@@ -1297,97 +1500,37 @@ export default {
                 "
               />
             </div>
-            <!-- Ticket cerrado: solo lectura, se muestra el formato ya renderizado. -->
+            <!-- Solo lectura: se muestra el formato ya renderizado. -->
             <div
               v-else
               class="prose-note p-2 text-sm border rounded-md border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-100"
               v-html="formatMarkdown(form.description) || '—'"
             />
-
-            <!-- Escritura asistida por IA (mixin caseAiWriter). -->
-            <div
-              v-if="!viewing && aiEnabled"
-              class="flex flex-wrap items-center gap-2 mt-2"
-            >
-              <woot-button
-                type="button"
-                size="tiny"
-                variant="smooth"
-                color-scheme="secondary"
-                icon="wand"
-                :is-loading="aiLoading === 'fix_spelling_grammar'"
-                :disabled="!form.description.trim() || !!aiLoading"
-                @click="aiImprove('fix_spelling_grammar')"
-              >
-                {{ $t('CASE_TICKETS.AI.FIX') }}
-              </woot-button>
-              <woot-button
-                type="button"
-                size="tiny"
-                variant="smooth"
-                color-scheme="secondary"
-                icon="wand"
-                :is-loading="aiLoading === 'rephrase'"
-                :disabled="!form.description.trim() || !!aiLoading"
-                @click="aiImprove('rephrase')"
-              >
-                {{ $t('CASE_TICKETS.AI.IMPROVE') }}
-              </woot-button>
-              <woot-button
-                v-if="canRevertAi"
-                type="button"
-                size="tiny"
-                variant="clear"
-                color-scheme="secondary"
-                icon="arrow-undo"
-                :disabled="!!aiLoading"
-                @click="aiRevert"
-              >
-                {{ $t('CASE_TICKETS.AI.REVERT') }}
-              </woot-button>
-            </div>
           </div>
 
-          <!-- Debajo de la descripción: vencimiento, prioridad y estado. El
-               estado también se cambia desde la fila con "Completar"; aquí
-               además se puede reabrir la tarea. Prioridad propia (no heredada). -->
-          <div class="flex gap-3">
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+          <!-- Vence · Programada para · Prioridad · Duración · Estado, en una línea. El estado
+               también se cambia desde la fila con «Completar»; aquí además se reabre. -->
+          <div class="grid grid-cols-5 gap-3">
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.DUE_LABEL')
               }}</span>
-              <input
-                v-model="form.due_at"
-                type="datetime-local"
-                :readonly="viewing"
-                class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-              />
+              <input v-model="form.due_at" type="date" :readonly="viewing" />
             </label>
-
             <!-- Plan-Bandeja-Prioridad — cuándo PIENSA hacerla quien la hace
                  (distinto del vencimiento). Hoy = entra a su «Mi día». -->
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.PLANNED_LABEL')
               }}</span>
               <input
                 v-model="form.planned_on"
                 type="date"
                 :readonly="viewing"
-                class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
               />
-              <span
-                v-if="plannedLate"
-                class="block mt-1 text-xs text-amber-700 dark:text-amber-300"
-              >
-                {{ $t('CASE_TICKETS.TASKS.MODAL.PLANNED_AFTER_DUE') }}
-              </span>
             </label>
-          </div>
-
-          <div class="flex gap-3">
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.PRIORITY_LABEL')
               }}</span>
               <select v-model="form.priority" :disabled="viewing">
@@ -1400,10 +1543,9 @@ export default {
                 </option>
               </select>
             </label>
-
             <!-- Plan-Bandeja-Prioridad F1 — suma a la carga de «Mi día». -->
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.ESTIMATE_LABEL')
               }}</span>
               <select v-model="form.estimated_minutes" :disabled="viewing">
@@ -1415,9 +1557,8 @@ export default {
                 </option>
               </select>
             </label>
-
-            <label class="flex-1">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
+            <label class="block">
+              <span class="field-label">{{
                 $t('CASE_TICKETS.TASKS.MODAL.STATUS_LABEL')
               }}</span>
               <select v-model="form.status" :disabled="viewing">
@@ -1433,45 +1574,78 @@ export default {
               </select>
             </label>
           </div>
-
-          <!-- Plan-Clase-Proyecto P2 — hito del proyecto -->
-          <label v-if="allowMilestones" class="flex items-center gap-2 mt-3">
-            <input
-              v-model="form.milestone"
-              type="checkbox"
-              class="!mb-0"
-              :disabled="viewing"
-            />
-            <span class="text-sm text-slate-700 dark:text-slate-200">
-              {{ $t('CASE_TICKETS.TASKS.MILESTONE_LABEL') }}
-            </span>
-            <span class="text-xs text-slate-400 dark:text-slate-500">
-              {{ $t('CASE_TICKETS.TASKS.MILESTONE_HINT') }}
-            </span>
-          </label>
-
-          <!-- Plan-Plantilla-Tareas-Etapa — cuenta para pasar a la siguiente etapa -->
-          <label
-            v-if="stagePlan.current && !form.documentation"
-            class="flex items-center gap-2 mt-3"
+          <p
+            v-if="plannedLate"
+            class="m-0 -mt-1 text-xs text-amber-700 dark:text-amber-300"
           >
-            <input
-              v-model="form.required"
-              type="checkbox"
-              class="!mb-0"
-              :disabled="viewing"
-            />
-            <span class="text-sm text-slate-700 dark:text-slate-200">
-              {{ $t('CASE_TICKETS.TASKS.STAGE.REQUIRED_LABEL') }}
-            </span>
-            <span class="text-xs text-slate-400 dark:text-slate-500">
-              {{
-                $t('CASE_TICKETS.TASKS.STAGE.REQUIRED_FORM_HINT', {
-                  stage: stagePlan.current.label,
-                })
-              }}
-            </span>
-          </label>
+            {{ $t('CASE_TICKETS.TASKS.MODAL.PLANNED_AFTER_DUE') }}
+          </p>
+
+          <!-- Tareas que se repiten: solo al crear y si la hace el equipo (no el cliente). -->
+          <template v-if="!isEditing && !viewing && form.audience !== 'client'">
+            <RecurrenceFields v-if="repeats" v-model="recurrence">
+              <template #before>
+                <label
+                  class="flex items-center gap-2 text-sm ltr:mr-1 rtl:ml-1"
+                >
+                  <input v-model="repeats" type="checkbox" class="!m-0" />
+                  {{ $t('CASE_TICKETS.TASKS.MODAL.REPEATS') }}
+                </label>
+              </template>
+            </RecurrenceFields>
+            <label v-else class="flex items-center gap-2 text-sm w-fit">
+              <input v-model="repeats" type="checkbox" class="!m-0" />
+              {{ $t('CASE_TICKETS.TASKS.MODAL.REPEATS') }}
+            </label>
+          </template>
+          <p
+            v-if="form.status === 'cancelled' && form.cancel_reason"
+            class="m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400"
+          >
+            {{ form.cancel_reason }}
+          </p>
+
+          <!-- Hito del proyecto (P2) y obligatoria para la etapa, en una sola línea. -->
+          <div
+            v-if="allowMilestones || (stagePlan.current && !form.documentation)"
+            class="flex flex-wrap items-center gap-x-5 gap-y-1"
+          >
+            <label v-if="allowMilestones" class="flex items-center gap-2">
+              <input
+                v-model="form.milestone"
+                type="checkbox"
+                class="!h-auto"
+                :disabled="viewing"
+              />
+              <span class="text-sm text-slate-700 dark:text-slate-200">
+                {{ $t('CASE_TICKETS.TASKS.MILESTONE_LABEL') }}
+              </span>
+              <span class="text-xs text-slate-400 dark:text-slate-500">
+                {{ $t('CASE_TICKETS.TASKS.MILESTONE_HINT') }}
+              </span>
+            </label>
+            <label
+              v-if="stagePlan.current && !form.documentation"
+              class="flex items-center gap-2"
+            >
+              <input
+                v-model="form.required"
+                type="checkbox"
+                class="!h-auto"
+                :disabled="viewing"
+              />
+              <span class="text-sm text-slate-700 dark:text-slate-200">
+                {{ $t('CASE_TICKETS.TASKS.STAGE.REQUIRED_LABEL') }}
+              </span>
+              <span class="text-xs text-slate-400 dark:text-slate-500">
+                {{
+                  $t('CASE_TICKETS.TASKS.STAGE.REQUIRED_FORM_HINT', {
+                    stage: stagePlan.current.label,
+                  })
+                }}
+              </span>
+            </label>
+          </div>
 
           <!-- Tareas con el cliente — lo que hizo en su portal; responderle o regresarla. -->
           <ClientTaskEntries
@@ -1484,7 +1658,32 @@ export default {
             @changed="onClientReturned"
           />
 
-          <div class="flex items-center justify-end gap-2 mt-4">
+          <!-- Sin responsable: se pregunta antes de guardar (nadie la vería en su Mi día). -->
+          <div
+            v-if="askUnassigned"
+            class="flex flex-wrap items-center gap-2 px-3 py-2 mt-1 text-sm border rounded-md bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-200"
+          >
+            <span class="flex-1 min-w-[12rem]">
+              {{ $t('CASE_TICKETS.TASKS.UNASSIGNED_CONFIRM.TEXT') }}
+            </span>
+            <woot-button
+              size="small"
+              variant="clear"
+              type="button"
+              @click="chooseAssignee"
+            >
+              {{ $t('CASE_TICKETS.TASKS.UNASSIGNED_CONFIRM.CHOOSE') }}
+            </woot-button>
+            <woot-button
+              size="small"
+              color-scheme="warning"
+              type="button"
+              @click="saveUnassigned"
+            >
+              {{ $t('CASE_TICKETS.TASKS.UNASSIGNED_CONFIRM.SAVE') }}
+            </woot-button>
+          </div>
+          <div class="flex items-center justify-end gap-2 mt-1">
             <woot-button
               variant="clear"
               type="button"
@@ -1593,39 +1792,53 @@ export default {
       :reject-text="$t('CASE_TICKETS.TASKS.DELETE_CONFIRM.CANCEL')"
     />
 
-    <!-- Menú de acciones de la fila. Posición FIJA anclada al botón "…": así no
-         lo recorta el overflow de la tabla. Se cierra al hacer click fuera. -->
+    <!-- Menú de acciones de la fila (⋮ a la derecha). Arriba lo que se HACE con la
+         tarea, según su estado; abajo de la línea, lo que se consulta. Posición
+         FIJA calculada con su tamaño real (rowMenuMixin): abre hacia arriba si no cabe. -->
     <div
       v-if="rowMenu"
       v-on-clickaway="closeRowMenu"
-      class="fixed z-[9999] w-56 p-1 bg-white border rounded-md shadow-xl dark:bg-slate-800 border-slate-50 dark:border-slate-700"
-      :style="{ top: `${rowMenu.top}px`, left: `${rowMenu.left}px` }"
+      class="js-row-menu fixed z-[9999] w-56 p-1 bg-white border rounded-md shadow-xl dark:bg-slate-800 border-slate-50 dark:border-slate-700"
+      :style="rowMenuStyle()"
     >
       <WootDropdownMenu>
+        <!-- Avance: lo hecho sin completarla (es un reporte, no una nota). Primera opción. -->
+        <WootDropdownItem v-if="canReportProgress(rowMenu.row)">
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="clipboard"
+            @click="menuReportProgress"
+          >
+            {{ $t('TASK_REPORT.PROGRESS') }}
+          </woot-button>
+        </WootDropdownItem>
         <WootDropdownItem>
           <woot-button
             variant="clear"
             color-scheme="secondary"
             size="small"
-            icon="clipboard"
-            @click="menuViewNotes"
+            :icon="rowMenu.row.status === 'pending' ? 'edit' : 'eye-show'"
+            @click="menuEdit"
           >
             {{
-              $t('CASE_TICKETS.TASKS.MENU.NOTES', {
-                count: rowMenu.row.notes_count || 0,
-              })
+              rowMenu.row.status === 'pending'
+                ? $t('CASE_TICKETS.TASKS.MENU.EDIT')
+                : $t('CASE_TICKETS.TASKS.MENU.VIEW')
             }}
           </woot-button>
         </WootDropdownItem>
-        <WootDropdownItem v-if="rowMenu.row.status === 'done'">
+        <!-- Agendar: una sesión de trabajo ligada (la tarea se queda; puede tener varias). -->
+        <WootDropdownItem v-if="rowMenu.row.status === 'pending'">
           <woot-button
             variant="clear"
             color-scheme="secondary"
             size="small"
-            icon="clipboard"
-            @click="menuViewReports"
+            icon="calendar"
+            @click="menuAddMeeting"
           >
-            {{ $t('TASK_REPORT.VIEW') }}
+            {{ $t('CASE_TICKETS.TASKS.MENU.ADD_MEETING') }}
           </woot-button>
         </WootDropdownItem>
         <WootDropdownItem>
@@ -1639,64 +1852,45 @@ export default {
             {{ $t('CASE_TICKETS.TASKS.ADD_NOTE') }}
           </woot-button>
         </WootDropdownItem>
-        <!-- Una tarea concluida ya no se agenda: la opción queda visible pero
-             inhabilitada, con el motivo en el tooltip. -->
+        <!-- Concluida o cancelada: regresa a pendiente para poder cambiarla. -->
         <WootDropdownItem
-          :disabled="rowMenu.row.status === 'done'"
-          :title="
-            rowMenu.row.status === 'done'
-              ? $t('CASE_TICKETS.TASKS.MENU.ADD_MEETING_DONE_HINT')
-              : ''
-          "
+          v-if="['done', 'cancelled'].includes(rowMenu.row.status)"
         >
           <woot-button
             variant="clear"
             color-scheme="secondary"
             size="small"
-            icon="calendar"
-            :is-disabled="rowMenu.row.status === 'done'"
-            @click="menuAddMeeting"
+            icon="arrow-clockwise"
+            @click="menuReopen"
           >
-            {{ $t('CASE_TICKETS.TASKS.MENU.ADD_MEETING') }}
+            {{ $t('CANCEL_ITEM.REOPEN') }}
           </woot-button>
         </WootDropdownItem>
-        <WootDropdownItem>
+        <!-- Pasar a la agenda: la tarea se convierte en UNA tarea agendada. -->
+        <WootDropdownItem v-if="canMoveToAgenda(rowMenu.row)">
           <woot-button
             variant="clear"
             color-scheme="secondary"
             size="small"
             icon="calendar-clock"
-            @click="menuViewMeetings"
+            @click="menuMoveToAgenda"
           >
-            {{ $t('CASE_TICKETS.TASKS.MENU.VIEW_MEETINGS') }}
+            {{ $t('CONVERT_ITEM.SCHEDULE') }}
           </woot-button>
         </WootDropdownItem>
-        <WootDropdownItem
-          v-if="
-            rowMenu &&
-            rowMenu.row &&
-            ['pending', 'cancelled'].includes(rowMenu.row.status)
-          "
-        >
+        <WootDropdownItem v-if="rowMenu.row.status === 'pending'">
           <woot-button
             variant="clear"
             color-scheme="secondary"
             size="small"
-            :icon="
-              rowMenu.row.status === 'cancelled'
-                ? 'arrow-clockwise'
-                : 'dismiss-circle'
-            "
+            icon="dismiss-circle"
             @click="menuCancelTask"
           >
-            {{
-              rowMenu.row.status === 'cancelled'
-                ? $t('CANCEL_ITEM.REOPEN')
-                : $t('CANCEL_ITEM.MENU')
-            }}
+            {{ $t('CANCEL_ITEM.MENU') }}
           </woot-button>
         </WootDropdownItem>
-        <WootDropdownItem>
+        <!-- Borrar es solo para errores de captura: quien la creó en 24 h o un admin. -->
+        <WootDropdownItem v-if="rowMenu.row.deletable !== false">
           <woot-button
             variant="clear"
             color-scheme="alert"
@@ -1707,8 +1901,29 @@ export default {
             {{ $t('CASE_TICKETS.TASKS.DELETE') }}
           </woot-button>
         </WootDropdownItem>
+        <WootDropdownDivider />
+        <!-- Todo lo de la tarea (notas, reportes, agendadas y cambios) en un solo lugar. -->
+        <WootDropdownItem>
+          <woot-button
+            variant="clear"
+            color-scheme="secondary"
+            size="small"
+            icon="document-list-clock"
+            @click="menuHistory"
+          >
+            {{ $t('TASK_HISTORY.MENU') }}
+          </woot-button>
+        </WootDropdownItem>
       </WootDropdownMenu>
     </div>
+    <ScheduleTaskModal
+      :show="!!scheduleTarget"
+      :task="scheduleTarget"
+      :busy="scheduleBusy"
+      :error="scheduleError"
+      @close="scheduleTarget = null"
+      @submit="submitMoveToAgenda"
+    />
     <CancelItemModal
       :show="!!cancelTarget"
       :item="cancelTarget"
@@ -1723,7 +1938,14 @@ export default {
       @close="cancelReport"
       @reported="onReported"
     />
-    <TaskReportsDialog :filters="reportsFilter" @close="reportsFilter = null" />
+    <TaskHistoryModal
+      v-if="historyTaskId"
+      show
+      :task-id="historyTaskId"
+      :actions="isFrozen ? [] : ['progress', 'note', 'schedule', 'complete']"
+      @close="historyTaskId = null"
+      @action="onHistoryAction"
+    />
   </div>
 </template>
 
@@ -1796,7 +2018,32 @@ export default {
   // modal completo nunca necesita scroll.
   .ProseMirror-woot-style {
     @apply px-3 py-2 overflow-y-auto;
-    height: 8rem;
+    height: 5.5rem;
+  }
+}
+
+// Formulario compacto de la tarea: etiquetas chicas, campos de 36 px y sin margen abajo.
+.task-form {
+  .field-label {
+    @apply block mb-1 text-xs font-medium text-slate-600 dark:text-slate-300;
+  }
+
+  .field-hint {
+    @apply block mt-0.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400;
+  }
+
+  input[type='text'],
+  input[type='date'] {
+    @apply h-9 py-1 px-2 mb-0 text-sm;
+  }
+
+  // La flecha del select es su fondo: se deja espacio a la derecha para verla.
+  select {
+    @apply h-9 py-1 pl-2 pr-8 mb-0 text-sm;
+  }
+
+  input[type='checkbox'] {
+    @apply mb-0;
   }
 }
 

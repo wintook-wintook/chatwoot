@@ -305,6 +305,11 @@
       },
       "VIEW_DETAILS": "View details",
       "NEW_CONVERSATION": "New conversation"
+    },
+    "LIST_PROSPECTS": {
+      "BUTTON": "List prospects",
+      "BACK": "See all contacts",
+      "HINT": "Contacts from cold email lists who haven't replied yet (quarantined): hidden from the normal list and deleted automatically if they never reply."
     }
   },
   "CONTACT_PROFILE": {

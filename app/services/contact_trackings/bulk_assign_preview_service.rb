@@ -29,12 +29,16 @@
 class ContactTrackings::BulkAssignPreviewService
   include ContactTrackings::Eligibility
 
-  # Tope de seguridad de contactos a clasificar/listar (la audiencia puede ser
-  # mayor, pero el bulk real se limita a MAX_BULK_ASSIGN). Ver Preview-buckets-modal §6.
-  PREVIEW_LIMIT = 200
+  # Tope de contactos a clasificar/listar. Igual al tope de lanzamiento
+  # (BulkAssignService::MAX_BULK_ASSIGN) para que toda campaña que se puede lanzar
+  # tenga su desglose. Arriba de eso solo se devuelve el total (counts_only).
+  PREVIEW_LIMIT = ContactTrackings::BulkAssignService::MAX_BULK_ASSIGN
 
-  def initialize(account:, current_user:, filter_payload:, template_id:,
-                 skip_active: true, excluded_contact_ids: [])
+  # inbox_id: Campaña con Vendedor IA, el canal es de la campaña (no del agente).
+  def initialize(account:, current_user:, filter_payload:, template_id:, # rubocop:disable Metrics/ParameterLists
+                 skip_active: true, excluded_contact_ids: [], inbox_id: nil, limit: PREVIEW_LIMIT)
+    @limit                = limit # Campaña con Vendedor IA: más (TrackingCampaigns::AudiencePage la pagina)
+    @inbox_id             = inbox_id
     @account              = account
     @current_user         = current_user
     @filter_payload       = filter_payload
@@ -45,15 +49,16 @@ class ContactTrackings::BulkAssignPreviewService
 
   def call
     template = @account.tracking_templates.find_by(id: @template_id)
-    return { error: 'Plantilla no encontrada' } unless template
+    # Campaña con Vendedor IA: no lleva agente elegido (lo arma la campaña); basta la bandeja.
+    return { error: 'Plantilla no encontrada' } unless template || @inbox_id
 
-    inbox = template.inbox
+    inbox = @inbox_id ? @account.inboxes.find_by(id: @inbox_id) : template.inbox
     return { error: no_inbox_error(template) } unless inbox
 
     total = resolved[:count]
     # Audiencia demasiado grande para clasificar/listar → solo el total (counts_only).
     # El usuario debe reducir el filtro (igual no puede confirmar sobre el límite).
-    return counts_only_result(inbox, total) if total > PREVIEW_LIMIT
+    return counts_only_result(inbox, total) if total > @limit
 
     classified = classify_audience(inbox)
 
@@ -108,6 +113,7 @@ class ContactTrackings::BulkAssignPreviewService
       name: contact.name,
       phone_number: contact.phone_number,
       email: contact.email,
+      company: contact.additional_attributes.to_h['company_name'].presence,
       bucket: bucket,
       reason: reason,
       excluded: @excluded_contact_ids.include?(contact.id)

@@ -118,7 +118,7 @@
       },
       "WILL_CREATE": "Se crearán {count} seguimientos al confirmar.",
       "TOO_MANY_TITLE": "Audiencia demasiado grande",
-      "TOO_MANY_BODY": "La audiencia tiene {total} contactos y supera el máximo para previsualizar. Reduce el filtro para ver el desglose por grupo y poder lanzar la campaña.",
+      "TOO_MANY_BODY": "La audiencia tiene {total} contactos y supera el máximo de contactos por campaña. Reduce el filtro para ver el desglose por grupo y poder lanzarla.",
       "BACK": "Listo"
     }
   }

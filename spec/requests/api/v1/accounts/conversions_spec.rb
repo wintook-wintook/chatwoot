@@ -74,7 +74,7 @@ RSpec.describe 'Conversions' do
 
     task = ticket.case_tasks.sole
     expect(task).to have_attributes(title: 'Visita', description: 'Revisar equipo', assignee_id: admin.id, estimated_minutes: 90)
-    expect(task.due_at).to be_within(1.second).of(starts)
+    expect(task.due_at).to be_within(1.second).of(starts.end_of_day) # sin hora: vence al final del día
     expect(CaseMeeting.exists?(meeting.id)).to be(false)
     expect(report.reload).to have_attributes(case_meeting_id: nil, case_task_id: task.id)
     expect(conversation.messages.outgoing.last.content).to include('quitamos de la agenda «Visita»')

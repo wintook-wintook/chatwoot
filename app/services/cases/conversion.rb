@@ -128,8 +128,14 @@ class Cases::Conversion
   def build_task
     meeting = @item
     CaseTask.new(account: meeting.account, case_ticket: meeting.case_ticket, title: meeting.title.first(255),
-                 description: meeting.description, due_at: meeting.starts_at, assignee_id: meeting.organizer_id || @user&.id,
+                 description: meeting.description, due_at: due_day(meeting), assignee_id: meeting.organizer_id || @user&.id,
                  requester: @user, estimated_minutes: estimated(meeting), skip_activity: true, **own_client(meeting))
+  end
+
+  # La tarea vence al final del día de la cita (en la zona de la cita): sin hora.
+  def due_day(meeting)
+    zone = ActiveSupport::TimeZone[meeting.time_zone.to_s] || Time.zone
+    meeting.starts_at.in_time_zone(zone).end_of_day
   end
 
   def estimated(meeting)

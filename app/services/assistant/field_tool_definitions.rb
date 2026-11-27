@@ -21,6 +21,8 @@ module Assistant::FieldToolDefinitions
                                  'cierre y la visita queda realizada.',
          { kind: KIND, id: D.int('id de my_route'), notes: D.str('Lo que se hizo, ordenado y claro, con las palabras del usuario'),
            done_task_ids: { type: 'array', items: { type: 'integer' }, description: 'Puntos de la lista (get_visit) que dijo que hizo' },
-           minutes: D.int('Minutos dedicados, solo en visita agendada y si los dijo') }, %w[kind id notes])
+           minutes: D.int('Minutos dedicados, solo en visita agendada y si los dijo'),
+           no_show: { type: 'boolean', description: 'Visita agendada: true si el cliente no estaba o no asistió' } },
+         %w[kind id notes])
   ].freeze
 end

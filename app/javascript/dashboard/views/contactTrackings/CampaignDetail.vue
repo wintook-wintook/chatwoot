@@ -10,11 +10,28 @@ import { frontendURL } from 'dashboard/helper/URLHelper';
 import TrackingCampaignsAPI from 'dashboard/api/trackingCampaigns';
 import ContactTrackingsAPI from 'dashboard/api/contactTrackings';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
+import { sortRows, nextSort, sortArrow } from 'dashboard/helper/tableSort';
 import CampaignEntries from './CampaignEntries.vue';
 import CampaignHandoffSettings from './CampaignHandoffSettings.vue';
 import CampaignScoringSettings from './CampaignScoringSettings.vue';
+import CampaignSettingsMenu from './CampaignSettingsMenu.vue';
+import CampaignLaunchModal from './CampaignLaunchModal.vue';
 
 const PAGE_SIZE = 25;
+
+// Columnas de Prospectos ordenables con clic (en cliente: la campaña viene completa).
+const PROSPECT_COLUMNS = [
+  { key: 'contact', label: 'CONTACT' },
+  { key: 'status', label: 'STATUS' },
+  { key: 'delivery', label: 'DELIVERY' },
+  { key: 'intent', label: 'INTENT' },
+  { key: 'outcome', label: 'OUTCOME' },
+  { key: 'scheduled', label: 'SCHEDULED' },
+  { key: 'attempts', label: 'ATTEMPTS', align: 'text-center' },
+  { key: 'score', label: 'SCORE', align: 'text-center' },
+];
+// «Más es mejor»: el primer clic ordena de mayor a menor.
+const DESC_FIRST_COLUMNS = ['attempts', 'score'];
 // Cada cuánto se refrescan los indicadores mientras la pantalla está abierta
 const KPI_REFRESH_MS = 60 * 1000;
 
@@ -94,10 +111,12 @@ const PROSPECT_FILTERS = {
 
 export default {
   components: {
+    CampaignLaunchModal,
     TableFooter,
     CampaignEntries,
     CampaignHandoffSettings,
     CampaignScoringSettings,
+    CampaignSettingsMenu,
   },
   data() {
     return {
@@ -106,7 +125,8 @@ export default {
       handingOff: null, // prospeccion V6
       showHandoffModal: false, // prospeccion P2
       showScoringModal: false, // prospeccion P4
-      sortByScore: false, // prospeccion P4: ordenar por puntos
+      prospectSort: { key: 'contact', direction: 'asc' }, // clic en columna: ↑/↓
+      prospectColumns: PROSPECT_COLUMNS,
       choosingSubject: null, // prospeccion P3
       isLoading: false,
       currentPage: 1,
@@ -347,21 +367,28 @@ export default {
         `TRACKING_CAMPAIGN_DETAIL.FILTER_DESC.${this.activeFilter}`
       );
     },
-    // Prospectos tras aplicar el filtro por KPI (client-side sobre lo cargado).
+    // Prospectos tras aplicar el filtro por KPI y el orden por columna (client-side
+    // sobre lo cargado). Sin valor (—) siempre al final.
     filteredProspects() {
       const predicate = PROSPECT_FILTERS[this.activeFilter];
       const list = predicate
         ? this.prospects.filter(predicate)
         : this.prospects;
-      if (!this.sortByScore) return list;
-      // prospeccion P4: de más a menos puntos; sin puntuación, al final.
-      return [...list].sort(
-        (a, b) => (b.prospect_score ?? -1) - (a.prospect_score ?? -1)
-      );
+      const { key, direction } = this.prospectSort;
+      return sortRows(list, this.prospectSortValues[key], direction);
     },
-    scoreHeader() {
-      const arrow = this.sortByScore ? '↓' : '↕';
-      return `${this.$t('TRACKING_CAMPAIGN_DETAIL.COL.SCORE')} ${arrow}`;
+    // Valor por el que ordena cada columna: el texto que se ve (ya traducido).
+    prospectSortValues() {
+      return {
+        contact: p => p.contact_name,
+        status: p => this.trackingStatusLabel(p.status),
+        delivery: p => this.deliveryLabel(p),
+        intent: p => this.intentLabel(p.last_intent),
+        outcome: p => this.outcomeLabel(p.outcome),
+        scheduled: p => (p.scheduled_for ? Date.parse(p.scheduled_for) : null),
+        attempts: p => p.attempt_count,
+        score: p => p.prospect_score, // prospeccion P4
+      };
     },
     // prospeccion P4: «Pesos sugeridos · reglas: giro, zona» para el renglón de puntuación.
     scoringSummary() {
@@ -465,6 +492,14 @@ export default {
     },
     onPageChange(page) {
       this.currentPage = page;
+    },
+    sortProspectsBy(key) {
+      this.prospectSort = nextSort(this.prospectSort, key, DESC_FIRST_COLUMNS);
+      this.currentPage = 1;
+    },
+    columnHeader(column) {
+      const label = this.$t(`TRACKING_CAMPAIGN_DETAIL.COL.${column.label}`);
+      return `${label} ${sortArrow(this.prospectSort, column.key)}`;
     },
     // Clic en un KPI: 'clear' o volver a clicar el activo limpia; si no, filtra.
     async handOff(prospect) {
@@ -777,6 +812,13 @@ export default {
         >
           {{ $t('TRACKING_CAMPAIGNS_VIEW.BACK_TO_LIST') }}
         </woot-button>
+        <!-- Entrega de interesados y Puntuación (antes tarjetas sobre las tablas) -->
+        <CampaignSettingsMenu
+          :handoff-summary="handoffSummary"
+          :scoring-summary="scoringSummary"
+          @handoff="showHandoffModal = true"
+          @scoring="showScoringModal = true"
+        />
         <!-- Guardada: se puede modificar (en el formulario de Campañas) -->
         <woot-button
           v-if="campaign.status === 'saved'"
@@ -807,6 +849,18 @@ export default {
           @click="showPauseModal = true"
         >
           {{ $t('TRACKING_CAMPAIGNS_VIEW.PAUSE') }}
+        </woot-button>
+        <!-- fix/campanas: duplicar abre «Nueva campaña» llena con esta -->
+        <woot-button
+          variant="smooth"
+          color-scheme="secondary"
+          size="small"
+          icon="copy"
+          @click="
+            $router.push({ ...backRoute, query: { duplicate: campaign.id } })
+          "
+        >
+          {{ $t('TRACKING_CAMPAIGNS_VIEW.DUPLICATE') }}
         </woot-button>
         <woot-button
           variant="smooth"
@@ -1039,48 +1093,6 @@ export default {
         </div>
       </div>
 
-      <!-- prospeccion P2: entrega de interesados (resumen; se configura en el modal) -->
-      <div
-        class="flex items-center justify-between gap-3 p-3 mb-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
-      >
-        <div class="min-w-0">
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-            {{ $t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.TITLE') }}
-          </span>
-          <p class="mb-0 text-xs truncate text-slate-500 dark:text-slate-400">
-            {{ handoffSummary }}
-          </p>
-        </div>
-        <woot-button
-          size="small"
-          variant="smooth"
-          icon="settings"
-          @click="showHandoffModal = true"
-        >
-          {{ $t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.CONFIGURE') }}
-        </woot-button>
-      </div>
-      <!-- prospeccion P4: puntuación (resumen; se configura en el modal) -->
-      <div
-        class="flex items-center justify-between gap-3 p-3 mb-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-75 dark:border-slate-700 shadow-sm"
-      >
-        <div class="min-w-0">
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-            {{ $t('TRACKING_CAMPAIGN_DETAIL.SCORING.TITLE') }}
-          </span>
-          <p class="mb-0 text-xs truncate text-slate-500 dark:text-slate-400">
-            {{ scoringSummary }}
-          </p>
-        </div>
-        <woot-button
-          size="small"
-          variant="smooth"
-          icon="settings"
-          @click="showScoringModal = true"
-        >
-          {{ $t('TRACKING_CAMPAIGN_DETAIL.HANDOFF_SETTINGS.CONFIGURE') }}
-        </woot-button>
-      </div>
       <woot-modal
         :show.sync="showScoringModal"
         size="medium"
@@ -1235,34 +1247,18 @@ export default {
               class="sticky top-0 z-10 bg-white dark:bg-slate-800 shadow-sm"
             >
               <tr class="text-left text-slate-500 dark:text-slate-400">
-                <th class="p-3">
-                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.CONTACT') }}
-                </th>
-                <th class="p-3">
-                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.STATUS') }}
-                </th>
-                <th class="p-3">
-                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.DELIVERY') }}
-                </th>
-                <th class="p-3">
-                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.INTENT') }}
-                </th>
-                <th class="p-3">
-                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.OUTCOME') }}
-                </th>
-                <th class="p-3">
-                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.SCHEDULED') }}
-                </th>
-                <th class="p-3 text-center">
-                  {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.ATTEMPTS') }}
-                </th>
-                <!-- prospeccion P4: clic para ordenar de más a menos puntos -->
+                <!-- Clic: ordena ↑; otro clic: ↓ (Puntos e Intentos arrancan ↓) -->
                 <th
-                  class="p-3 text-center cursor-pointer select-none"
-                  :class="sortByScore ? 'text-woot-600' : ''"
-                  @click="sortByScore = !sortByScore"
+                  v-for="column in prospectColumns"
+                  :key="column.key"
+                  class="p-3 cursor-pointer select-none whitespace-nowrap"
+                  :class="[
+                    column.align,
+                    prospectSort.key === column.key ? 'text-woot-600' : '',
+                  ]"
+                  @click="sortProspectsBy(column.key)"
                 >
-                  {{ scoreHeader }}
+                  {{ columnHeader(column) }}
                 </th>
                 <th class="p-3 text-right">
                   {{ $t('TRACKING_CAMPAIGN_DETAIL.COL.ACTION') }}
@@ -1395,15 +1391,10 @@ export default {
       :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.PAUSE_YES')"
       :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
     />
-    <woot-delete-modal
-      :show="showLaunchModal"
-      :on-close="() => (showLaunchModal = false)"
-      :on-confirm="confirmLaunch"
-      :title="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH')"
-      :message="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_CONFIRM')"
-      :message-value="campaign ? ` «${campaign.name}»?` : ''"
-      :confirm-text="$t('TRACKING_CAMPAIGNS_VIEW.LAUNCH_YES')"
-      :reject-text="$t('TRACKING_CAMPAIGNS_VIEW.DELETE_NO')"
+    <CampaignLaunchModal
+      :campaign="showLaunchModal ? campaign : null"
+      @close="showLaunchModal = false"
+      @confirm="confirmLaunch"
     />
   </div>
 </template>

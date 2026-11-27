@@ -23,6 +23,15 @@ export default {
     return { visit: null, eta: 20, busy: false, etas: ETAS };
   },
   computed: {
+    // Participante (otro es el responsable): ve la visita, no marca llegada ni concluye.
+    participating() {
+      const me = this.$store.getters.getCurrentUserID;
+      return (
+        !!this.visit.organizer &&
+        this.visit.organizer.id !== me &&
+        (this.visit.participant_ids || []).includes(me)
+      );
+    },
     arrivedLabel() {
       return new Date(this.visit.arrived_at).toLocaleTimeString(undefined, {
         hour: '2-digit',
@@ -62,15 +71,17 @@ export default {
       }
       this.run(() => AgendaVisitsAPI.arrive(this.meetingId, location));
     },
+    // Concluir: el reporte pregunta si se realizó o el cliente no asistió.
     conclude() {
       const { title } = this.visit;
-      this.askReport({ type: 'meeting', id: this.meetingId, title }, () =>
-        this.finish()
+      this.askReport(
+        { type: 'meeting', id: this.meetingId, title, askAttendance: true },
+        result => this.finish(result.status)
       );
     },
-    async finish() {
+    async finish(status = 'held') {
       await this.run(() =>
-        AgendaItemsAPI.updateItem(this.meetingId, { status: 'held' })
+        AgendaItemsAPI.updateItem(this.meetingId, { status })
       );
       this.fetch();
     },
@@ -129,7 +140,15 @@ export default {
       <p class="m-0 text-sm font-medium text-slate-700">
         {{ $t(`FIELD.STATES.${visit.state}`) }}
       </p>
-      <div v-if="visit.state === 'pending'" class="flex items-center gap-2">
+      <p v-if="participating" class="m-0 text-sm text-slate-600">
+        {{
+          $t('AGENDA_PARTICIPANTS.ONLY_OWNER', { name: visit.organizer.name })
+        }}
+      </p>
+      <div
+        v-if="!participating && visit.state === 'pending'"
+        class="flex items-center gap-2"
+      >
         <select v-model="eta" class="!mb-0 flex-1">
           <option v-for="n in etas" :key="n" :value="n">
             {{ $t('FIELD.ETA_OPTION', { n }) }}
@@ -140,7 +159,7 @@ export default {
         </woot-button>
       </div>
       <woot-button
-        v-if="!visit.arrived_at && visit.state !== 'done'"
+        v-if="!participating && !visit.arrived_at && visit.state !== 'done'"
         :is-loading="busy"
         @click="arrive"
       >
@@ -153,7 +172,7 @@ export default {
         </template>
       </p>
       <woot-button
-        v-if="visit.state !== 'done'"
+        v-if="!participating && visit.state !== 'done'"
         variant="smooth"
         :disabled="busy"
         @click="conclude"

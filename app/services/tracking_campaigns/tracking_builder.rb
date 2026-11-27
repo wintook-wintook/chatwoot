@@ -55,8 +55,15 @@ class TrackingCampaigns::TrackingBuilder
     @tracking = tracking
 
     contact_inbox = ContactInboxBuilder.new(contact: @contact, inbox: @campaign.inbox).perform
+    # Campaña con Vendedor IA: nace SIN responsable (la atiende la IA; «Agente IA» en la conversación) y con la marca
+    # «ai_campaign» para que la asignación automática de la bandeja no se la dé a nadie; al entregarla, se asigna
+    # (Motor2::HandoffAssign). El de una lista fría en cuarentena nace además pospuesto (Motor2::ListConversation).
+    motor2 = @campaign.motor2?
+    quiet = motor2 && @contact.list_quarantine?
+    extra = email_subject_attributes.merge(motor2 ? { 'ai_campaign' => @campaign.id } : {})
     conversation = ConversationBuilder.new(
-      params: ActionController::Parameters.new(assignee_id: @agent.id, additional_attributes: email_subject_attributes),
+      params: ActionController::Parameters.new({ assignee_id: motor2 ? nil : @agent.id, additional_attributes: extra,
+                                                 status: quiet ? 'snoozed' : nil }.compact),
       contact_inbox: contact_inbox
     ).perform
     Messages::MessageBuilder.new(@agent, conversation, { content: @note, private: true }).perform
@@ -75,7 +82,7 @@ class TrackingCampaigns::TrackingBuilder
     return {} unless @campaign.inbox&.email?
 
     template, variant = TrackingCampaigns::SubjectTest.pick(@campaign)
-    subject = TrackingCampaigns::EmailSubject.render(template, @contact)
+    subject = TrackingCampaigns::EmailSubject.render(template, @contact, @campaign)
     return {} unless subject
 
     @tracking&.update_column(:subject_variant, variant) if variant # rubocop:disable Rails/SkipsModelValidations
@@ -102,12 +109,15 @@ class TrackingCampaigns::TrackingBuilder
   # (ActionService#assign_tracking_template): uno por plantilla WhatsApp; sin plantillas,
   # DEFAULT_MAX_ATTEMPTS mensajes con IA. Con un número fijo, un agente con menos
   # plantillas que intentos dejaba seguimientos que no pasan la validación y nunca salían.
-  def max_attempts
-    count = Array(template.whatsapp_templates).count(&:present?)
-    count.zero? ? DEFAULT_MAX_ATTEMPTS : count.clamp(1, 10)
-  end
+  # feat/ficha_agente_ia: la misma regla que el agente (plantillas, o los de su ficha, o 3).
+  def max_attempts = template.follow_up_attempts
 
   def tracking_attributes(conversation_id)
+    base_attributes(conversation_id).merge(@campaign.motor2? ? TrackingCampaigns::Motor2Brief.tracking_touches(@campaign) : {})
+  end
+
+  # Campaña con Vendedor IA: los toques (cuántos, cada cuánto, plantilla de cada uno) son de la campaña.
+  def base_attributes(conversation_id)
     {
       account_id: @account.id, contact_id: @contact.id, inbox_id: @campaign.inbox_id, conversation_id: conversation_id,
       tracking_template_id: template.id, tracking_campaign_id: @campaign.id, objective: template.objective,

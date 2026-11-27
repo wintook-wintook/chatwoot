@@ -197,7 +197,26 @@ en:
       task_not_open: 'Only a pending task can be scheduled.'
       meeting_not_open: 'Only a pending scheduled task with no visit started can become a task.'
       starts_at: 'Pick the day and time.'
+  # «Link to a client» — an internal case becomes a client's case (Cases::AssignClient)
+  assign_client:
+    errors:
+      not_internal: 'This case already has a client.'
+      contact_required: 'Pick the client contact.'
+      organization_missing: 'Organization not found.'
+      contact_other_organization: 'That contact belongs to another organization.'
+  # WhatsApp templates — «Create with AI» (Whatsapp::TemplateDrafter)
+  whatsapp_templates:
+    ai:
+      no_key: 'Connect the account OpenAI integration to create templates with AI.'
+      goal_required: 'Write what you want to achieve with the template.'
+      failed: 'The proposal could not be built. Try again.'
+  # Follow-up presets (AiFollowUpPreset)
+  ai_follow_up_presets:
+    not_editable: 'Only its creator or an administrator can change or delete it.'
   cancellation:
+    meeting_locked: 'The scheduled task is already closed or cancelled: it cannot be changed.'
+    meeting_not_closed: 'Only a held or no-show scheduled task can be reopened.'
+    closed_locked: 'The task is already done or cancelled: reopen it to change it.'
     report: 'Cancelled: %{reason}'
     client_message: 'Hi %{name}, we cancelled «%{title}» on %{when}. We are here for anything you need.'
     delete_restricted: 'Only mistakes can be deleted, within 24 hours and by whoever created it. If it will not happen, cancel it with its reason.'
@@ -330,6 +349,13 @@ en:
       not_found: 'Maintenance plan not found'
       asset_not_found: 'Equipment not found'
   # prospeccion V4 — opt-out from the link in an AI Agent email
+  public_campaign_survey:
+    title: "Your opinion matters"
+    body: "Answer these questions from %{name}. It takes less than a minute."
+    pick: "Pick one"
+    send: "Send answers"
+    done_title: "Thanks for your time!"
+    done_body: "%{name} received your answers."
   public_opt_out:
     title: "Don't want to receive our emails anymore?"
     body: "Confirm and %{name} won't write to you again."
@@ -350,6 +376,38 @@ en:
       someone: "Someone on the team"
   contact_trackings:
     opt_out_footer: "Don't want more emails? Unsubscribe here: %{url}"
+  quote_formats:
+    copy: 'copy'
+    errors:
+      last: 'At least one format must remain.'
+      logo: 'The logo must be a PNG, JPG or WEBP up to 2 MB.'
+      not_found: 'Format not found'
+    default_name: 'Main format'
+    client: 'Customer'
+    bank: 'Payment details'
+    withholdings: 'Withholdings'
+    amount_in_words: 'Amount in words'
+    client_signature: 'Name and signature of acceptance'
+    accepted_on: 'Accepted on %{date}'
+    pdf_unavailable: 'The PDF is not available right now; use Print.'
+    company:
+      legal_name: 'Legal name'
+      tax_id: 'Tax ID'
+      address: 'Address'
+      phone: 'Phone'
+      email: 'Email'
+      website: 'Web'
+    client_fields:
+      name: 'Name'
+      organization: 'Company'
+      tax_id: 'Tax ID'
+      email: 'Email'
+      phone: 'Phone'
+    columns:
+      sku: 'Code'
+      unit: 'Unit'
+      tax: 'Tax'
+      price_with_tax: 'Price incl. tax'
   public_quotes:
     title: 'Quote'
     for: 'For %{name}'
@@ -408,10 +466,16 @@ en:
       opportunity_required: 'Your company requires every quote to have an opportunity'
       no_sales_type: 'First create an opportunity type in Settings › Cases and stages'
       no_conversation: 'The customer has no conversations; copy the link and send it another way'
+  catalog_parameters:
+    not_found: 'Not found in the list.'
+    in_use: 'It is in use: deactivate it so it is no longer offered.'
+    default_tax: 'It is the default tax: mark another one before deleting it.'
   catalog_items:
     not_found: 'Product or service not found'
     import:
       no_file: 'Attach the catalog CSV file.'
+    image:
+      invalid: 'The photo must be PNG, JPG or WEBP up to 5 MB.'
   case_tasks:
     on_close:
       kept: 'Kept %{count} task(s) without a case.'
@@ -431,12 +495,14 @@ en:
       delegate: 'Delegate a client follow-up to an AI agent, and ask how it is going or pause it.'
       sales: 'Sales: how are we doing vs the target, seller and client rankings, which opportunities close, are overdue or stalled, and pipeline health (amounts before tax).'
       sales_own: 'Your sales: how you are doing vs your target, your best clients, which of your opportunities close, are overdue or stalled (amounts before tax).'
+      setup: 'Set up your account: case types with their stages and close reasons for your business (e.g. «help me set up my stages, we sell solar panels»).'
       guide: 'Learn the platform: how to do something, where each thing is and what it is for (e.g. «how do I create a contract?», «what is the funnel for?»).'
       quotes: 'Quotes: build them with catalog products and prices, send them to the customer and see their open quotes (e.g. «quote Mario 3 AC maintenance services»).'
-      reply: 'Answer your customers: which conversations are waiting, what they said, and the reply ready on a card to send it (e.g. “who wrote to me?”, “tell Mario it arrives on Thursday”).'
+      reply: 'Answer your customers: which conversations are waiting, what they said, and the reply ready on a card to send it; also call them on WhatsApp if the inbox has calls (e.g. “who wrote to me?”, “tell Mario it arrives on Thursday”, “call Mario”).'
       field: 'Field work: your visits for the day, which one is next, what was done last time, telling the customer “on my way” and dictating the visit report (e.g. “what visits do I have today?”, “report the visit: replaced the capacitor”).'
       nfc: 'Capture at the expo: the event NFC link to write on a tag («tap a phone») and how many were captured (e.g. “I want to write the expo NFC tag for Ana”).'
       client_tasks: 'Customer tasks: what a customer still has to do, who has overdue tasks, and assigning a task they work in their portal (e.g. “assign Acme testing the invoicing for Friday”).'
+      team_day: 'Your team: a teammate''s day (their tasks, meetings and overdue items) and assigning them tasks (e.g. “what does Ana have today?”, “add a task for my teammate Luis”).'
       limits: 'What it does not do: it never writes to the customer on its own (it leaves a draft or a scheduled message) and does no bulk actions.'
     quotes:
       new_opportunity: 'A new opportunity is created'
@@ -506,9 +572,111 @@ en:
     required: 'To conclude it, write what was done'
     note_title: 'Closing report: %{title}'
     activity_note_title: 'Activity: %{title}'
+    progress_note_title: 'Progress: %{title}'
+    progress_not_open: 'Progress can only be reported on a pending task'
     minutes_required: 'Enter the time spent'
+  google_calendar_schedule:
+    agent_not_found: 'That agent is not in this account'
+    viewer_not_connected: 'Connect your Google Calendar to schedule for a teammate'
+    agent_not_connected: 'That teammate has no Google Calendar connected'
+    same_google: 'That teammate uses your same Google: schedule it for yourself'
+    no_permission: 'Your teammate has not allowed you to make changes to their calendar. Ask them in "Share my calendar".'
+  google_calendar_delete:
+    linked_to_agenda_item: 'This event is a scheduled task: cancel it to remove it from the calendar'
+    no_permission: 'You do not have permission to delete in that calendar'
+    google_error: 'Google could not delete the event. Please try again.'
+    bot_note: '🗑️ %{name} deleted the appointment from the calendar. The customer was not notified.'
+  # diag/waba F1 — WhatsApp inbox «Diagnostics» tab
+  whatsapp_health:
+    only_cloud: 'Diagnostics are only for WhatsApp Cloud inboxes.'
+    reconnect:
+      other_number: 'You picked another number in the Meta window (%{number}). To reconnect this inbox pick its same number; for another number create a new inbox.'
+    unknown: 'Could not check (%{check}). Try again.'
+    ago:
+      minutes: '%{count} min'
+      hours: '%{count} h'
+      days: '%{count} days'
+    quality:
+      green: 'high'
+      yellow: 'medium'
+      red: 'low'
+    tiers:
+      tier_50: '50 conversations per day'
+      tier_250: '250 conversations per day'
+      tier_1k: '1,000 conversations per day'
+      tier_10k: '10,000 conversations per day'
+      tier_100k: '100,000 conversations per day'
+      tier_unlimited: 'unlimited'
+    errors:
+      window_24h: 'More than 24 h since the customer last wrote: use a template.'
+      not_on_whatsapp: 'The customer number has no WhatsApp or cannot receive the message.'
+      payment: 'Payment issue on the WhatsApp Business account.'
+      ecosystem: 'Meta held the message to protect the customer (too many marketing messages).'
+      unsupported: 'That message type is not allowed.'
+      template: 'Template problem (parameters, paused, rejected or deleted): %{title}'
+      rate_limit: 'Too many messages in a row; retrying slower.'
+      token: 'The Meta permission expired: reconnect the inbox.'
+      blocked: 'The account or number is blocked by Meta.'
+      other: 'Meta replied: %{title}'
+      no_title: 'no details'
+    checks:
+      app:
+        ok: 'The system Meta app is configured correctly'
+        fail: 'The system Meta app is misconfigured (App ID or App Secret): «Reconnect with Meta» will not work until it is fixed in Super Admin'
+        unknown: 'Could not check the system Meta app'
+      token:
+        ok: 'This inbox Meta permission is valid'
+        warn: 'This inbox Meta permission needs attention'
+        fail: 'This inbox Meta permission expired or was revoked: messages are not received or sent'
+        unknown: 'Could not check the Meta permission'
+        details:
+          no_app: 'Could not check when it expires: the system Meta app is misconfigured.'
+          permanent: 'It never expires.'
+          expires: 'It expires on %{date}.'
+          scopes: 'Missing permissions: %{scopes}.'
+      webhook:
+        ok: 'Meta sends messages to this system'
+        warn: 'Our app is subscribed, but we could not check which server Meta sends messages to'
+        fail: 'Meta is not sending us the messages people write to you'
+        unknown: 'Could not check whether Meta sends us messages'
+        details:
+          not_subscribed: 'The WhatsApp Business account is not subscribed to our app.'
+          other_server: 'Meta sends them to another server (%{host}). Fix the webhook URL in the Meta app.'
+          unverified: 'Checking it requires the system Meta app to be configured correctly.'
+      last_incoming:
+        ok: 'Last message received: %{ago} ago'
+        warn: 'Last message received: %{ago} ago'
+        never: 'This inbox has never received messages'
+      number:
+        ok: 'Number connected · quality %{quality}'
+        warn: 'Number quality at risk (%{quality}): Meta may lower its limit'
+        fail: 'The number is not ready to send (status %{state}, quality %{quality})'
+        unknown: 'Could not check the number'
+      display_name:
+        ok: 'Display name approved: %{name}'
+        warn: 'Meta rejected the display name «%{name}»: customers see the number instead'
+      limit:
+        ok: 'Sending limit: %{tier}'
+        unknown: 'Could not check the sending limit'
+      account:
+        ok: 'WhatsApp Business account approved'
+        warn: 'The WhatsApp Business account is under review'
+        fail: 'Meta rejected or restricted the WhatsApp Business account'
+        unknown: 'Could not check the WhatsApp Business account'
+      failed:
+        ok: 'No failed messages in the last 7 days'
+        warn: '%{count} failed messages in the last 7 days'
+        fail: 'All messages of the last 7 days failed (%{count})'
+      reauthorization:
+        ok: 'The inbox is not flagged for reconnection'
+        fail: 'The inbox is flagged for reconnection: Meta rejected its permission'
+      queue:
+        ok: 'Messages are being processed'
+        warn: 'WhatsApp messages are delayed (%{minutes} min in queue)'
+        fail: 'No process serves the %{queues} queue: WhatsApp messages do not move'
   agenda_items:
     already_linked: 'That event already has a scheduled task'
+    invalid_emails: 'Invalid guest email: %{emails}'
     all_day: 'An all-day event has no time: it stays in Google only'
     untitled: 'Untitled'
   access_roles:
@@ -560,6 +728,15 @@ en:
       stage_ready: "The tasks for %{stage} are done: move to %{next}?"
       stage_ready_doc: "The tasks for %{stage} are done: document to move to %{next}"
       rule_notice: "Rule «%{rule}»: %{title}"
+    task_recurrence_missed:
+      body: "%{assignee} · was due %{due} and is still pending"
+    case_meeting_participant:
+      added: "You were added to «%{title}»"
+      rescheduled: "«%{title}» changed time"
+      cancelled: "«%{title}» was cancelled"
+      reminder: "«%{title}» is about to start"
+      declined: "%{name} can't attend «%{title}»"
+      removed: "You're no longer in «%{title}»"
     notification_title:
       conversation_creation: "A conversation (#%{display_id}) has been created in %{inbox_name}"
       conversation_assignment: "A conversation (#%{display_id}) has been assigned to you"
@@ -577,6 +754,8 @@ en:
       case_stage_ready: "Case %{folio} is ready to move to the next stage"
       case_rule_notice: "Rule notice on case %{folio}"
       client_task_update: "The customer updated a task on case %{folio}"
+      case_meeting_participant: "Scheduled task"
+      task_recurrence_missed: "«%{title}» was not done"
     calendar_event_reminder:
       body: "\"%{title}\" starts in %{minutes} minutes"
       no_title: "Untitled event"

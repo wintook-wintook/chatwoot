@@ -12,6 +12,14 @@ import AgendaItemsAPI from 'dashboard/api/agendaItems';
 import CaseTasksAPI from 'dashboard/api/caseTasks';
 import QuickTasksAPI from 'dashboard/api/quickTasks';
 import OrganizationContactFields from 'dashboard/views/organizations/OrganizationContactFields.vue';
+import ParticipantsPicker from 'dashboard/components/agenda/ParticipantsPicker.vue';
+import TaskRecurrencesAPI from 'dashboard/api/taskRecurrences';
+import RecurrenceFields from 'dashboard/components/recurrence/RecurrenceFields.vue';
+import {
+  defaultRecurrence,
+  describeRecurrence,
+  recurrencePayload,
+} from 'dashboard/components/recurrence/recurrence';
 
 const HOUR = 60 * 60 * 1000;
 const today = () => format(new Date(), 'yyyy-MM-dd');
@@ -19,9 +27,15 @@ const endOfDayIso = date => new Date(`${date}T23:59:59`).toISOString();
 
 export default {
   name: 'QuickTaskModal',
-  components: { OrganizationContactFields },
+  components: {
+    OrganizationContactFields,
+    ParticipantsPicker,
+    RecurrenceFields,
+  },
   props: {
     show: { type: Boolean, default: false },
+    // Desde «Tareas que se repiten»: abre con «Se repite» marcado.
+    presetRepeat: { type: Boolean, default: false },
     // Desde el panel del contacto: el contacto ya elegido.
     presetContact: { type: Object, default: null },
   },
@@ -31,6 +45,8 @@ export default {
       title: '',
       description: '',
       assigneeId: null,
+      // Con hora: otros del equipo que van (además del responsable).
+      participantIds: [],
       dueDate: '',
       plannedDate: '',
       time: '',
@@ -41,6 +57,9 @@ export default {
       caseId: '',
       cases: [],
       saving: false,
+      // Tareas que se repiten: Kontrolya la vuelve a crear sola cada vez que toca.
+      repeats: false,
+      recurrence: defaultRecurrence(),
     };
   },
   computed: {
@@ -48,6 +67,13 @@ export default {
       agents: 'agents/getAgents',
       currentUserId: 'getCurrentUserID',
     }),
+    startsLocal() {
+      return this.time ? `${this.plannedDate}T${this.time}` : '';
+    },
+    endsLocal() {
+      if (!this.time) return '';
+      return new Date(new Date(this.startsLocal).getTime() + HOUR).toString();
+    },
     hasClient() {
       return !!(this.contact || this.organization);
     },
@@ -58,12 +84,21 @@ export default {
     },
     contact: 'loadCases',
     organization: 'loadCases',
+    // Se repite cada semana: el día sugerido sigue a la fecha programada (si solo hay uno).
+    plannedDate(date) {
+      if (!date || this.recurrence.weekdays.length > 1) return;
+      const day = new Date(`${date}T00:00`).getDay();
+      this.recurrence = { ...this.recurrence, weekdays: [day] };
+    },
   },
   methods: {
     reset() {
       this.title = '';
       this.description = '';
+      this.repeats = this.presetRepeat;
+      this.recurrence = defaultRecurrence();
       this.assigneeId = this.currentUserId;
+      this.participantIds = [];
       this.dueDate = '';
       this.plannedDate = today();
       this.time = '';
@@ -115,9 +150,32 @@ export default {
         is_visit: this.isVisit,
         location: this.address.trim() || undefined,
         case_ticket_id: this.caseId || undefined,
+        participant_ids: this.participantIds.filter(
+          id => id !== this.assigneeId
+        ),
       });
     },
+    // La primera sale el día de «Fecha programada» (o el primero de los días elegidos desde ahí).
+    async createRecurring() {
+      const { data } = await TaskRecurrencesAPI.create({
+        ...this.clientFields(),
+        title: this.title.trim(),
+        description: this.description.trim() || undefined,
+        case_ticket_id: this.caseId || undefined,
+        at_time: this.time || null,
+        starts_on: this.plannedDate,
+        ...recurrencePayload(this.recurrence),
+      });
+      return data;
+    },
+    recurringText() {
+      return describeRecurrence(
+        { ...this.recurrence, at_time: this.time },
+        this
+      );
+    },
     create() {
+      if (this.repeats) return this.createRecurring();
       if (this.time) return this.createScheduled();
       if (this.caseId) {
         return CaseTasksAPI.createTask(this.caseId, this.taskFields());
@@ -137,6 +195,16 @@ export default {
         useAlert(this.$t('QUICK_ACTIONS.TASK.VISIT_TIME_REQUIRED'));
         return;
       }
+      if (this.repeats && !this.plannedDate) {
+        useAlert(this.$t('QUICK_ACTIONS.TASK.DATE_REQUIRED'));
+        return;
+      }
+      const weekly =
+        this.recurrence.mode === 'fixed' && this.recurrence.unit === 'week';
+      if (this.repeats && weekly && !this.recurrence.weekdays.length) {
+        useAlert(this.$t('RECURRING_TASKS.WEEKDAYS_REQUIRED'));
+        return;
+      }
       if (this.time && !this.plannedDate) {
         useAlert(this.$t('QUICK_ACTIONS.TASK.DATE_REQUIRED'));
         return;
@@ -144,7 +212,11 @@ export default {
       this.saving = true;
       try {
         await this.create();
-        useAlert(this.$t('QUICK_ACTIONS.TASK.SUCCESS'));
+        useAlert(
+          this.repeats
+            ? this.$t('RECURRING_TASKS.CREATED', { text: this.recurringText() })
+            : this.$t('QUICK_ACTIONS.TASK.SUCCESS')
+        );
         this.$emitter.emit('agendaChanged');
         this.$emit('close');
       } catch (error) {
@@ -162,91 +234,141 @@ export default {
 </script>
 
 <template>
-  <woot-modal :show="show" :on-close="() => $emit('close')">
+  <woot-modal :show="show" :on-close="() => $emit('close')" size="medium">
     <woot-modal-header :header-title="$t('QUICK_ACTIONS.TASK.TITLE')" />
-    <form class="px-6 pb-6 space-y-4" @submit.prevent="submit">
-      <woot-input
-        v-model="title"
-        :label="$t('QUICK_ACTIONS.TASK.NAME')"
-        :placeholder="$t('QUICK_ACTIONS.TASK.NAME_PLACEHOLDER')"
-      />
+    <!-- Compacto: campos cortos lado a lado; cabe sin scroll. -->
+    <form
+      class="quick-task-form flex flex-col gap-2.5 px-6 pb-6"
+      @submit.prevent="submit"
+    >
       <label class="block">
-        <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-          {{ $t('QUICK_ACTIONS.TASK.DESCRIPTION') }}
-        </span>
+        <span class="field-label">{{ $t('QUICK_ACTIONS.TASK.NAME') }}</span>
+        <input
+          v-model="title"
+          type="text"
+          :placeholder="$t('QUICK_ACTIONS.TASK.NAME_PLACEHOLDER')"
+        />
+      </label>
+      <label class="block">
+        <span class="field-label">{{
+          $t('QUICK_ACTIONS.TASK.DESCRIPTION')
+        }}</span>
         <textarea
           v-model="description"
-          rows="3"
+          rows="2"
           class="mb-0 resize-y"
           :placeholder="$t('QUICK_ACTIONS.TASK.DESCRIPTION_PLACEHOLDER')"
         />
       </label>
-      <label class="block">
-        <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-          {{ $t('QUICK_ACTIONS.TASK.ASSIGNEE') }}
-        </span>
-        <select v-model="assigneeId" class="mb-0">
-          <option v-for="agent in agents" :key="agent.id" :value="agent.id">
-            {{ agent.name }}
-          </option>
-        </select>
-      </label>
-      <div class="grid grid-cols-3 gap-3">
-        <woot-input
-          v-model="plannedDate"
-          type="date"
-          :label="$t('QUICK_ACTIONS.TASK.PLANNED')"
-        />
-        <woot-input
-          v-model="time"
-          type="time"
-          :label="$t('QUICK_ACTIONS.TASK.TIME')"
-        />
-        <woot-input
-          v-if="!time"
-          v-model="dueDate"
-          type="date"
-          :label="$t('QUICK_ACTIONS.TASK.DUE')"
-        />
+      <!-- Responsable · Fecha programada · Hora · Vence (sin hora: vence ese día) -->
+      <div class="grid grid-cols-4 gap-3">
+        <label class="block">
+          <span class="field-label">{{
+            $t('QUICK_ACTIONS.TASK.ASSIGNEE')
+          }}</span>
+          <select v-model="assigneeId">
+            <option v-for="agent in agents" :key="agent.id" :value="agent.id">
+              {{ agent.name }}
+            </option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="field-label">{{
+            $t('QUICK_ACTIONS.TASK.PLANNED')
+          }}</span>
+          <input v-model="plannedDate" type="date" />
+        </label>
+        <label class="block">
+          <span class="field-label">{{ $t('QUICK_ACTIONS.TASK.TIME') }}</span>
+          <input v-model="time" type="time" />
+        </label>
+        <label v-if="!time && !repeats" class="block">
+          <span class="field-label">{{ $t('QUICK_ACTIONS.TASK.DUE') }}</span>
+          <input v-model="dueDate" type="date" />
+        </label>
       </div>
-      <p v-if="time" class="m-0 text-xs text-slate-500 dark:text-slate-400">
+      <p
+        v-if="time"
+        class="m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400"
+      >
         {{ $t('QUICK_ACTIONS.TASK.SCHEDULED_HINT') }}
       </p>
-      <label class="flex items-center gap-2 cursor-pointer w-fit">
+      <!-- Se repite: la casilla y cada cuánto / hasta cuándo, en un renglón -->
+      <RecurrenceFields v-if="repeats" v-model="recurrence">
+        <template #before>
+          <label
+            class="flex items-center gap-2 cursor-pointer ltr:mr-1 rtl:ml-1"
+          >
+            <input
+              v-model="repeats"
+              type="checkbox"
+              class="w-4 h-4 rounded accent-woot-500"
+              data-test="quick-task-repeats"
+            />
+            <span class="text-sm text-slate-700 dark:text-slate-200">
+              {{ $t('RECURRING_TASKS.REPEATS') }}
+            </span>
+          </label>
+        </template>
+      </RecurrenceFields>
+      <label v-else class="flex items-center gap-2 cursor-pointer w-fit">
         <input
-          v-model="isVisit"
+          v-model="repeats"
           type="checkbox"
           class="w-4 h-4 rounded accent-woot-500"
+          data-test="quick-task-repeats"
         />
         <span class="text-sm text-slate-700 dark:text-slate-200">
-          {{ $t('QUICK_ACTIONS.TASK.IS_VISIT') }}
+          {{ $t('RECURRING_TASKS.REPEATS') }}
         </span>
       </label>
-      <woot-input
-        v-if="isVisit"
-        v-model="address"
-        :label="$t('QUICK_ACTIONS.TASK.ADDRESS')"
-        :placeholder="$t('QUICK_ACTIONS.TASK.ADDRESS_PLACEHOLDER')"
+      <!-- Solo las agendadas (con hora) llevan participantes -->
+      <ParticipantsPicker
+        v-if="time && !repeats"
+        v-model="participantIds"
+        :organizer-id="assigneeId"
+        :starts-at="startsLocal"
+        :ends-at="endsLocal"
       />
+      <!-- Es una visita (y su dirección, en la misma línea) -->
+      <div v-if="!repeats" class="flex items-center gap-3">
+        <label class="flex items-center flex-shrink-0 gap-2 cursor-pointer">
+          <input
+            v-model="isVisit"
+            type="checkbox"
+            class="w-4 h-4 rounded accent-woot-500"
+          />
+          <span class="text-sm text-slate-700 dark:text-slate-200">
+            {{ $t('QUICK_ACTIONS.TASK.IS_VISIT') }}
+          </span>
+        </label>
+        <input
+          v-if="isVisit"
+          v-model="address"
+          type="text"
+          class="flex-1"
+          :aria-label="$t('QUICK_ACTIONS.TASK.ADDRESS')"
+          :placeholder="$t('QUICK_ACTIONS.TASK.ADDRESS_PLACEHOLDER')"
+        />
+      </div>
       <OrganizationContactFields
         v-model="contact"
         :organization.sync="organization"
+        horizontal
       />
       <label v-if="hasClient" class="block">
-        <span class="text-sm font-medium text-slate-700 dark:text-slate-200">
-          {{ $t('QUICK_ACTIONS.TASK.CASE') }}
-        </span>
-        <select v-model="caseId" class="mb-0">
+        <span class="field-label">{{ $t('QUICK_ACTIONS.TASK.CASE') }}</span>
+        <select v-model="caseId">
           <option value="">{{ $t('QUICK_ACTIONS.TASK.NO_CASE') }}</option>
           <option v-for="item in cases" :key="item.id" :value="item.id">
             {{ item.folio }} · {{ item.title }}
           </option>
         </select>
       </label>
-      <p v-else class="m-0 text-xs text-slate-500 dark:text-slate-400">
+      <p v-else class="m-0 -mt-1 text-xs text-slate-500 dark:text-slate-400">
         {{ $t('QUICK_ACTIONS.TASK.ONLY_MY_DAY') }}
       </p>
-      <div class="flex justify-end gap-2 pt-2">
+      <div class="flex justify-end gap-2 pt-1">
         <woot-button type="button" variant="clear" @click="$emit('close')">
           {{ $t('QUICK_ACTIONS.TASK.CANCEL') }}
         </woot-button>
@@ -257,3 +379,44 @@ export default {
     </form>
   </woot-modal>
 </template>
+
+<style lang="scss" scoped>
+// Formulario compacto (igual que el de la tarea): etiquetas chicas y campos de 36 px.
+.quick-task-form {
+  .field-label {
+    @apply block mb-1 text-xs font-medium text-slate-600 dark:text-slate-300;
+  }
+
+  input[type='text'],
+  input[type='date'],
+  input[type='time'] {
+    @apply h-9 py-1 px-2 mb-0 text-sm;
+  }
+
+  // La flecha del select es su fondo: se deja espacio a la derecha para verla.
+  select {
+    @apply h-9 py-1 pl-2 pr-8 mb-0 text-sm;
+  }
+
+  textarea {
+    @apply text-sm;
+  }
+
+  // Los de fecha y hora no traen estilo base: se les da el borde de los demás.
+  input[type='datetime-local'],
+  input[type='time'] {
+    @apply w-full bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100;
+  }
+
+  // Organización y contacto (componente compartido): mismo tamaño que los demás.
+  ::v-deep span[class~='font-medium'] {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  ::v-deep input[type='text'],
+  ::v-deep input:not([type]) {
+    @apply h-9 py-1 px-2 mb-0 text-sm;
+  }
+}
+</style>

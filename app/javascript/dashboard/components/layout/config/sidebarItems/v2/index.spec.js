@@ -112,7 +112,7 @@ describe('Menú v2', () => {
     const menus = getSidebarItemsV2(ACCOUNT, route('home')).secondaryMenu;
     const item = key => menus.find(m => m.parentNav === key).menuItems;
     expect(item('ventas')[0].toState).toContain('tickets/commercial/metrics');
-    expect(item('servicio')).toHaveLength(5);
+    expect(item('servicio')).toHaveLength(4);
     expect(item('servicio')[0].toState).toContain('tickets/support/board');
     const primary = primaryMenuV2(ACCOUNT, route('home'));
     expect(primary.find(i => i.key === 'servicio').toState).toContain(
@@ -222,7 +222,7 @@ describe('Menú v2', () => {
     );
   });
 
-  it('Servicio: casos, despacho, mantenimientos, portales y Centro de ayuda', () => {
+  it('Servicio: casos, despacho, mantenimientos y portales', () => {
     const servicio = menuFor(
       route('gestorTickets_class_list', { caseClass: 'support' })
     );
@@ -231,21 +231,26 @@ describe('Menú v2', () => {
       'gestorTickets_dispatch',
       'gestorTickets_maintenance',
       'gestorTickets_portals',
-      'default_portal_articles',
     ]);
     [
       'gestorTickets_dispatch',
       'gestorTickets_maintenance',
       'gestorTickets_portals',
     ].forEach(name => expect(menuFor(route(name)).parentNav).toBe('servicio'));
-    // Dentro del Centro de ayuda solo se marca Servicio (su menú es el suyo).
+    // El Centro de ayuda está en Agentes IA, junto a Bases de conocimiento; dentro manda su
+    // propio menú y se marca Agentes IA en el menú principal.
     const ayuda = menuFor({
       name: 'list_all_locale_articles',
       path: '/app/accounts/1/portals/x/es/articles',
       params: {},
     });
-    expect(ayuda.parentNav).toBe('servicio');
+    expect(ayuda.parentNav).toBe('agentes');
     expect(ayuda.menuItems).toEqual([]);
+    const agentes = menuFor(route('ready_agents')).menuItems.map(
+      i => i.toStateName
+    );
+    const base = agentes.indexOf('knowledge_sources_list');
+    expect(agentes[base + 1]).toBe('default_portal_articles');
     // Y salen de Ajustes › Casos y etapas.
     const grupo = menuFor(route('agent_list')).menuItems.find(
       i => i.label === 'CASES_AND_STAGES'
@@ -258,11 +263,12 @@ describe('Menú v2', () => {
     );
   });
 
-  it('Agenda: Tareas (abre en Mi día), Calendario, Reportes y Ruta de campo', () => {
+  it('Agenda: Tareas (abre en Mi día), Calendario, Tareas que se repiten, Reportes y Ruta de campo', () => {
     const agenda = menuFor(route('gestorTickets_tasks'));
     expect(agenda.menuItems.map(i => i.label)).toEqual([
       'TASKS_V2',
       'CALENDAR',
+      'RECURRING_TASKS',
       'TASK_REPORTS',
       'FIELD_ROUTE',
     ]);
@@ -304,9 +310,12 @@ describe('Menú v2', () => {
     const agentes = menuFor(route('contact_trackings_agents'));
     expect(agentes.parentNav).toBe('agentes');
     expect(agentes.menuItems.map(i => i.label)).toEqual([
+      'READY_AGENTS',
+      'AI_VOICE',
       'AI_AGENT_LIST',
       'TRACKINGS',
       'KNOWLEDGE_SOURCES',
+      'HELP_CENTER.TITLE',
       'CHATGPT',
       'SITE_ANALYSIS',
       'AUTOMATION',
@@ -362,13 +371,18 @@ describe('Menú v2', () => {
     expect(ajustes.menuItems.map(i => i.label)).toContain('CASES_AND_STAGES');
   });
 
-  it('Inicio: Mi resumen (con Notificaciones como pestaña), Mi negocio y Presupuesto', () => {
+  it('Inicio: Mi resumen (con Notificaciones como pestaña), Mi negocio, Presupuesto, Mi capacitación y Probar agentes', () => {
     const inicio = menuFor(route('my_summary'));
     expect(inicio.menuItems.map(i => i.label)).toEqual([
       'MY_SUMMARY',
       'MY_BUSINESS',
       'SALES_BUDGET',
+      'ACADEMY',
+      'AGENT_TESTER',
     ]);
+    expect(menuFor(route('academy')).parentNav).toBe('inicio');
+    // Probar agentes es de Inicio: cualquier usuario entra (ve los agentes «En prueba»).
+    expect(menuFor(route('agent_tester')).parentNav).toBe('inicio');
     // Presupuesto de ventas: vive en Inicio pero solo lo ve quien tiene Ventas.
     expect(inicio.menuItems[2]).toMatchObject({
       toStateName: 'gestorTickets_sales_budgets',

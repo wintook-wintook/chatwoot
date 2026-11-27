@@ -4,8 +4,10 @@
 # Embudo de contactos — mueve la tarjeta con lo que pasa en la propia conversación
 # ================================================================================
 # Solo actúa en tableros con «Movimiento automático». Reglas:
-#   - entrar: una conversación nueva por una bandeja del tablero entra a su columna
-#     de entrada (si ya está en un tablero, p. ej. por una automatización, no se toca);
+#   - entrar: la PRIMERA conversación de un contacto nuevo, por una bandeja del tablero,
+#     entra a su columna de entrada. Si el contacto ya tenía conversaciones (cliente o
+#     alguien que ya escribió) no entra; si ya está en un tablero (p. ej. por una
+#     automatización), no se toca;
 #   - avanzar: un hecho (primera respuesta, etiqueta, cita, caso creado, conversación
 #     resuelta) la lleva a la PRIMERA columna más adelante que tenga ese disparador.
 #     Nunca la regresa, así que mover a mano siempre gana;
@@ -23,6 +25,7 @@ class Kanban::FunnelMover
 
   def enter!
     return if @conversation.kanban_type_process_id.present?
+    return unless new_contact?
 
     board = @account.kanban_type_processes.where(auto_move: true).order(:id)
                     .detect { |b| b.entry_inbox?(@conversation.inbox_id) }
@@ -30,6 +33,11 @@ class Kanban::FunnelMover
     return if column.nil?
 
     move!(board, column, source: 'rule', reason: reason(:conversation_created, inbox: @conversation.inbox&.name))
+  end
+
+  # Contacto nuevo: esta es su primera conversación en la cuenta.
+  def new_contact?
+    @account.conversations.where(contact_id: @conversation.contact_id).where.not(id: @conversation.id).none?
   end
 
   # type: uno de KanbanProcess::TRIGGER_TYPES; labels/case_class/folio según el hecho.
@@ -56,7 +64,7 @@ class Kanban::FunnelMover
   end
 
   # NOTE: nil → nota de actividad estándar; un texto → esa nota privada; false → sin nota.
-  def move!(board, column, source:, reason:, user_id: nil, note: nil)
+  def move!(board, column, source:, reason:, user_id: nil, note: nil) # rubocop:disable Metrics/ParameterLists
     return false if @conversation.kanban_process_id == column.id
 
     @conversation.kanban_move_context = { source: source, reason: reason, user_id: user_id }
@@ -68,7 +76,7 @@ class Kanban::FunnelMover
   # Columnas más adelante que la actual, en orden; vacío si la tarjeta ya cerró su paso.
   # Desde «Descartado» (solo con un caso nuevo) cuenta cualquier columna: el descarte
   # suele ir al final y la de «Convertido» queda antes.
-  def forward_columns(board, allow_from_discarded: false)
+  def forward_columns(board, allow_from_discarded: false) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     current = @conversation.kanban_process
     return [] if current&.stage_converted?
     return [] if current&.stage_discarded? && !allow_from_discarded

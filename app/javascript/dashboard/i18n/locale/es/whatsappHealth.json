@@ -1,0 +1,67 @@
+{
+  "WHATSAPP_HEALTH": {
+    "TAB": "Diagnóstico",
+    "TITLE": "Diagnóstico de WhatsApp",
+    "SUBTITLE": "Revisa con Meta por qué esta bandeja no recibe o no envía mensajes. Solo consulta: no cambia nada.",
+    "RUN": "Ejecutar diagnóstico",
+    "RUNNING": "Revisando con Meta…",
+    "LAST": "Último diagnóstico: {date}",
+    "NEVER": "Todavía no se ha ejecutado el diagnóstico en esta bandeja.",
+    "ERROR": "No se pudo ejecutar el diagnóstico. Inténtalo de nuevo.",
+    "SUMMARY_OK": "Todo en orden.",
+    "SUMMARY_ISSUES": "{fail} problema(s) y {warn} aviso(s).",
+    "GROUPS": {
+      "RECEIVE": "Recibir mensajes",
+      "SEND": "Enviar mensajes",
+      "SYSTEM": "Sistema"
+    },
+    "STATUS": {
+      "OK": "Bien",
+      "WARN": "Atención",
+      "FAIL": "Problema",
+      "UNKNOWN": "No se pudo revisar"
+    },
+    "ACTIONS": {
+      "SUBSCRIBE": "Suscribir ahora",
+      "SUBSCRIBE_CONFIRM": "Se suscribirá nuestra app a la cuenta de WhatsApp Business para que Meta nos mande los mensajes. ¿Continuar?",
+      "SUBSCRIBE_YES": "Sí, suscribir",
+      "SUBSCRIBE_DONE": "Listo: nuestra app quedó suscrita.",
+      "CANCEL": "Cancelar",
+      "UPDATE_TOKEN": "Cambiar token",
+      "OPEN_META": "Abrir Meta"
+    },
+    "RECONNECT": {
+      "BUTTON": "Reconectar con Meta",
+      "BANNER": "WhatsApp perdió el permiso de Meta: esta bandeja no recibe ni envía mensajes. Reconéctala para que vuelva a funcionar.",
+      "HINT": "Se abre la ventana de Meta: entra con la cuenta que administra el negocio y elige el mismo número.",
+      "DONE": "Listo: la bandeja quedó reconectada.",
+      "ERROR": "No se pudo reconectar. Inténtalo de nuevo.",
+      "CANCELLED": "Se canceló la reconexión.",
+      "SDK_NOT_LOADED": "No cargó la ventana de Meta. Recarga la página e inténtalo de nuevo.",
+      "APP_BROKEN": "La app de Meta del sistema está mal configurada: pide al administrador del sistema que la corrija en Super Admin.",
+      "SECTION_TITLE": "Reconexión con Meta",
+      "STATE": {
+        "NOT_NEEDED": "La bandeja está conectada: no es necesario reconectar. Hazlo solo si soporte te lo pide o si cambió la cuenta de Meta que administra el número.",
+        "NEEDED": "Meta rechazó el permiso de esta bandeja: reconectarla lo resuelve.",
+        "UNKNOWN": "Úsalo si el permiso de Meta venció o si cambió la cuenta de Meta que administra el número. Ejecuta el diagnóstico para saber si hace falta."
+      }
+    },
+    "ERRORS": {
+      "WINDOW_24H": "Pasaron más de 24 h desde el último mensaje del cliente: usa una plantilla.",
+      "NOT_ON_WHATSAPP": "El número del cliente no tiene WhatsApp o no puede recibir el mensaje.",
+      "PAYMENT": "Problema de pago en la cuenta de WhatsApp Business.",
+      "ECOSYSTEM": "Meta frenó el envío para cuidar al cliente (demasiados mensajes de marketing).",
+      "UNSUPPORTED": "Ese tipo de mensaje no está permitido.",
+      "TEMPLATE": "Problema con la plantilla (parámetros, pausada, rechazada o borrada): {title}",
+      "RATE_LIMIT": "Demasiados envíos seguidos; se reintenta más lento.",
+      "TOKEN": "El permiso de Meta venció: reconecta la bandeja en Configuración → Bandejas → Diagnóstico.",
+      "BLOCKED": "La cuenta o el número está bloqueado por Meta.",
+      "META_CODE": "(Meta {code})"
+    },
+    "REPORT": {
+      "COPY": "Copiar diagnóstico para soporte",
+      "COPIED": "Diagnóstico copiado: pégalo en tu reporte a soporte.",
+      "HEADER": "Diagnóstico de WhatsApp · {name} {phone} · bandeja #{id}"
+    }
+  }
+}

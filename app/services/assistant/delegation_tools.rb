@@ -13,7 +13,7 @@ module Assistant::DelegationTools
 
   def tool_list_agents(args)
     conversation = delegation_conversation(args)
-    templates = @account.tracking_templates.where(archived_at: nil)
+    templates = @account.tracking_templates.listable.where(archived_at: nil)
     templates = templates.where(inbox_id: [nil, conversation.inbox_id]) if conversation
     { conversation: conversation && { id: conversation.display_id, inbox: conversation.inbox&.name },
       agents: templates.order(:name).limit(20).map { |t| agent_ref(t) } }
@@ -80,7 +80,7 @@ module Assistant::DelegationTools
   end
 
   def agent_for(id, conversation)
-    agent = @account.tracking_templates.where(archived_at: nil).find_by(id: id)
+    agent = @account.tracking_templates.listable.where(archived_at: nil).find_by(id: id)
     raise ArgumentError, 'Elige un agente de la lista (list_agents).' unless agent
     raise ArgumentError, "El agente #{agent.name} es de otra bandeja." if agent.inbox_id && agent.inbox_id != conversation.inbox_id
 

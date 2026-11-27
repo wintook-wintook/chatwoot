@@ -1,12 +1,12 @@
 {
   "CONVERT_ITEM": {
-    "SCHEDULE": "Schedule…",
-    "SCHEDULE_TITLE": "Schedule «{title}»",
+    "SCHEDULE": "Move to schedule",
+    "SCHEDULE_TITLE": "Move «{title}» to the schedule",
     "SCHEDULE_DESC": "The task leaves Tasks and is scheduled with a day and time.",
     "STARTS": "Starts",
     "ENDS": "Ends",
     "LOCATION": "Location",
-    "SAVE": "Schedule",
+    "SAVE": "Move to schedule",
     "CANCEL": "Cancel",
     "SCHEDULED": "«{title}» is now scheduled",
     "LINKED": "A session of «{title}» was scheduled; the task stays",
@@ -20,6 +20,7 @@
     "DONE_LINKED": "Removed from the schedule; the task «{title}» stays"
   },
   "CANCEL_ITEM": {
+    "CANCELLED_AS": "Cancelled: {reason}",
     "CATALOG": {
       "TITLE": "Cancellation reasons",
       "HELP": "Asked when cancelling a task or scheduled task. «Otro» asks to write the reason.",
@@ -135,6 +136,11 @@
     "NO_LOCATION": "No location"
   },
   "TASK_REPORT": {
+    "ATTENDANCE": {
+      "TITLE": "How did it end?",
+      "HELD": "It took place",
+      "NO_SHOW": "The customer did not show up"
+    },
     "TITLE": "Closing report",
     "CONTENT": "What was done",
     "CONTENT_PLACEHOLDER": "Write what you did and how it ended",
@@ -147,6 +153,7 @@
     "CANCEL": "Cancel",
     "SUBMIT": "Conclude",
     "VIEW": "View report",
+    "PROGRESS": "Report progress",
     "EMPTY": "No reports.",
     "MORE": "See more",
     "HISTORY": "Concluded tasks and activities",
@@ -176,7 +183,8 @@
       "TASK": "Task",
       "MEETING": "Scheduled task",
       "ORDER": "Work order",
-      "ACTIVITY": "Activity"
+      "ACTIVITY": "Activity",
+      "PROGRESS": "Progress"
     },
     "CATALOG": {
       "TITLE": "Task results",
@@ -187,9 +195,39 @@
       "ERROR": "Could not save."
     }
   },
+  "TASK_HISTORY": {
+    "TITLE": "Task history",
+    "SUBTITLE": "Everything that happened with the task: notes, reports, scheduled tasks and changes",
+    "LOADING": "Loading history…",
+    "ERROR": "The history could not be loaded.",
+    "STATUS": "Status",
+    "ASSIGNEE": "Assignee",
+    "DUE": "Due",
+    "PLANNED": "planned {day}",
+    "TIME": "Reported time",
+    "TIME_OF": "{done} of {est} estimated",
+    "NO_SHOW": "The customer did not show up",
+    "FROM_MEETING": "from the scheduled task «{title}»",
+    "EMPTY": "Nothing with this filter.",
+    "MENU": "View history",
+    "ACTIONS": {
+      "PROGRESS": "Report progress",
+      "NOTE": "Add note",
+      "SCHEDULE": "Schedule",
+      "COMPLETE": "Complete"
+    },
+    "FILTERS": {
+      "ALL": "All",
+      "NOTES": "Notes",
+      "REPORTS": "Reports",
+      "MEETINGS": "Scheduled",
+      "CLIENT": "Customer",
+      "CHANGES": "Changes"
+    }
+  },
   "ACTIVITY_REPORT": {
     "TITLE": "Report activity",
-    "SUBTITLE": "Something you already did, with no task behind it",
+    "SUBTITLE": "Something you already did. If it belongs to a pending task, pick it and it becomes its progress",
     "NAME": "Title",
     "NAME_PLACEHOLDER": "E.g. Confirmation call",
     "DATE": "Date",
@@ -197,7 +235,15 @@
     "INTERNAL_HINT": "With no contact or organization it stays internal: only visible in Reports and your My day.",
     "REQUIRED": "Write the title and what you did.",
     "SUBMIT": "Save",
-    "SUCCESS": "Activity reported"
+    "SUCCESS": "Activity reported",
+    "TASK": "Task (optional)",
+    "NO_TASK": "— No task: it is an activity —",
+    "PROGRESS_TITLE": "Report progress",
+    "PROGRESS_SUBTITLE": "What you did on the task, without completing it",
+    "PROGRESS_OF": "Progress of",
+    "PROGRESS_HINT": "The task stays pending. The progress shows in the task history and in the case activity.",
+    "PROGRESS_SUBMIT": "Save progress",
+    "PROGRESS_SUCCESS": "Progress reported"
   },
   "SALES_BUDGET": {
     "TITLE": "Sales budget",
@@ -319,6 +365,22 @@
     }
   },
   "CASE_TICKETS": {
+    "CONFIRM_DELETE": {
+      "TITLE": "Delete “{label}”?",
+      "MESSAGE": "It can no longer be chosen. Records that had it keep no value.",
+      "YES": "Yes, delete",
+      "NO": "Cancel"
+    },
+    "ASSIGN_CLIENT": {
+      "BUTTON": "Link to a client",
+      "TITLE": "Link to a client · {folio}",
+      "HINT": "The case stops being internal: it shows in the organization and contact records, their portal and their reports. Whoever asked for it stays as requester.",
+      "CONFIRM": "Link",
+      "CANCEL": "Cancel",
+      "DONE": "The case now belongs to the client",
+      "ERROR": "The case could not be linked",
+      "EVENT": "Linked to {client} (was an internal case)"
+    },
     "STAGE_BAR": {
       "NOW": "Now: {stage}"
     },
@@ -584,6 +646,7 @@
     },
     "DETAIL_TABS": {
       "PENDING": "Pending",
+      "PENDING_OF": "{pending} pending of {total}",
       "MORE": "More",
       "ACTIVITY": "Activity",
       "SUMMARY": "Summary",
@@ -592,7 +655,7 @@
       "CONTACT_NOTES": "Contact Notes",
       "TASKS": "Tasks",
       "JOURNEY": "Progress",
-      "AI": "AI assistant",
+      "AI": "Dali",
       "MEETINGS": "Scheduled tasks",
       "CONCEPTS": "Service report",
       "PROJECT": "Project",
@@ -714,7 +777,10 @@
         "ESTIMATE_LABEL": "Estimated time",
         "ESTIMATE_NONE": "Not estimated",
         "PLANNED_LABEL": "Planned for",
-        "PLANNED_AFTER_DUE": "After the due date: it will be late."
+        "PLANNED_AFTER_DUE": "After the due date: it will be late.",
+        "REPEATS": "Repeats",
+        "REPEATS_SAVED": "Done: it repeats {when}.",
+        "REPEATS_ERROR": "Could not schedule the task."
       },
       "INBOX": {
         "TITLE": "Tasks",
@@ -751,6 +817,11 @@
           "TASK": "Not scheduled",
           "MEETING": "Scheduled"
         },
+        "AUDIENCE": {
+          "ANY": "Who does it: all",
+          "OURS": "Ours",
+          "CLIENT": "The client"
+        },
         "DUE": {
           "ANY": "Any date",
           "OVERDUE": "Overdue",
@@ -766,6 +837,7 @@
       "REFRESH": "Refresh",
       "FILTER_PLACEHOLDER": "Search tasks (title, assignee)…",
       "NO_MATCHES": "No matches for the filter.",
+      "UNASSIGNED_CONFIRM": { "TEXT": "The task has no assignee: it will not show in anyone's My day. Save it unassigned?", "CHOOSE": "Choose assignee", "SAVE": "Save unassigned" },
       "NOTES_NONE": "No notes",
       "NOTES_COUNT_TITLE": "{count} note(s) — view",
       "NOTES_NONE_TOAST": "Task {folio} has no notes yet.",
@@ -785,7 +857,10 @@
         "NOTES": "Task notes ({count})",
         "ADD_MEETING": "Schedule task",
         "ADD_MEETING_DONE_HINT": "The task is already completed",
-        "VIEW_MEETINGS": "View scheduled tasks"
+        "VIEW_MEETINGS": "View scheduled tasks",
+        "EDIT": "Edit",
+        "VIEW": "View",
+        "VIEW_MEETINGS_COUNT": "View scheduled tasks ({count})"
       },
       "ORPHAN_MEETINGS": {
         "TITLE": "Upcoming scheduled tasks remain",
@@ -801,6 +876,41 @@
       "MILESTONE_LABEL": "This is a project milestone",
       "MILESTONE_HINT": "It counts toward the project progress.",
       "MY_DAY": {
+        "CLIENT": {
+          "TITLE": "Waiting on the client ({n})",
+          "OVERDUE_BADGE": "{n} overdue",
+          "DONE_BADGE": "{n} to review",
+          "HINT": "What the client has to do in your cases. It is not in your tasks because they do it in their portal: you follow it here.",
+          "GROUPS": {
+            "overdue": "Overdue ({n})",
+            "soon": "Due this week ({n})",
+            "done": "Done: review ({n})",
+            "waiting": "Waiting ({n})"
+          },
+          "DONE_BY": "Done by {who} on {date}",
+          "THE_CLIENT": "the client",
+          "OVERDUE_DAYS": "Overdue {n} day(s)",
+          "DUE": "Due {date}",
+          "IN_PROGRESS": "in progress",
+          "REMIND": "Remind",
+          "REMINDED_SHORT": "Reminded",
+          "REMINDED": "We sent the reminder with their portal link.",
+          "OPEN": "Open",
+          "REVIEW": "Review",
+          "MORE": "And {n} more: open them from Tasks › Client.",
+          "NOT_SENT": {
+            "no_conversation": "No conversation: send them the portal link another way.",
+            "window_closed": "24 h passed since their last message: WhatsApp does not allow free text. Send a template or reach them another way.",
+            "no_owner": "The case has no contact or organization: there is no portal to send.",
+            "error": "It could not be sent; try again."
+          }
+        },
+        "DAY_OF": "Day of:",
+        "DAY_OF_ME": "Me",
+        "VIEWING": "You're viewing {name}'s day: view only, they set their own order.",
+        "THEIR_ORDER": "Their order for today",
+        "THEIR_ORDER_EMPTY": "They haven't set their order for today.",
+        "THEIR_EMPTY": "Nothing pending: no tasks to do.",
         "NEXT": "Next",
         "LOAD": "For today: {count} tasks",
         "LOAD_NONE": "Nothing due today",
@@ -854,14 +964,14 @@
         "PLAN_TIME": "≈ {time}",
         "PLAN_OVERLOAD": "≈ {time} · over 8 h",
         "AI": {
-          "BUTTON": "Plan my day (AI)",
+          "BUTTON": "My day plan with Dali",
           "TITLE": "My day plan",
           "LOADING": "Building your plan…",
           "REGENERATE": "Regenerate",
           "CLOSE": "Close",
           "LATER": "Can wait until tomorrow",
           "ERROR": "Could not build the plan.",
-          "DISCLAIMER": "AI suggestion: it does not change your order. Review it before following it."
+          "DISCLAIMER": "Dali suggestion: it does not change your order. Review it before following it."
         },
         "NOTICES": {
           "BUTTON": "You have {count} important notices",
@@ -1231,7 +1341,7 @@
       "FIX": "Fix spelling",
       "IMPROVE": "Improve writing",
       "REVERT": "Back to original",
-      "ERROR": "Could not process the text with AI. Please try again.",
+      "ERROR": "Could not process the text with Dali. Please try again.",
       "TITLE": "Artificial Intelligence",
       "BACK": "Back",
       "SAVE": "Save",
@@ -1312,7 +1422,7 @@
         "SUMMARY_LABEL": "Summary",
         "ROOT_CAUSE_LABEL": "Root cause",
         "SOLUTION_LABEL": "Suggested solution",
-        "SUGGEST_CLOSE": "Suggest with AI",
+        "SUGGEST_CLOSE": "Suggest with Dali",
         "ERROR": "Could not generate the summary"
       },
       "DUPLICATE": {
@@ -1660,7 +1770,7 @@
       "article_generated": "KB article generated",
       "ai_classified": "Classified by AI",
       "ai_suggested": "Classification suggested by AI",
-      "ai_followup": "Follow-up drafted by AI",
+      "ai_followup": "Follow-up drafted by Dali",
       "reassigned": "Reassigned",
       "escalated": "Escalated",
       "message_received": "Message received",
@@ -1695,6 +1805,8 @@
       "task_client_update": "The customer updated a task",
       "task_cancelled": "Task cancelled",
       "task_converted": "Task ↔ schedule",
+      "client_assigned": "Linked to a client",
+      "task_reported": "Report",
       "task_reopened": "Task reopened",
       "task_deleted": "Task deleted",
       "quote_created": "Quote created",
@@ -1834,7 +1946,13 @@
         "CANCELLED": "Cancelled",
         "RESCHEDULED": "Rescheduled"
       },
+      "COMPLETE": "Complete",
+      "COMPLETE_TITLE": "Close the scheduled task with its report (held or no show)",
       "MENU": {
+        "VIEW": "View",
+        "REOPEN": "Reopen",
+        "VIEW_REPORT": "View report",
+        "VIEW_TASK": "View task {folio}",
         "EDIT": "Edit",
         "HELD": "Mark as held",
         "NO_SHOW": "Mark as no show",
@@ -1846,6 +1964,7 @@
         "TO_TASK": "Turn into a task (no time)"
       },
       "MODAL": {
+        "VIEW_TITLE": "View scheduled task",
         "TITLE": "Schedule task",
         "EDIT_TITLE": "Edit scheduled task",
         "DESC": "It is recorded in the case's progress.",
@@ -1856,9 +1975,6 @@
         "DATE_ERROR": "The end time must be after the start time.",
         "TASK_LABEL": "Task",
         "TASK_NONE": "— Case (no task) —",
-        "CONVERT_HINT": "On save, «{title}» leaves Tasks and becomes a scheduled task, keeping its reported time.",
-        "KEEP_TASK": "Keep the task: only schedule a work session",
-        "KEEP_HINT": "The task stays in Tasks and this session is linked to it.",
         "KEEP_LOCKED": "It is required, from the stage or the customer's: the task stays and a linked session is scheduled.",
         "ORGANIZER_LABEL": "Assignee",
         "ORGANIZER_ME": "— Me —",
@@ -1967,6 +2083,8 @@
         "FROZEN": "The opportunity is closed: reopen it to change its data."
       },
       "ACTIONS": {
+        "CHANGE_POSTPONE": "Change date or reason",
+        "RESUME_NOW": "Resume now",
         "WON": "Won",
         "LOST": "Lost",
         "CANCEL": "Cancel",
@@ -1988,7 +2106,10 @@
         "SUCCESS": "Opportunity closed as {outcome}",
         "ERROR": "Could not close the opportunity"
       },
+      "POSTPONE_CHANGED": "Changed the postponement",
       "POSTPONE_MODAL": {
+        "CHANGE_TITLE": "Change the postponement of {folio}",
+        "SAVE_CHANGE": "Save changes",
         "TITLE": "Postpone {folio}",
         "UNTIL": "Resume on",
         "REASON_CATALOG": "Reason",
@@ -2664,6 +2785,7 @@
       }
     },
     "TASK_PRIORITY": {
+      "LOADING": "Loading scoring...",
       "PAGE_TITLE": "Task scoring: how «My day» is sorted",
       "INTRO": "«My day» sorts each agent's pending tasks by a score: each situation adds the points below. More points = higher up. A negative weight subtracts; 0 ignores it.",
       "GROUPS": {
@@ -2739,11 +2861,11 @@
         "TITLE": "Explain my week",
         "EXPLAIN": "Explain my week",
         "AGAIN": "Explain again",
-        "HINT": "AI tells you in 30 seconds how the business is doing, what's worrying and what to do today, using this screen's figures.",
+        "HINT": "Dali tells you in 30 seconds how the business is doing, what's worrying and what to do today, using this screen's figures.",
         "good": "Going well",
         "watch": "Worrying",
         "today": "Today I'd do",
-        "DISCLAIMER": "AI-generated from these figures; review before deciding.",
+        "DISCLAIMER": "Dali-generated from these figures; review before deciding.",
         "ERROR": "Could not generate the explanation."
       },
       "SALES": {
@@ -2828,8 +2950,9 @@
         "line": "LINE"
       },
       "ANALYSIS": {
-        "TITLE": "AI conversation analysis",
-        "DESCRIPTION": "Reads a sample of up to 150 conversations from the period and finds topics, upset customers, missed sales and repeated complaints. Costs tokens: on demand.",
+        "TITLE": "Conversation analysis with Dali",
+        "SAMPLE_LABEL": "Conversations:",
+        "DESCRIPTION": "Reads a sample of the most recent conversations in the period (100 by default; you can choose up to 150) and finds topics, upset customers, missed sales and repeated complaints. Costs tokens: on demand.",
         "SAMPLE": "Sample analyzed: {count} conversations",
         "EMPTY": "No conversations in the period to analyze.",
         "COUNT": "{count} conv.",
@@ -2837,7 +2960,7 @@
         "complaints": "Repeated complaints",
         "lost_sales": "Missed sales (no opportunity)",
         "upset": "Upset customers",
-        "DISCLAIMER": "AI-generated from a sample; review the conversations before acting.",
+        "DISCLAIMER": "Dali-generated from a sample; review the conversations before acting.",
         "ERROR": "Could not analyze."
       }
     },
@@ -2877,6 +3000,7 @@
       "WE": "Us",
       "TASK_REPORT": "Closing report",
       "ACTIVITY_REPORT": "Reported activity",
+      "PROGRESS_REPORT": "Task progress",
       "TODAY": "Today",
       "YESTERDAY": "Yesterday",
       "LOADING": "Loading activity…",
@@ -2937,6 +3061,9 @@
       }
     },
     "HOME": {
+      "ONBOARDING": {
+        "BUTTON": "My training {done}/{total}"
+      },
       "GREETING": {
         "MORNING": "Good morning, {name}",
         "AFTERNOON": "Good afternoon, {name}",
@@ -2988,7 +3115,196 @@
       "LIST": "Back to the list"
     }
   },
+  "QUOTE_FORMATS": {
+    "TITLE": "Quote formats",
+    "DESCRIPTION": "How the quote looks on the customer link and in the PDF. You can have several and pick one per quote.",
+    "DEFAULT": "default",
+    "NEW": "New",
+    "NEW_NAME": "Format {n}",
+    "DUPLICATE": "Duplicate",
+    "NAME": "Format name",
+    "IS_DEFAULT": "Default format (Dali and agents use it too)",
+    "USED_BY": "Used by {count} quotes.",
+    "SAVE": "Save format",
+    "SAVED": "Saved",
+    "DELETED": "Format deleted",
+    "ERROR": "Could not save",
+    "UNSAVED": "Unsaved changes",
+    "DISCARD": "There are unsaved changes. Discard them?",
+    "DELETE_CONFIRM": "Delete the format «{name}»? Its quotes will use the default one.",
+    "UPLOAD": "Upload",
+    "REMOVE": "Remove",
+    "UP": "Up",
+    "DOWN": "Down",
+    "OPTIONS": "options",
+    "CLOSE": "close",
+    "PREVIEW": "Preview",
+    "PREVIEW_HINT": "With your latest quote (or a sample)",
+    "UPDATING": "Updating…",
+    "NO_PDF": "This server cannot generate PDFs yet: the customer will use Print. wkhtmltopdf must be installed.",
+    "VARIABLES": "You can use: {list}",
+    "BRAND": {
+      "TITLE": "Brand",
+      "COLOR": "Main color",
+      "FONT": "Font",
+      "PAPER": "Paper",
+      "LETTER": "Letter",
+      "A4": "A4",
+      "LOGO_POSITION": "Logo",
+      "LOGO_SIZE": "Logo size",
+      "POSITIONS": {
+        "left": "Left",
+        "center": "Center",
+        "right": "Right"
+      },
+      "SIZES": {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large"
+      },
+      "FORMAT_LOGO": "Logo for this format (optional)",
+      "FORMAT_LOGO_HINT": "If none, the company logo is used. PNG, JPG or WEBP up to 2 MB."
+    },
+    "BLOCKS": {
+      "TITLE": "Blocks",
+      "HINT": "Turn on the ones you want and order them with the arrows. Click the name for its options.",
+      "header": {
+        "TITLE": "Header",
+        "HINT": "Logo, company data, folio, date, validity and seller. Choose which company data shows.",
+        "OVERRIDE": "Change data only in this format (empty = company data)"
+      },
+      "client": {
+        "TITLE": "Customer",
+        "HINT": "Which customer data shows."
+      },
+      "intro": {
+        "TITLE": "Intro text",
+        "HINT": "A paragraph before the items.",
+        "PLACEHOLDER": "Dear {{cliente}}, here is our proposal…"
+      },
+      "items": {
+        "TITLE": "Items",
+        "HINT": "Description, quantity, price and amount always show. Choose the other columns.",
+        "PRICES_WITH_TAX": "Show prices including tax"
+      },
+      "totals": {
+        "TITLE": "Totals",
+        "HINT": "Subtotal, discount, taxes, withholdings and total.",
+        "tax_breakdown": "Tax broken down by rate",
+        "withholdings": "Withholdings one by one",
+        "amount_in_words": "Total in words"
+      },
+      "terms": {
+        "TITLE": "Terms",
+        "HINT": "This format's default terms; if the quote has its own, those show.",
+        "PLACEHOLDER": "Payment terms, delivery time, warranty…"
+      },
+      "bank": {
+        "TITLE": "Payment details",
+        "HINT": "Bank, account, CLABE…",
+        "PLACEHOLDER": "Bank: …\nAccount: …\nCLABE: …"
+      },
+      "signatures": {
+        "TITLE": "Signatures",
+        "HINT": "Seller signature line and customer acceptance (with their signature if accepted online).",
+        "seller": "Seller signature",
+        "client": "Customer acceptance signature"
+      },
+      "footer": {
+        "TITLE": "Footer",
+        "HINT": "Text at the end of the document.",
+        "PLACEHOLDER": "Thank you · www.yourcompany.com"
+      }
+    },
+    "COMPANY": {
+      "TITLE": "Company data",
+      "HINT": "Used in every format (each format can change it).",
+      "legal_name": "Legal name",
+      "tax_id": "Tax ID",
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email",
+      "website": "Website",
+      "LOGO": "Company logo",
+      "SAVE": "Save company data"
+    },
+    "CLIENT": {
+      "name": "Name",
+      "organization": "Company",
+      "tax_id": "Tax ID",
+      "email": "Email",
+      "phone": "Phone"
+    },
+    "COLUMNS": {
+      "sku": "Code",
+      "image": "Product photo",
+      "unit": "Unit",
+      "discount": "Discount",
+      "tax": "Tax"
+    }
+  },
   "CATALOG": {
+    "TABS": {
+      "ITEMS": "Products",
+      "PARAMETERS": "Settings"
+    },
+    "PARAMS": {
+      "HINT": "The lists you pick from when adding a product. What is in use cannot be deleted: deactivate it and it is no longer offered.",
+      "ADD": "Add",
+      "SAVE": "Save",
+      "CANCEL": "Cancel",
+      "EDIT": "Edit",
+      "DELETE": "Delete",
+      "DEACTIVATE": "Deactivate",
+      "ACTIVATE": "Activate",
+      "INACTIVE": "Inactive",
+      "ITEMS": "No products | 1 product | {count} products",
+      "IN_USE": "In use: deactivate it instead of deleting it",
+      "ERROR": "Could not save",
+      "DELETE_CONFIRM": "Delete «{name}»?",
+      "CATEGORIES": {
+        "TITLE": "Categories",
+        "HINT": "With one level of subcategories (Parts › Brakes). Renaming updates the products.",
+        "NAME": "Category name",
+        "ADD_CHILD": "Subcategory",
+        "CHILD_NAME": "Subcategory name",
+        "EMPTY": "No categories yet."
+      },
+      "TAXES": {
+        "TITLE": "Taxes",
+        "HINT": "The marked one is the default: used by products without their own tax and by lines not from the catalog.",
+        "NAME": "Name",
+        "PERCENT": "%",
+        "EXEMPT": "Exempt",
+        "DEFAULT": "Default",
+        "MAKE_DEFAULT": "Make default"
+      },
+      "WITHHOLDINGS": {
+        "TITLE": "Withholdings",
+        "HINT": "VAT and income tax withholdings. Each product carries its own; the quote subtracts them only for companies (12-character RFC)."
+      },
+      "UNITS": {
+        "TITLE": "Units of measure",
+        "HINT": "The abbreviation shows in quotes and work orders. The SAT code is optional (for invoicing).",
+        "NAME": "Name",
+        "ABBREVIATION": "Abbreviation",
+        "SAT_CODE": "SAT code"
+      }
+    },
+    "FORM_EXTRA": {
+      "CATEGORY_NONE": "No category",
+      "UNIT_NONE": "No unit",
+      "TAX": "Tax",
+      "TAX_DEFAULT": "Default ({name})",
+      "PRICE_INCLUDES_TAX": "Price already includes tax",
+      "PRICE_INCLUDES_TAX_HINT": "When quoting, the tax is separated so the total is this price.",
+      "SAT_CODE": "SAT product or service code",
+      "SAT_CODE_HINT": "Optional. For invoicing.",
+      "WITHHOLDINGS": "Withholdings",
+      "WITHHOLDINGS_HINT": "Subtracted in the quote only if the customer is a company.",
+      "MANAGE": "Edit the lists in «Settings»"
+    },
+    "QUOTE_TAX_MOVED": "The default tax is changed in Products and services › Settings: {name}",
     "TITLE": "Products and services catalog",
     "DESCRIPTION": "What your company sells and the parts technicians use. Used by quotes and work orders.",
     "NEW": "Product or service",
@@ -3032,6 +3348,9 @@
       "CURRENCY": "Currency",
       "COST": "Cost",
       "COST_HINT": "Optional. To see the margin; only visible with «See amounts».",
+      "IMAGE": "Photo (optional)",
+      "IMAGE_REMOVE": "Remove photo",
+      "IMAGE_HINT": "PNG, JPG or WEBP up to 5 MB. The Prospects agent sends it when it recommends this product.",
       "DESCRIPTION": "Description",
       "ACTIVE": "Active (can be used in quotes and orders)",
       "SAVE": "Save",
@@ -3041,7 +3360,7 @@
     "ERROR": "Could not save",
     "IMPORT_DONE": "Imported: {created} new, {updated} updated",
     "IMPORT_ERRORS": "{count} rows with errors (row {line}: {error})",
-    "IMPORT_HELP": "CSV with columns: clave, nombre, tipo, categoria, unidad, precio, moneda, costo, descripcion, activo",
+    "IMPORT_HELP": "CSV with columns: clave, nombre, tipo, categoria (Category › Subcategory), unidad, precio, moneda, costo, descripcion, activo, impuesto, precio_con_impuesto (si/no), clave_sat, retenciones (Ret. IVA 10.67 %; Ret. ISR 10 %)",
     "PICKER": {
       "PLACEHOLDER": "Search the catalog…",
       "EMPTY": "No results",
@@ -3121,6 +3440,14 @@
       "SUBTOTAL": "Subtotal",
       "DISCOUNT_TOTAL": "Discount",
       "TAX_TOTAL": "Taxes",
+      "FORMAT": "Format",
+      "FORMAT_DEFAULT": "Default ({name})",
+      "WITHHOLDINGS": "Withholdings",
+      "WITHHOLDING_ADD": "+ Add withholding",
+      "WITHHOLDING_REMOVE": "Remove withholding",
+      "WITHHOLDING_TOTAL": "Withholdings",
+      "APPLY_WITHHOLDINGS": "Apply withholdings",
+      "APPLY_WITHHOLDINGS_HINT": "Only for company customers: checked automatically when the organization RFC has 12 characters.",
       "TOTAL": "Total",
       "TERMS": "Terms",
       "TERMS_PLACEHOLDER": "Payment terms, delivery time, warranty…",
@@ -3150,6 +3477,7 @@
       "POSTPONED": "Postponed",
       "CANCELLED": "Cancelled",
       "REOPEN": "Reopen",
+      "RESUME": "Resume (back to Sent)",
       "NEW_VERSION": "New version",
       "DELETE": "Delete draft",
       "DELETE_CONFIRM": "Delete this draft?",
@@ -3463,5 +3791,96 @@
       "ACTIVE": "Active",
       "EMPTY": "No recurring maintenance."
     }
+  },
+  "AGENDA_PARTICIPANTS": {
+    "LABEL": "Participants",
+    "HINT": "Other teammates going with you: they see it in their agenda and get notified. Only the owner completes it.",
+    "DECLINED": "can't go",
+    "DECLINED_NOTE": "{name} can't go: «{note}»",
+    "BUSY": "{name} already has something at that time: {what}",
+    "PARTICIPATING": "Participating",
+    "WITH": "With: {names}",
+    "CANT_GO": "I can't go",
+    "CANT_GO_PROMPT": "Why can't you go? (the owner will be notified)",
+    "CANT_GO_SENT": "We let the owner know",
+    "ONLY_OWNER": "Only the owner ({name}) checks in and completes it.",
+    "TOAST": "{task}"
+  },
+  "RECURRING_TASKS": {
+    "MENU": "Recurring tasks",
+    "TITLE": "Recurring tasks",
+    "SUBTITLE": "Fixed tasks Kontrolya creates again on its own every so often. Each time they show up in the owner's My day and are completed with their report.",
+    "REPEATS": "Repeats",
+    "MODE_FIXED": "On a fixed date",
+    "MODE_FIXED_HINT": "Due on its date even if the previous one wasn't done (e.g. every Monday).",
+    "MODE_AFTER_DONE": "After doing it",
+    "MODE_AFTER_DONE_HINT": "Counts from the day you complete it (e.g. 30 days later).",
+    "EVERY": "Every",
+    "AFTER_DOING_IT": "after doing it",
+    "UNIT_DAY": "day | days",
+    "UNIT_WEEK": "week | weeks",
+    "UNIT_MONTH": "month | months",
+    "DAYS_SHORT": {
+      "0": "Su",
+      "1": "Mo",
+      "2": "Tu",
+      "3": "We",
+      "4": "Th",
+      "5": "Fr",
+      "6": "Sa"
+    },
+    "DAYS_LONG": {
+      "0": "Sunday",
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday"
+    },
+    "ENDS": "Ends",
+    "ENDS_NEVER": "Never",
+    "ENDS_ON": "On",
+    "ENDS_AFTER": "After",
+    "TIMES": "times",
+    "TEXT_EVERY_DAY": "Every day",
+    "TEXT_EVERY_WEEK": "Every week",
+    "TEXT_EVERY_MONTH": "Every month",
+    "TEXT_EVERY_N": "Every {every} {unit}",
+    "TEXT_AFTER": "{every} {unit} after doing it",
+    "STARTS": "Starts",
+    "WEEKDAYS_REQUIRED": "Pick at least one weekday.",
+    "CREATED": "Done: it will repeat {text}",
+    "MINE": "Mine",
+    "ALL": "All",
+    "NEW": "New recurring task",
+    "EMPTY": "You have no recurring tasks. Create one with «New recurring task» or in «Task» checking «Repeats».",
+    "COL_TASK": "Task",
+    "COL_ASSIGNEE": "Owner",
+    "COL_REPEATS": "Repeats",
+    "COL_NEXT": "Next",
+    "COL_RESULTS": "Compliance",
+    "COL_STATUS": "Status",
+    "NEXT_WAITING": "When the pending one is completed",
+    "ON_TIME": "on time",
+    "LATE": "late",
+    "MISSED": "not done",
+    "PENDING": "pending",
+    "STATUS_ACTIVE": "Active",
+    "STATUS_PAUSED": "Paused",
+    "EDIT": "Edit",
+    "PAUSE": "Pause",
+    "RESUME": "Resume",
+    "END": "End",
+    "END_CONFIRM": "End «{title}»? It won't be created again; tasks already created stay.",
+    "EDIT_TITLE": "Edit recurring task",
+    "SAVE": "Save",
+    "CANCEL": "Cancel",
+    "TIME": "Time (optional)",
+    "TIME_HINT": "With a time it becomes a scheduled task.",
+    "SAVED": "Saved",
+    "ERROR": "Could not save",
+    "PROGRAMMED_BY": "Set up by: {name}",
+    "RECURRING_BADGE": "Repeats"
   }
 }

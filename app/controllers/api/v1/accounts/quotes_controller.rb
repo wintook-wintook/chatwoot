@@ -15,10 +15,11 @@
 # quien puede trabajar el caso del que sale (el técnico cotiza trabajo adicional).
 class Api::V1::Accounts::QuotesController < Api::V1::Accounts::BaseController
   PER_PAGE = 25
-  ITEM_FIELDS = %i[catalog_item_id description kind unit quantity unit_price discount_percent tax_percent].freeze
+  ITEM_FIELDS = [:catalog_item_id, :description, :kind, :unit, :quantity, :unit_price, :discount_percent, :tax_percent, :tax_rate_id,
+                 { withholdings: %i[id name percent] }].freeze
 
   before_action :check_access
-  before_action :set_quote, except: %i[index create summary]
+  before_action :set_quote, except: %i[index create summary withholdings_default]
   before_action :check_editable, only: %i[update]
 
   def index
@@ -56,6 +57,12 @@ class Api::V1::Accounts::QuotesController < Api::V1::Accounts::BaseController
     render json: { quote: quote_json(@quote.reload, full: true) }
   rescue ActiveRecord::RecordInvalid => e
     render_error(e.record.errors.full_messages)
+  end
+
+  # ¿Se aplican retenciones a la cotización de este cliente? Solo si es persona moral (RFC de 12).
+  def withholdings_default
+    contact = Current.account.contacts.find_by(id: params[:contact_id])
+    render json: { apply: Quotes::Withholdings.for_contact(contact, params[:organization_id]) }
   end
 
   def destroy
@@ -198,7 +205,7 @@ class Api::V1::Accounts::QuotesController < Api::V1::Accounts::BaseController
 
   def quote_params
     params.require(:quote).permit(:contact_id, :organization_id, :assignee_id, :opportunity_id, :origin_ticket_id, :currency,
-                                  :valid_until, :terms, :notes)
+                                  :valid_until, :terms, :notes, :apply_withholdings, :quote_format_id)
   end
 
   def render_error(message)

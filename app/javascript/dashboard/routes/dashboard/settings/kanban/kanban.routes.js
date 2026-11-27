@@ -1,5 +1,4 @@
 import { frontendURL } from '../../../../helper/URLHelper';
-import { ROLES } from 'dashboard/constants/permissions.js';
 
 export default {
   routes: [
@@ -7,10 +6,11 @@ export default {
       path: frontendURL('accounts/:accountId/settings/kanban'),
       name: 'kanban_types_list',
       meta: {
-        permissions: ROLES, // Solo administradores pueden gestionar tipos
-        parentNav: 'settings'
+        // Igual que el menú y KanbanTypeProcessPolicy: solo el Administrador los cambia.
+        permissions: ['administrator'],
+        parentNav: 'settings',
       },
       component: () => import('./index.vue'),
-    }
+    },
   ],
 };

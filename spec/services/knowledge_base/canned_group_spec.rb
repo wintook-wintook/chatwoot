@@ -48,6 +48,34 @@ RSpec.describe KnowledgeBase::CannedGroup do
     end
   end
 
+  # respuestas_predefinidas R4: si hay una categoría con ese nombre, el grupo es la categoría.
+  # proyecto@predefinidas_que_contestan: la categoría es fija (General, Ficha, Objeción).
+  describe '.scope por categoría fija' do
+    before do
+      create(:knowledge_item, account: account, knowledge_source: source, source_type: 'canned_response',
+                              title: 'Plan X — Precio', metadata: { 'kind' => 'ficha' })
+      create(:knowledge_item, account: account, knowledge_source: source, source_type: 'canned_response',
+                              title: 'ESTÁ MUY CARO', metadata: { 'kind' => 'objecion' })
+      item('Horario de atención')
+    end
+
+    it '«Ficha», «Objeción» y «General» filtran por tipo; sin tipo cuenta como general' do
+      expect(described_class.scope(account, 'canned_response', 'Fichas').pluck(:title)).to eq(['Plan X — Precio'])
+      expect(described_class.scope(account, 'canned_response', 'objecion').pluck(:title)).to eq(['ESTÁ MUY CARO'])
+      expect(described_class.scope(account, 'canned_response', 'General').pluck(:title)).to eq(['Horario de atención'])
+      expect(described_class.scope(account, 'canned_response', '!Objeción').pluck(:title))
+        .to contain_exactly('Plan X — Precio', 'Horario de atención')
+    end
+
+    it 'el motor hace exactamente lo mismo' do
+      service = KnowledgeBaseResponseService.new(Message.new(account: account, content: 'hola'))
+      %w[Ficha !Objeción General].each do |group|
+        expect(described_class.scope(account, 'canned_response', group).pluck(:id).sort)
+          .to eq(service.send(:grouped_items, 'canned_response', group).pluck(:id).sort)
+      end
+    end
+  end
+
   describe '.threshold' do
     it 'sube el listón solo para el grupo positivo' do
       expect(described_class.threshold('GESTION')).to eq(KnowledgeBaseResponseService::GROUP_SIMILARITY_THRESHOLD)

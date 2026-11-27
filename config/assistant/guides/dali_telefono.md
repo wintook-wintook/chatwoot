@@ -2,8 +2,15 @@
 key: dali_telefono
 title: Dali en el teléfono (instalarlo como app)
 areas: []
-keywords: [dali en el telefono, celular, movil, instalar, instalar app, icono, pantalla de inicio, agregar a inicio, agregar a pantalla principal, android, iphone, safari, chrome, qr, codigo qr, /dali, app de dali, dictar, microfono, permiso del microfono, no me deja instalar, me pide firmarme, avisos, notificaciones, notificacion, campanita, no me llegan avisos, push]
-pages: []
+keywords: [dali en el telefono, celular, movil, app movil, aplicacion, descargar, descargar la app, play store, app store, google play, tienda de aplicaciones, kontrolya en el celular, instalar, instalar app, icono, pantalla de inicio, agregar a inicio, agregar a pantalla principal, android, iphone, safari, chrome, qr, codigo qr, /dali, app de dali, dictar, microfono, permiso del microfono, no me deja instalar, me pide firmarme, avisos, notificaciones, notificacion, campanita, no me llegan avisos, push, ahora no, marcar todo como leido, cambiar de empresa, ir a kontrolya, abrir en kontrolya, mi ruta, generar otro codigo]
+pages: [profile, field_route]
+sources:
+  - app/javascript/dashboard/views/dali/**/*.vue
+  - app/javascript/dashboard/routes/dashboard/settings/profile/DaliOnPhone.vue
+  - app/javascript/dashboard/components/assistant/**/*.vue
+  - app/javascript/dashboard/helper/daliPush.js
+  - app/controllers/api/v1/accounts/assistant_controller.rb
+reviewed: 2026-11-25
 ---
 ## Para qué sirve
 Usar a Dali desde el celular a pantalla completa, como una app con su propio ícono: escribirle o dictarle, ver qué tienes hoy, contestar a tus clientes, cotizar y agendar, con los mismos permisos que en la plataforma.
@@ -15,7 +22,7 @@ Usar a Dali desde el celular a pantalla completa, como una app con su propio íc
 ## Cómo se hace
 ### Entrar la primera vez
 1. En la computadora, ve a tu perfil (Configuración de Perfil) › «Usar Dali en mi teléfono» y pulsa «Mostrar código QR».
-2. Apunta la cámara del teléfono al código y abre el enlace: entras ya firmado a Dali. El código sirve una sola vez y vence en 5 minutos; si vence, pulsa «Generar otro código».
+2. Apunta la cámara del teléfono al código y abre el enlace: entras ya firmado a Dali. El código sirve una sola vez y vence en 5 minutos (abajo dice «Vence en …»); si vence, pulsa «Generar otro código».
 3. Sin QR: abre en el teléfono la dirección de tu plataforma terminada en /dali y entra con tu correo y contraseña; te lleva directo a Dali.
 
 ### Instalarlo en Android (Chrome)
@@ -32,15 +39,16 @@ Usar a Dali desde el celular a pantalla completa, como una app con su propio íc
 ### Usarlo
 1. Ábrelo con el ícono: se ve a pantalla completa y no te vuelve a pedir la contraseña durante 2 meses.
 2. Escribe o toca el micrófono para dictar; vuelve a tocarlo al terminar. El texto queda en el cuadro para que lo revises y lo mandes.
-3. Los botones de abajo (Mi día, Sin responder, Cotizar, Visitas de hoy, Agendar, Anotar y Ventas si la tienes) empiezan la plática.
-4. Si sales a campo, el botón «Mi ruta» de arriba abre tus visitas para marcar «Llegué», tomar fotos y la firma; «Volver a Dali» te regresa.
-5. Lo que Dali abre (un caso, una cotización, una conversación) se abre en la plataforma; el botón «Volver a Dali» te regresa.
+3. Los botones de abajo empiezan la plática, según tu rol: «Mi día», «Sin responder» (si puedes escribir en Conversaciones), «Cotizar» (si puedes crear en Ventas), «Visitas de hoy» (si tienes Agenda), «Agendar», «Anotar» y «Ventas» (si tienes Ventas).
+4. Arriba: el «+» empieza una conversación nueva y el menú ⋮ tiene «Ir a Kontrolya» (abre la plataforma), «Activar avisos en este teléfono» (si aún no los activas), «Instalar en este teléfono» (cuando el navegador lo permite) y, si estás en varias empresas, «Empresa» para cambiar.
+5. Si sales a campo (y tienes Agenda), el botón «Mi ruta» de arriba abre tus visitas para marcar «Llegué», tomar fotos y la firma; «Volver a Dali» te regresa.
+6. Dali no cambia de pantalla solo: cuando hay algo que abrir deja el botón «Abrir en Kontrolya», y las pantallas que nombra salen como liga. Se abren en la plataforma (un caso, una cotización, una conversación); el botón «Volver a Dali» te regresa.
 
 ### Avisos en el teléfono
-1. La primera vez que abres Dali sale «Activa los avisos…»: toca «Activar avisos» y acepta el permiso del teléfono. También está en el menú ⋮ › «Activar avisos en este teléfono».
-2. Desde ahí te llega un aviso cuando te asignan una conversación o cuando un cliente te escribe en una conversación tuya, aunque Dali esté cerrado: «Mario: ¿ya llegó mi equipo?».
+1. La primera vez que abres Dali sale «Activa los avisos para saber cuándo te escriben o te asignan una conversación, aunque Dali esté cerrado.»: toca «Activar avisos» y acepta el permiso del teléfono, o «Ahora no». También está en el menú ⋮ › «Activar avisos en este teléfono».
+2. Desde ahí te llega un aviso cuando te asignan una conversación, cuando un cliente te escribe en una conversación tuya, cuando alguien te menciona con @ (en una conversación o en el chat interno) y cuando un compañero te escribe en directo por el chat interno, aunque Dali esté cerrado: «Mario: ¿ya llegó mi equipo?». Los mensajes de los grupos del chat interno no avisan, salvo que te mencionen.
 3. Al tocar el aviso se abre Dali y te lee esa conversación; le contestas ahí mismo («dile que llega el jueves»).
-4. Con Dali abierto: la campanita de arriba muestra cuántos avisos tienes sin leer y su lista (tócalos para que Dali te lea la conversación, o «Ver lo que tengo sin responder»), y cuando llega algo sale una franja «Mario te escribió».
+4. Con Dali abierto: la campanita de arriba muestra cuántos avisos tienes sin leer y su lista (tócalos para que Dali te lea la conversación; también «Ver lo que tengo sin responder» y «Marcar todo como leído»; sin nada dice «No tienes avisos nuevos.»), y cuando llega algo sale una franja «Mario te escribió».
 5. Con Dali instalado, el ícono muestra un globito con el número de avisos sin leer.
 
 ## Límites
@@ -49,6 +57,7 @@ Usar a Dali desde el celular a pantalla completa, como una app con su propio íc
 - El ícono es el logo de la plataforma.
 
 ## Dudas frecuentes
+- ¿Está en Play Store o en App Store? No. No se descarga de ninguna tienda: se abre en el navegador del teléfono (con el QR de tu perfil o la dirección terminada en /dali) y desde ahí se instala con su ícono, como dicen los pasos de arriba. Desde Dali, el menú ⋮ › «Ir a Kontrolya» abre la plataforma completa.
 - ¿Tengo que escanear el QR cada vez? No. El QR solo es para entrar la primera vez; después abres Dali con el ícono.
 - No me aparece «Instalar»: en Android usa el menú ⋮ de Chrome › «Agregar a la pantalla principal»; en iPhone tiene que ser desde Safari, con Compartir › «Agregar a inicio».
 - En el iPhone, ya instalado, me pidió firmarme otra vez: es normal la primera vez, porque la app instalada guarda su sesión aparte de Safari. Entra con tu correo y contraseña una vez.
@@ -57,6 +66,7 @@ Usar a Dali desde el celular a pantalla completa, como una app con su propio íc
 - Estoy en varias empresas: en el menú ⋮ de Dali eliges la empresa.
 - No me llegan avisos en el iPhone: tienen que activarse con Dali instalado en la pantalla de inicio (iOS 16.4 o más nuevo) y abierto desde el ícono, no desde Safari.
 - El teléfono bloqueó los avisos: actívalos en los permisos (Android: Chrome › candado de la dirección › Notificaciones; iPhone: Ajustes › Notificaciones › Dali) y vuelve a tocar «Activar avisos en este teléfono».
+- Al activar los avisos desde Dali se prenden en tu perfil, en «Preferencias de notificación», los de «Notificación Push» para «Una conversación ha sido asignada a ti», «Se ha creado un nuevo mensaje en una conversación asignada» y «Has sido mencionado en una conversación». Si después los apagas ahí, dejan de llegar al teléfono (salvo los mensajes directos del chat interno).
 - En la computadora los avisos siguen abriendo la conversación en la plataforma; solo el teléfono donde los activaste desde Dali abre Dali.
 
 ## Quién puede

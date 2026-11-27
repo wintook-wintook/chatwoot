@@ -74,7 +74,7 @@ class Cases::Ai::DayPlanner < Cases::Ai::BaseService
     ticket = task.case_ticket
     parts = ["#{position}. [id #{task.id}]#{' [MI ORDEN]' if item[:planned]} #{task.title}"]
     parts << "caso #{ticket.folio} (#{ticket.case_type&.case_class || 'support'}): #{ticket.title}" if ticket
-    parts << "vence #{local(task.due_at, '%d/%m %H:%M')}" if task.due_at
+    parts << "vence #{local(task.due_at, '%d/%m')}" if task.due_at # una tarea vence en un día, sin hora
     parts << "duración #{task.estimated_minutes} min" if task.estimated_minutes
     parts << "puntaje #{item[:score]} (#{item[:reasons].pluck(:key).join(', ')})"
     parts.join(' · ')

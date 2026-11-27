@@ -78,7 +78,8 @@ class Api::V1::Accounts::ContactTrackings::AssistantBriefsController < Api::V1::
     return render json: { error: 'not_ready' }, status: :unprocessable_entity unless @brief.ready?
 
     render json: ContactTrackings::Assistant::BriefCoverage
-      .new(params[:draft], ficha: @brief.digest['ficha'], answers: @brief.answers).call
+      .new(params[:draft], ficha: @brief.digest['ficha'], answers: @brief.answers,
+                           fixed: ContactTrackings::Assistant::BriefFromChat.new(@brief)).call
   end
 
   def content

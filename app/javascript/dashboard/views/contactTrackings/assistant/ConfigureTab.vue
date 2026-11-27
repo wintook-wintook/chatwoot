@@ -160,7 +160,8 @@ export default {
     },
     // Lo que se ve de cada cosa: el nombre del dato o la directiva tal como está escrita.
     title(item) {
-      if (item.kind === 'variable') return item.name;
+      if (item.kind === 'variable' || item.kind === 'constant')
+        return item.name;
       return item.wrote || item.name || this.kindLabel(item);
     },
     isOk(item) {

@@ -22,11 +22,13 @@
 # ================================================================================
 class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseController
   include CaseMeetingSerializer
+  include TaskMenuFields # meetings_count y deletable para el menú de la tarea
 
   def index
     limit_to_own_tasks
     result = Cases::TasksInboxQuery.new(account: Current.account, current_user: current_user, params: params).call
     @notes_count_map = notes_count_map_for(result[:rows])
+    @menu_task_ids = result[:rows].filter_map { |record, kind| record.id if kind == :task } # TaskMenuFields
 
     @scores = result[:scores] || {}
     @planned_ids = result[:planned_ids]
@@ -86,6 +88,11 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
     end
   end
 
+  # De quién es el día que se ve («Día de:» de otro, o el propio).
+  def day_user_id
+    @day_user_id ||= params[:assignee_id].to_s.match?(/\A\d+\z/) ? params[:assignee_id].to_i : current_user&.id
+  end
+
   # Plan-Bandeja-Prioridad F1 — «Mi día»: la agenda de hoy y la carga del día.
   def my_day_meta(result)
     return {} unless result.key?(:agenda)
@@ -108,6 +115,7 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
       title: task.title,
       description: task.description,
       status: task.status,
+      audience: task.audience, # la del cliente no lleva «Reportar avance»
       # @tickets_cases — prioridad de la TAREA. Ojo al leer el JSON: la del
       # ticket viaja aparte, dentro de `case_ticket`.
       priority: task.priority,
@@ -129,8 +137,9 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
   # puntaje con sus motivos (score + reasons).
   def priority_fields(task)
     fields = { estimated_minutes: task.estimated_minutes, planned_on: task.planned_on, milestone: task.milestone,
-               report_required: task.report_required?, replaceable: Cases::Conversion.task_kind_replaceable?(task) }
-             .merge(@scores[task.id] || {})
+               report_required: task.report_required?, replaceable: Cases::Conversion.task_kind_replaceable?(task),
+               recurring: task.task_recurrence_id.present? } # Tareas que se repiten
+             .merge(@scores[task.id] || {}).merge(task_menu_fields(task))
     @planned_ids ? fields.merge(planned: @planned_ids.include?(task.id)) : fields
   end
 
@@ -141,7 +150,9 @@ class Api::V1::Accounts::CaseTasksIndexController < Api::V1::Accounts::BaseContr
   def meeting_row_json(meeting)
     meeting_json(meeting).merge(
       item_type: 'meeting',
-      case_ticket: ticket_context(meeting.case_ticket)
+      case_ticket: ticket_context(meeting.case_ticket),
+      # Agenda: la persona del día la ve por ser participante (no responsable): «Participas» y «No puedo ir».
+      participating: meeting.organizer_id != day_user_id && meeting.participants.any? { |p| p.user_id == day_user_id }
     ).merge(agenda_client(meeting))
   end
 

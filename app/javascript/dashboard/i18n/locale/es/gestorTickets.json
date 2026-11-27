@@ -1,12 +1,12 @@
 {
   "CONVERT_ITEM": {
-    "SCHEDULE": "Agendar…",
-    "SCHEDULE_TITLE": "Agendar «{title}»",
+    "SCHEDULE": "Pasar a la agenda",
+    "SCHEDULE_TITLE": "Pasar «{title}» a la agenda",
     "SCHEDULE_DESC": "La tarea se quita de Tareas y queda agendada con día y hora.",
     "STARTS": "Empieza",
     "ENDS": "Termina",
     "LOCATION": "Lugar",
-    "SAVE": "Agendar",
+    "SAVE": "Pasar a la agenda",
     "CANCEL": "Cancelar",
     "SCHEDULED": "«{title}» quedó agendada",
     "LINKED": "Se agendó una sesión de «{title}»; la tarea se queda",
@@ -20,6 +20,7 @@
     "DONE_LINKED": "Se quitó de la agenda; queda la tarea «{title}»"
   },
   "CANCEL_ITEM": {
+    "CANCELLED_AS": "Cancelada: {reason}",
     "CATALOG": {
       "TITLE": "Motivos de cancelación",
       "HELP": "Se piden al cancelar una tarea o tarea agendada. «Otro» pide escribir el motivo.",
@@ -135,6 +136,11 @@
     "NO_LOCATION": "Sin ubicación"
   },
   "TASK_REPORT": {
+    "ATTENDANCE": {
+      "TITLE": "¿Cómo terminó?",
+      "HELD": "Se realizó",
+      "NO_SHOW": "El cliente no asistió"
+    },
     "TITLE": "Reporte de cierre",
     "CONTENT": "Qué se hizo",
     "CONTENT_PLACEHOLDER": "Escribe qué hiciste y cómo quedó",
@@ -147,6 +153,7 @@
     "CANCEL": "Cancelar",
     "SUBMIT": "Concluir",
     "VIEW": "Ver reporte",
+    "PROGRESS": "Reportar avance",
     "EMPTY": "Sin reportes.",
     "MORE": "Ver más",
     "HISTORY": "Tareas concluidas y actividades",
@@ -176,7 +183,8 @@
       "TASK": "Tarea",
       "MEETING": "Tarea agendada",
       "ORDER": "Orden de trabajo",
-      "ACTIVITY": "Actividad"
+      "ACTIVITY": "Actividad",
+      "PROGRESS": "Avance"
     },
     "CATALOG": {
       "TITLE": "Resultados de tareas",
@@ -187,9 +195,39 @@
       "ERROR": "No se pudo guardar."
     }
   },
+  "TASK_HISTORY": {
+    "TITLE": "Historial de la tarea",
+    "SUBTITLE": "Todo lo que pasó con la tarea: notas, reportes, tareas agendadas y cambios",
+    "LOADING": "Cargando historial…",
+    "ERROR": "No se pudo cargar el historial.",
+    "STATUS": "Estado",
+    "ASSIGNEE": "Responsable",
+    "DUE": "Vence",
+    "PLANNED": "programada {day}",
+    "TIME": "Tiempo reportado",
+    "TIME_OF": "{done} de {est} estimado",
+    "NO_SHOW": "El cliente no asistió",
+    "FROM_MEETING": "de la tarea agendada «{title}»",
+    "EMPTY": "Nada con este filtro.",
+    "MENU": "Ver historial",
+    "ACTIONS": {
+      "PROGRESS": "Reportar avance",
+      "NOTE": "Agregar nota",
+      "SCHEDULE": "Agendar",
+      "COMPLETE": "Completar"
+    },
+    "FILTERS": {
+      "ALL": "Todo",
+      "NOTES": "Notas",
+      "REPORTS": "Reportes",
+      "MEETINGS": "Agendadas",
+      "CLIENT": "Cliente",
+      "CHANGES": "Cambios"
+    }
+  },
   "ACTIVITY_REPORT": {
     "TITLE": "Reportar actividad",
-    "SUBTITLE": "Algo que ya hiciste, sin tarea de por medio",
+    "SUBTITLE": "Algo que ya hiciste. Si es de una tarea pendiente, elígela y queda como su avance",
     "NAME": "Título",
     "NAME_PLACEHOLDER": "Ej. Llamada de confirmación",
     "DATE": "Fecha",
@@ -197,7 +235,15 @@
     "INTERNAL_HINT": "Sin contacto ni organización queda como actividad interna: solo se ve en Reportes y en tu Mi día.",
     "REQUIRED": "Escribe el título y qué hiciste.",
     "SUBMIT": "Guardar",
-    "SUCCESS": "Actividad reportada"
+    "SUCCESS": "Actividad reportada",
+    "TASK": "Tarea (opcional)",
+    "NO_TASK": "— Sin tarea: es una actividad —",
+    "PROGRESS_TITLE": "Reportar avance",
+    "PROGRESS_SUBTITLE": "Lo que hiciste en la tarea, sin completarla",
+    "PROGRESS_OF": "Avance de",
+    "PROGRESS_HINT": "La tarea sigue pendiente. El avance sale en el historial de la tarea y en la actividad del caso.",
+    "PROGRESS_SUBMIT": "Guardar avance",
+    "PROGRESS_SUCCESS": "Avance reportado"
   },
   "SALES_BUDGET": {
     "TITLE": "Presupuesto de ventas",
@@ -319,6 +365,22 @@
     }
   },
   "CASE_TICKETS": {
+    "CONFIRM_DELETE": {
+      "TITLE": "¿Borrar «{label}»?",
+      "MESSAGE": "Ya no se podrá elegir. Lo que ya lo tenía se queda sin él.",
+      "YES": "Sí, borrar",
+      "NO": "Cancelar"
+    },
+    "ASSIGN_CLIENT": {
+      "BUTTON": "Ligar a un cliente",
+      "TITLE": "Ligar a un cliente · {folio}",
+      "HINT": "El caso deja de ser interno: queda en la ficha de la organización y del contacto, en su portal y en sus reportes. Quien lo pidió sigue como solicitante.",
+      "CONFIRM": "Ligar",
+      "CANCEL": "Cancelar",
+      "DONE": "El caso ya es del cliente",
+      "ERROR": "No se pudo ligar el caso",
+      "EVENT": "Se ligó a {client} (antes era caso interno)"
+    },
     "STAGE_BAR": {
       "NOW": "Ahora: {stage}"
     },
@@ -587,6 +649,7 @@
     },
     "DETAIL_TABS": {
       "PENDING": "Pendientes",
+      "PENDING_OF": "{pending} pendiente(s) de {total}",
       "MORE": "Más",
       "ACTIVITY": "Actividad",
       "SUMMARY": "Resumen",
@@ -595,7 +658,7 @@
       "CONTACT_NOTES": "Notas del Contacto",
       "TASKS": "Tareas",
       "JOURNEY": "Avance",
-      "AI": "Asistente IA",
+      "AI": "Dali",
       "MEETINGS": "Tareas agendadas",
       "CONCEPTS": "Reporte de servicio",
       "PROJECT": "Proyecto",
@@ -719,6 +782,11 @@
           "TASK": "No agendadas",
           "MEETING": "Agendadas"
         },
+        "AUDIENCE": {
+          "ANY": "Quién la hace: todas",
+          "OURS": "Las nuestras",
+          "CLIENT": "Del cliente"
+        },
         "DUE": {
           "ANY": "Cualquier fecha",
           "OVERDUE": "Vencidas",
@@ -770,12 +838,16 @@
         "ESTIMATE_LABEL": "Duración estimada",
         "ESTIMATE_NONE": "Sin estimar",
         "PLANNED_LABEL": "Programada para",
-        "PLANNED_AFTER_DUE": "Queda después del vencimiento: se entregará tarde."
+        "PLANNED_AFTER_DUE": "Queda después del vencimiento: se entregará tarde.",
+        "REPEATS": "Se repite",
+        "REPEATS_SAVED": "Listo: se repite {when}.",
+        "REPEATS_ERROR": "No se pudo programar la tarea."
       },
       "ADD_NOTE": "Agregar nota",
       "REFRESH": "Actualizar",
       "FILTER_PLACEHOLDER": "Buscar en tareas (título, responsable)…",
       "NO_MATCHES": "Sin coincidencias con el filtro.",
+      "UNASSIGNED_CONFIRM": { "TEXT": "La tarea no tiene responsable: no le aparecerá a nadie en su Mi día. ¿Guardarla sin asignar?", "CHOOSE": "Elegir responsable", "SAVE": "Guardar sin asignar" },
       "NOTES_NONE": "Sin notas",
       "NOTES_COUNT_TITLE": "{count} nota(s) — ver",
       "NOTES_NONE_TOAST": "La tarea {folio} aún no tiene notas.",
@@ -788,7 +860,10 @@
         "NOTES": "Notas de la tarea ({count})",
         "ADD_MEETING": "Agendar tarea",
         "ADD_MEETING_DONE_HINT": "La tarea ya está concluida",
-        "VIEW_MEETINGS": "Ver tareas agendadas"
+        "VIEW_MEETINGS": "Ver tareas agendadas",
+        "EDIT": "Editar",
+        "VIEW": "Ver",
+        "VIEW_MEETINGS_COUNT": "Ver tareas agendadas ({count})"
       },
       "ORPHAN_MEETINGS": {
         "TITLE": "Quedan tareas agendadas a futuro",
@@ -804,6 +879,41 @@
       "MILESTONE_LABEL": "Es un hito del proyecto",
       "MILESTONE_HINT": "Cuenta para el avance del proyecto.",
       "MY_DAY": {
+        "CLIENT": {
+          "TITLE": "Esperando al cliente ({n})",
+          "OVERDUE_BADGE": "{n} vencidas",
+          "DONE_BADGE": "{n} por revisar",
+          "HINT": "Lo que le toca al cliente en tus casos. No sale en tus tareas porque lo hace él en su portal: aquí lo sigues.",
+          "GROUPS": {
+            "overdue": "Vencidas ({n})",
+            "soon": "Vencen esta semana ({n})",
+            "done": "Ya las hizo: revisa ({n})",
+            "waiting": "En espera ({n})"
+          },
+          "DONE_BY": "La hizo {who} el {date}",
+          "THE_CLIENT": "el cliente",
+          "OVERDUE_DAYS": "Vencida hace {n} día(s)",
+          "DUE": "Para el {date}",
+          "IN_PROGRESS": "en proceso",
+          "REMIND": "Recordarle",
+          "REMINDED_SHORT": "Recordado",
+          "REMINDED": "Le mandamos el recordatorio con el enlace de su portal.",
+          "OPEN": "Abrir",
+          "REVIEW": "Revisar",
+          "MORE": "Y {n} más: ábrelas desde Tareas › Del cliente.",
+          "NOT_SENT": {
+            "no_conversation": "No tiene conversación: mándale el enlace de su portal por otro medio.",
+            "window_closed": "Pasaron 24 h desde su último mensaje: WhatsApp no deja escribirle libre. Mándale una plantilla o escríbele por otro medio.",
+            "no_owner": "El caso no tiene contacto ni organización: no hay portal al cual mandarlo.",
+            "error": "No se pudo mandar; intenta de nuevo."
+          }
+        },
+        "DAY_OF": "Día de:",
+        "DAY_OF_ME": "Mío",
+        "VIEWING": "Estás viendo el día de {name}: solo para ver, su orden lo arma esa persona.",
+        "THEIR_ORDER": "Su orden de hoy",
+        "THEIR_ORDER_EMPTY": "No ha armado su orden de hoy.",
+        "THEIR_EMPTY": "Sin pendientes: no tiene tareas por hacer.",
         "NEXT": "Siguiente",
         "LOAD": "Para hoy: {count} tareas",
         "LOAD_NONE": "Nada vence hoy",
@@ -857,14 +967,14 @@
         "PLAN_TIME": "≈ {time}",
         "PLAN_OVERLOAD": "≈ {time} · más de 8 h",
         "AI": {
-          "BUTTON": "Plan de mi día (IA)",
+          "BUTTON": "Plan de mi día con Dali",
           "TITLE": "Plan de mi día",
           "LOADING": "Armando tu plan…",
           "REGENERATE": "Volver a generar",
           "CLOSE": "Cerrar",
           "LATER": "Puede esperar a mañana",
           "ERROR": "No se pudo generar el plan.",
-          "DISCLAIMER": "Sugerencia de IA: no cambia tu orden. Revísala antes de seguirla."
+          "DISCLAIMER": "Sugerencia de Dali: no cambia tu orden. Revísala antes de seguirla."
         },
         "NOTICES": {
           "BUTTON": "Tienes {count} avisos importantes",
@@ -1234,7 +1344,7 @@
       "FIX": "Corregir ortografía",
       "IMPROVE": "Mejorar escritura",
       "REVERT": "Volver al original",
-      "ERROR": "No se pudo procesar el texto con IA. Inténtalo de nuevo.",
+      "ERROR": "Dali no pudo procesar el texto. Inténtalo de nuevo.",
       "TITLE": "Inteligencia Artificial",
       "BACK": "Volver",
       "SAVE": "Guardar",
@@ -1315,7 +1425,7 @@
         "SUMMARY_LABEL": "Resumen",
         "ROOT_CAUSE_LABEL": "Causa raíz",
         "SOLUTION_LABEL": "Solución sugerida",
-        "SUGGEST_CLOSE": "Sugerir con IA",
+        "SUGGEST_CLOSE": "Sugerir con Dali",
         "ERROR": "No se pudo generar el resumen"
       },
       "DUPLICATE": {
@@ -1758,7 +1868,7 @@
       "article_generated": "Artículo KB generado",
       "ai_classified": "Clasificado por IA",
       "ai_suggested": "Clasificación sugerida por IA",
-      "ai_followup": "Seguimiento redactado por IA",
+      "ai_followup": "Seguimiento redactado por Dali",
       "reassigned": "Reasignado",
       "escalated": "Escalado",
       "message_received": "Mensaje recibido",
@@ -1793,6 +1903,8 @@
       "task_client_update": "El cliente avanzó una tarea",
       "task_cancelled": "Tarea cancelada",
       "task_converted": "Tarea ↔ agenda",
+      "client_assigned": "Se ligó a un cliente",
+      "task_reported": "Reporte",
       "task_reopened": "Tarea reabierta",
       "task_deleted": "Tarea borrada",
       "quote_created": "Cotización creada",
@@ -1845,7 +1957,13 @@
         "CANCELLED": "Cancelada",
         "RESCHEDULED": "Reprogramada"
       },
+      "COMPLETE": "Completar",
+      "COMPLETE_TITLE": "Cerrar la tarea agendada con su reporte (realizada o no asistió)",
       "MENU": {
+        "VIEW": "Ver",
+        "REOPEN": "Reabrir",
+        "VIEW_REPORT": "Ver reporte",
+        "VIEW_TASK": "Ver la tarea {folio}",
         "EDIT": "Editar",
         "HELD": "Marcar realizada",
         "NO_SHOW": "Marcar no asistió",
@@ -1857,6 +1975,7 @@
         "TO_TASK": "Pasar a tarea (sin hora)"
       },
       "MODAL": {
+        "VIEW_TITLE": "Ver tarea agendada",
         "TITLE": "Agendar tarea",
         "EDIT_TITLE": "Editar tarea agendada",
         "DESC": "Queda registrada en el avance del caso.",
@@ -1867,9 +1986,6 @@
         "DATE_ERROR": "La hora de fin debe ser posterior a la de inicio.",
         "TASK_LABEL": "Tarea",
         "TASK_NONE": "— Del caso (sin tarea) —",
-        "CONVERT_HINT": "Al guardar, «{title}» se quita de Tareas y queda como tarea agendada, con el tiempo que ya tenía reportado.",
-        "KEEP_TASK": "Que la tarea se quede: solo agendar una sesión de trabajo",
-        "KEEP_HINT": "La tarea se queda en Tareas y esta sesión queda ligada a ella.",
         "KEEP_LOCKED": "Es obligatoria, de la etapa o del cliente: la tarea se queda y se agenda una sesión ligada a ella.",
         "ORGANIZER_LABEL": "Responsable",
         "ORGANIZER_ME": "— Yo —",
@@ -1978,6 +2094,8 @@
         "FROZEN": "La oportunidad está cerrada: reábrela para cambiar sus datos."
       },
       "ACTIONS": {
+        "CHANGE_POSTPONE": "Cambiar fecha o motivo",
+        "RESUME_NOW": "Retomar ahora",
         "WON": "Ganada",
         "LOST": "Perdida",
         "CANCEL": "Cancelar",
@@ -1999,7 +2117,10 @@
         "SUCCESS": "Oportunidad cerrada como {outcome}",
         "ERROR": "No se pudo cerrar la oportunidad"
       },
+      "POSTPONE_CHANGED": "Cambió la pospuesta",
       "POSTPONE_MODAL": {
+        "CHANGE_TITLE": "Cambiar la pospuesta de {folio}",
+        "SAVE_CHANGE": "Guardar cambios",
         "TITLE": "Posponer {folio}",
         "UNTIL": "Retomar el",
         "REASON_CATALOG": "Motivo",
@@ -2675,6 +2796,7 @@
       }
     },
     "TASK_PRIORITY": {
+      "LOADING": "Cargando el puntaje...",
       "PAGE_TITLE": "Puntaje de tareas: cómo se ordena «Mi día»",
       "INTRO": "«Mi día» ordena las tareas pendientes de cada consultor por un puntaje: cada situación suma los puntos de abajo. Más puntos = más arriba. Un peso negativo resta; en 0 no cuenta.",
       "GROUPS": {
@@ -2750,11 +2872,11 @@
         "TITLE": "Explícame la semana",
         "EXPLAIN": "Explícame la semana",
         "AGAIN": "Volver a explicar",
-        "HINT": "La IA te cuenta en 30 segundos cómo va el negocio, qué preocupa y qué harías hoy, con las cifras de esta pantalla.",
+        "HINT": "Dali te cuenta en 30 segundos cómo va el negocio, qué preocupa y qué harías hoy, con las cifras de esta pantalla.",
         "good": "Va bien",
         "watch": "Preocupa",
         "today": "Hoy haría",
-        "DISCLAIMER": "Generado con IA a partir de estas cifras; revísalo antes de decidir.",
+        "DISCLAIMER": "Lo escribió Dali con estas cifras; revísalo antes de decidir.",
         "ERROR": "No se pudo generar la explicación."
       },
       "SALES": {
@@ -2839,8 +2961,9 @@
         "line": "LINE"
       },
       "ANALYSIS": {
-        "TITLE": "Análisis de conversaciones con IA",
-        "DESCRIPTION": "Lee una muestra de hasta 150 conversaciones del período y encuentra de qué hablan, clientes molestos, ventas que se escapan y quejas que se repiten. Cuesta tokens: se hace a pedido.",
+        "TITLE": "Análisis de conversaciones con Dali",
+        "SAMPLE_LABEL": "Conversaciones:",
+        "DESCRIPTION": "Lee una muestra de las conversaciones más recientes del período (100 por omisión; puedes elegir hasta 150) y encuentra de qué hablan, clientes molestos, ventas que se escapan y quejas que se repiten. Cuesta tokens: se hace a pedido.",
         "SAMPLE": "Muestra analizada: {count} conversaciones",
         "EMPTY": "No hay conversaciones en el período para analizar.",
         "COUNT": "{count} conv.",
@@ -2848,7 +2971,7 @@
         "complaints": "Quejas que se repiten",
         "lost_sales": "Ventas que se escapan (sin oportunidad)",
         "upset": "Clientes molestos",
-        "DISCLAIMER": "Generado con IA sobre una muestra; revisa las conversaciones antes de actuar.",
+        "DISCLAIMER": "Lo escribió Dali sobre una muestra; revisa las conversaciones antes de actuar.",
         "ERROR": "No se pudo analizar."
       }
     },
@@ -2888,6 +3011,7 @@
       "WE": "Nosotros",
       "TASK_REPORT": "Reporte de cierre",
       "ACTIVITY_REPORT": "Actividad reportada",
+      "PROGRESS_REPORT": "Avance de tarea",
       "TODAY": "Hoy",
       "YESTERDAY": "Ayer",
       "LOADING": "Cargando actividad…",
@@ -2948,6 +3072,9 @@
       }
     },
     "HOME": {
+      "ONBOARDING": {
+        "BUTTON": "Mi capacitación {done}/{total}"
+      },
       "GREETING": {
         "MORNING": "Buenos días, {name}",
         "AFTERNOON": "Buenas tardes, {name}",
@@ -2999,7 +3126,196 @@
       "LIST": "Volver a la lista"
     }
   },
+  "QUOTE_FORMATS": {
+    "TITLE": "Formatos de cotización",
+    "DESCRIPTION": "Cómo se ve la cotización en la liga del cliente y en el PDF. Puedes tener varios y escoger uno en cada cotización.",
+    "DEFAULT": "por omisión",
+    "NEW": "Nuevo",
+    "NEW_NAME": "Formato {n}",
+    "DUPLICATE": "Duplicar",
+    "NAME": "Nombre del formato",
+    "IS_DEFAULT": "Es el formato por omisión (Dali y los agentes también lo usan)",
+    "USED_BY": "Lo usan {count} cotizaciones.",
+    "SAVE": "Guardar formato",
+    "SAVED": "Guardado",
+    "DELETED": "Formato borrado",
+    "ERROR": "No se pudo guardar",
+    "UNSAVED": "Cambios sin guardar",
+    "DISCARD": "Hay cambios sin guardar. ¿Descartarlos?",
+    "DELETE_CONFIRM": "¿Borrar el formato «{name}»? Sus cotizaciones usarán el de por omisión.",
+    "UPLOAD": "Subir",
+    "REMOVE": "Quitar",
+    "UP": "Subir",
+    "DOWN": "Bajar",
+    "OPTIONS": "opciones",
+    "CLOSE": "cerrar",
+    "PREVIEW": "Vista previa",
+    "PREVIEW_HINT": "Con tu cotización más reciente (o una de ejemplo)",
+    "UPDATING": "Actualizando…",
+    "NO_PDF": "Este servidor todavía no genera PDF: el cliente usará «Imprimir». Hay que instalar wkhtmltopdf.",
+    "VARIABLES": "Puedes usar: {list}",
+    "BRAND": {
+      "TITLE": "Marca",
+      "COLOR": "Color principal",
+      "FONT": "Tipografía",
+      "PAPER": "Hoja",
+      "LETTER": "Carta",
+      "A4": "A4",
+      "LOGO_POSITION": "Logo",
+      "LOGO_SIZE": "Tamaño del logo",
+      "POSITIONS": {
+        "left": "A la izquierda",
+        "center": "Al centro",
+        "right": "A la derecha"
+      },
+      "SIZES": {
+        "small": "Chico",
+        "medium": "Mediano",
+        "large": "Grande"
+      },
+      "FORMAT_LOGO": "Logo de este formato (opcional)",
+      "FORMAT_LOGO_HINT": "Si no subes uno, usa el logo de la empresa. PNG, JPG o WEBP de hasta 2 MB."
+    },
+    "BLOCKS": {
+      "TITLE": "Bloques",
+      "HINT": "Prende los que quieres ver y acomódalos con las flechas. Clic en el nombre para sus opciones.",
+      "header": {
+        "TITLE": "Encabezado",
+        "HINT": "Logo, datos de la empresa, folio, fecha, vigencia y vendedor. Marca qué datos de la empresa se ven.",
+        "OVERRIDE": "Cambiar datos solo en este formato (vacío = los de la empresa)"
+      },
+      "client": {
+        "TITLE": "Cliente",
+        "HINT": "Qué datos del cliente se ven."
+      },
+      "intro": {
+        "TITLE": "Texto de entrada",
+        "HINT": "Un párrafo antes de las partidas.",
+        "PLACEHOLDER": "Estimado {{cliente}}, le presentamos nuestra propuesta…"
+      },
+      "items": {
+        "TITLE": "Partidas",
+        "HINT": "Concepto, cantidad, precio e importe siempre van. Elige las demás columnas.",
+        "PRICES_WITH_TAX": "Mostrar precios con IVA incluido"
+      },
+      "totals": {
+        "TITLE": "Totales",
+        "HINT": "Subtotal, descuento, impuestos, retenciones y total.",
+        "tax_breakdown": "IVA desglosado por tasa",
+        "withholdings": "Retenciones una por una",
+        "amount_in_words": "Total con letra"
+      },
+      "terms": {
+        "TITLE": "Condiciones",
+        "HINT": "Las de por omisión de este formato; si la cotización trae las suyas, salen esas.",
+        "PLACEHOLDER": "Forma de pago, tiempo de entrega, garantía…"
+      },
+      "bank": {
+        "TITLE": "Datos para pago",
+        "HINT": "Banco, cuenta, CLABE…",
+        "PLACEHOLDER": "Banco: …\nCuenta: …\nCLABE: …"
+      },
+      "signatures": {
+        "TITLE": "Firmas",
+        "HINT": "Línea de firma del vendedor y de aceptación del cliente (con su firma si la aceptó en línea).",
+        "seller": "Firma del vendedor",
+        "client": "Firma de aceptación del cliente"
+      },
+      "footer": {
+        "TITLE": "Pie de página",
+        "HINT": "Texto al final del documento.",
+        "PLACEHOLDER": "Gracias por su preferencia · www.tuempresa.com"
+      }
+    },
+    "COMPANY": {
+      "TITLE": "Datos de la empresa",
+      "HINT": "Se usan en todos los formatos (cada formato puede cambiarlos).",
+      "legal_name": "Razón social",
+      "tax_id": "RFC",
+      "address": "Dirección",
+      "phone": "Teléfono",
+      "email": "Correo",
+      "website": "Sitio web",
+      "LOGO": "Logo de la empresa",
+      "SAVE": "Guardar datos de la empresa"
+    },
+    "CLIENT": {
+      "name": "Nombre",
+      "organization": "Empresa",
+      "tax_id": "RFC",
+      "email": "Correo",
+      "phone": "Teléfono"
+    },
+    "COLUMNS": {
+      "sku": "Clave",
+      "image": "Foto del producto",
+      "unit": "Unidad",
+      "discount": "Descuento",
+      "tax": "IVA"
+    }
+  },
   "CATALOG": {
+    "TABS": {
+      "ITEMS": "Productos",
+      "PARAMETERS": "Parámetros"
+    },
+    "PARAMS": {
+      "HINT": "Las listas que se eligen al dar de alta un producto. Lo que está en uso no se borra: se desactiva y ya no se ofrece.",
+      "ADD": "Agregar",
+      "SAVE": "Guardar",
+      "CANCEL": "Cancelar",
+      "EDIT": "Editar",
+      "DELETE": "Borrar",
+      "DEACTIVATE": "Desactivar",
+      "ACTIVATE": "Activar",
+      "INACTIVE": "Inactiva",
+      "ITEMS": "Sin productos | 1 producto | {count} productos",
+      "IN_USE": "En uso: desactívalo en lugar de borrarlo",
+      "ERROR": "No se pudo guardar",
+      "DELETE_CONFIRM": "¿Borrar «{name}»?",
+      "CATEGORIES": {
+        "TITLE": "Categorías",
+        "HINT": "Con subcategorías de un nivel (Refacciones › Frenos). Al cambiar el nombre, los productos se actualizan solos.",
+        "NAME": "Nombre de la categoría",
+        "ADD_CHILD": "Subcategoría",
+        "CHILD_NAME": "Nombre de la subcategoría",
+        "EMPTY": "Todavía no hay categorías."
+      },
+      "TAXES": {
+        "TITLE": "Impuestos",
+        "HINT": "El marcado es el de por omisión: lo usan los productos sin impuesto propio y las partidas que no son del catálogo.",
+        "NAME": "Nombre",
+        "PERCENT": "%",
+        "EXEMPT": "Exento",
+        "DEFAULT": "Por omisión",
+        "MAKE_DEFAULT": "Marcar como el de por omisión"
+      },
+      "WITHHOLDINGS": {
+        "TITLE": "Retenciones",
+        "HINT": "Ret. IVA, Ret. ISR… Cada producto lleva las suyas; la cotización las resta del total solo si el cliente es persona moral (RFC de 12)."
+      },
+      "UNITS": {
+        "TITLE": "Unidades de medida",
+        "HINT": "La abreviatura es la que sale en cotizaciones y órdenes. La clave SAT es opcional (para facturar).",
+        "NAME": "Nombre",
+        "ABBREVIATION": "Abreviatura",
+        "SAT_CODE": "Clave SAT"
+      }
+    },
+    "FORM_EXTRA": {
+      "CATEGORY_NONE": "Sin categoría",
+      "UNIT_NONE": "Sin unidad",
+      "TAX": "Impuesto",
+      "TAX_DEFAULT": "Por omisión ({name})",
+      "PRICE_INCLUDES_TAX": "El precio ya incluye el impuesto",
+      "PRICE_INCLUDES_TAX_HINT": "Al cotizar se separa el impuesto para que el total sea este precio.",
+      "SAT_CODE": "Clave SAT de producto o servicio",
+      "SAT_CODE_HINT": "Opcional. Para cuando se facture.",
+      "WITHHOLDINGS": "Retenciones",
+      "WITHHOLDINGS_HINT": "Se restan en la cotización solo si el cliente es persona moral.",
+      "MANAGE": "Editar las listas en «Parámetros»"
+    },
+    "QUOTE_TAX_MOVED": "El impuesto por omisión se cambia en Productos y servicios › Parámetros: {name}",
     "TITLE": "Catálogo de productos y servicios",
     "DESCRIPTION": "Lo que vende tu empresa y las refacciones que usa el técnico. Lo usan las cotizaciones y las órdenes de trabajo.",
     "NEW": "Producto o servicio",
@@ -3043,6 +3359,9 @@
       "CURRENCY": "Moneda",
       "COST": "Costo",
       "COST_HINT": "Opcional. Para ver el margen; solo lo ve quien tiene «Ver montos».",
+      "IMAGE": "Foto (opcional)",
+      "IMAGE_REMOVE": "Quitar foto",
+      "IMAGE_HINT": "PNG, JPG o WEBP de hasta 5 MB. El agente de Atención a prospectos la manda cuando recomienda este producto.",
       "DESCRIPTION": "Descripción",
       "ACTIVE": "Activo (se puede usar en cotizaciones y órdenes)",
       "SAVE": "Guardar",
@@ -3052,7 +3371,7 @@
     "ERROR": "No se pudo guardar",
     "IMPORT_DONE": "Importado: {created} nuevos, {updated} actualizados",
     "IMPORT_ERRORS": "{count} filas con error (fila {line}: {error})",
-    "IMPORT_HELP": "CSV con columnas: clave, nombre, tipo, categoria, unidad, precio, moneda, costo, descripcion, activo",
+    "IMPORT_HELP": "CSV con columnas: clave, nombre, tipo, categoria (Categoría › Subcategoría), unidad, precio, moneda, costo, descripcion, activo, impuesto, precio_con_impuesto (si/no), clave_sat, retenciones (Ret. IVA 10.67 %; Ret. ISR 10 %)",
     "PICKER": {
       "PLACEHOLDER": "Buscar en el catálogo…",
       "EMPTY": "Sin resultados",
@@ -3132,6 +3451,14 @@
       "SUBTOTAL": "Subtotal",
       "DISCOUNT_TOTAL": "Descuento",
       "TAX_TOTAL": "Impuestos",
+      "FORMAT": "Formato",
+      "FORMAT_DEFAULT": "Por omisión ({name})",
+      "WITHHOLDINGS": "Retenciones",
+      "WITHHOLDING_ADD": "+ Agregar retención",
+      "WITHHOLDING_REMOVE": "Quitar retención",
+      "WITHHOLDING_TOTAL": "Retenciones",
+      "APPLY_WITHHOLDINGS": "Aplicar retenciones",
+      "APPLY_WITHHOLDINGS_HINT": "Solo a clientes persona moral: se marca sola si el RFC de su organización tiene 12 caracteres.",
       "TOTAL": "Total",
       "TERMS": "Condiciones",
       "TERMS_PLACEHOLDER": "Forma de pago, tiempo de entrega, garantía…",
@@ -3161,6 +3488,7 @@
       "POSTPONED": "Pospuesta",
       "CANCELLED": "Cancelada",
       "REOPEN": "Reabrir",
+      "RESUME": "Retomar (vuelve a Enviada)",
       "NEW_VERSION": "Nueva versión",
       "DELETE": "Borrar borrador",
       "DELETE_CONFIRM": "¿Borrar este borrador?",
@@ -3474,5 +3802,96 @@
       "ACTIVE": "Activo",
       "EMPTY": "Sin mantenimientos recurrentes."
     }
+  },
+  "AGENDA_PARTICIPANTS": {
+    "LABEL": "Participantes",
+    "HINT": "Otros del equipo que van contigo: la ven en su agenda y reciben aviso. Solo el responsable la concluye.",
+    "DECLINED": "no puede ir",
+    "DECLINED_NOTE": "{name} no puede ir: «{note}»",
+    "BUSY": "{name} ya tiene algo a esa hora: {what}",
+    "PARTICIPATING": "Participas",
+    "WITH": "Con: {names}",
+    "CANT_GO": "No puedo ir",
+    "CANT_GO_PROMPT": "¿Por qué no puedes ir? (le llega al responsable)",
+    "CANT_GO_SENT": "Le avisamos al responsable",
+    "ONLY_OWNER": "Solo el responsable ({name}) marca llegada y la concluye.",
+    "TOAST": "{task}"
+  },
+  "RECURRING_TASKS": {
+    "MENU": "Tareas que se repiten",
+    "TITLE": "Tareas que se repiten",
+    "SUBTITLE": "Tareas fijas que Kontrolya vuelve a crear solas cada cierto tiempo. Cada vez salen en el Mi día del responsable y se concluyen con su reporte.",
+    "REPEATS": "Se repite",
+    "MODE_FIXED": "En fecha fija",
+    "MODE_FIXED_HINT": "Toca en su fecha aunque no se haya hecho la anterior (p. ej. cada lunes).",
+    "MODE_AFTER_DONE": "Después de hacerla",
+    "MODE_AFTER_DONE_HINT": "Cuenta desde el día que la concluyes (p. ej. 30 días después).",
+    "EVERY": "Cada",
+    "AFTER_DOING_IT": "después de hacerla",
+    "UNIT_DAY": "día | días",
+    "UNIT_WEEK": "semana | semanas",
+    "UNIT_MONTH": "mes | meses",
+    "DAYS_SHORT": {
+      "0": "Do",
+      "1": "Lu",
+      "2": "Ma",
+      "3": "Mi",
+      "4": "Ju",
+      "5": "Vi",
+      "6": "Sá"
+    },
+    "DAYS_LONG": {
+      "0": "domingo",
+      "1": "lunes",
+      "2": "martes",
+      "3": "miércoles",
+      "4": "jueves",
+      "5": "viernes",
+      "6": "sábado"
+    },
+    "ENDS": "Termina",
+    "ENDS_NEVER": "Nunca",
+    "ENDS_ON": "El día",
+    "ENDS_AFTER": "Después de",
+    "TIMES": "veces",
+    "TEXT_EVERY_DAY": "Cada día",
+    "TEXT_EVERY_WEEK": "Cada semana",
+    "TEXT_EVERY_MONTH": "Cada mes",
+    "TEXT_EVERY_N": "Cada {every} {unit}",
+    "TEXT_AFTER": "{every} {unit} después de hacerla",
+    "STARTS": "Empieza",
+    "WEEKDAYS_REQUIRED": "Elige al menos un día de la semana.",
+    "CREATED": "Listo: se repetirá {text}",
+    "MINE": "Mías",
+    "ALL": "Todas",
+    "NEW": "Nueva tarea que se repite",
+    "EMPTY": "No tienes tareas que se repitan. Créala con «Nueva tarea que se repite» o en «Tarea» marcando «Se repite».",
+    "COL_TASK": "Tarea",
+    "COL_ASSIGNEE": "Responsable",
+    "COL_REPEATS": "Se repite",
+    "COL_NEXT": "Próxima",
+    "COL_RESULTS": "Cumplimiento",
+    "COL_STATUS": "Estado",
+    "NEXT_WAITING": "Cuando concluya la pendiente",
+    "ON_TIME": "a tiempo",
+    "LATE": "tarde",
+    "MISSED": "no hechas",
+    "PENDING": "pendiente",
+    "STATUS_ACTIVE": "Activa",
+    "STATUS_PAUSED": "En pausa",
+    "EDIT": "Editar",
+    "PAUSE": "Pausar",
+    "RESUME": "Reanudar",
+    "END": "Terminar",
+    "END_CONFIRM": "¿Terminar «{title}»? Ya no se creará otra vez; las tareas que ya creó se quedan.",
+    "EDIT_TITLE": "Editar tarea que se repite",
+    "SAVE": "Guardar",
+    "CANCEL": "Cancelar",
+    "TIME": "Hora (opcional)",
+    "TIME_HINT": "Con hora sale como tarea agendada.",
+    "SAVED": "Guardada",
+    "ERROR": "No se pudo guardar",
+    "PROGRAMMED_BY": "Programó: {name}",
+    "RECURRING_BADGE": "Se repite"
   }
 }

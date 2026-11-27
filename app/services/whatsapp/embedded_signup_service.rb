@@ -51,19 +51,32 @@ class Whatsapp::EmbeddedSignupService
 
   def create_or_find_channel
     if @inbox_id.present?
-      inbox = @account.inboxes.find(@inbox_id)
-      channel = inbox.channel
-      channel.update!(
-        provider_config: channel.provider_config.merge(
-          'api_key' => @access_token,
-          'phone_number_id' => @phone_info[:phone_number_id],
-          'source' => 'embedded_signup'
-        )
-      )
-      channel
+      reconnect_channel(@account.inboxes.find(@inbox_id).channel)
     else
       create_channel
     end
+  end
+
+  # diag/waba F3 — «Reconectar con Meta»: misma bandeja, mismo número (H1), token nuevo y sin la
+  # marca de reconexión (H2). Una bandeja dada de alta a mano conserva su origen: así no se le
+  # manda la URL de este servidor a Meta (la WABA puede estar compartida con otro servidor).
+  def reconnect_channel(channel)
+    raise ArgumentError, I18n.t('whatsapp_health.reconnect.other_number', number: @phone_info[:phone_number]) unless same_number?(channel)
+
+    @reconnect_manual = channel.provider_config['source'] != 'embedded_signup'
+    channel.update!(
+      provider_config: channel.provider_config.merge(
+        'api_key' => @access_token,
+        'phone_number_id' => @phone_info[:phone_number_id],
+        'business_account_id' => @waba_id
+      )
+    )
+    channel.reauthorized!
+    channel
+  end
+
+  def same_number?(channel)
+    channel.phone_number.to_s.gsub(/\D/, '') == @phone_info[:phone_number].to_s.gsub(/\D/, '')
   end
 
   def create_channel
@@ -96,9 +109,15 @@ class Whatsapp::EmbeddedSignupService
     callback_url = "#{frontend_url}/webhooks/whatsapp/#{phone_number_encoded}"
     verify_token = channel.provider_config['webhook_verify_token']
 
-    @client.register_phone(@phone_info[:phone_number_id], @access_token) unless @phone_info[:verified]
+    # diag/waba F3 — al reconectar NO se registra el número: registrarlo pone un PIN nuevo de
+    # verificación en dos pasos (code_verification_status EXPIRED es normal en Cloud).
+    @client.register_phone(@phone_info[:phone_number_id], @access_token) unless @phone_info[:verified] || @inbox_id.present?
 
-    response = @client.subscribe_webhook(@waba_id, @access_token, callback_url, verify_token)
+    response = if @reconnect_manual
+                 @client.subscribe_app(@waba_id, @access_token)
+               else
+                 @client.subscribe_webhook(@waba_id, @access_token, callback_url, verify_token)
+               end
     if response.success?
       { success: true, url: callback_url, token: verify_token }
     else

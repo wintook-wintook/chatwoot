@@ -11,13 +11,16 @@
 //
 // Editar y eliminar una abren los modales de siempre (los emite a Index.vue).
 // R3: columna, filtro y orden por categoría, y «Cambiar categoría» de las seleccionadas.
+// proyecto@predefinidas_que_contestan: la categoría ya no la inventa cada cuenta: son tres
+// fijas (General, Ficha, Objeción) y la búsqueda de los agentes las usa (campo `kind`).
 // ============================================================================
 import CannedResponseAPI from 'dashboard/api/cannedResponse';
-import CategoryAPI from 'dashboard/api/cannedResponseCategory';
 import TableFooter from 'dashboard/components/widgets/TableFooter.vue';
 import { messageStamp } from 'shared/helpers/timeHelper';
 import { useAlert } from 'dashboard/composables';
 import EmbeddingState from './EmbeddingState.vue';
+// proyecto@auditoria_predefinidas: columna y filtro de tamaño (lo que recibe el agente).
+import { MAX_CHARS, sizeLevel, LEVEL_TEXT } from './audit/cannedSize';
 
 const PER_PAGE = 25;
 const PER_PAGE_OPTIONS = [25, 50, 100];
@@ -28,13 +31,14 @@ const POLL_MS = 4000;
 const MAX_POLLS = 15;
 const STATE_FILTERS = ['', 'not_ready', 'ready', 'pending', 'stale'];
 const PROMPT_FILTERS = ['', 'with', 'without'];
-const SORTS = ['short_code', 'category', 'created_at', 'updated_at'];
-// El valor del filtro y del «cambiar a» que significa «sin categoría».
-const NO_CATEGORY = 'none';
+const SIZE_FILTERS = ['', 'over', 'near'];
+const SORTS = ['short_code', 'kind', 'created_at', 'updated_at', 'chars'];
+// Las categorías fijas (CannedResponse::KINDS).
+const KINDS = ['general', 'ficha', 'objecion'];
 
 export default {
   components: { TableFooter, EmbeddingState },
-  emits: ['edit', 'delete'],
+  emits: ['edit', 'delete', 'fix'],
   data() {
     return {
       records: [],
@@ -45,7 +49,8 @@ export default {
       state: '',
       prompt: '',
       category: '',
-      categories: [],
+      size: '',
+      kinds: KINDS,
       bulkCategory: '',
       sort: 'short_code',
       order: 'asc',
@@ -56,11 +61,12 @@ export default {
       confirmBulkDelete: false,
       stateFilters: STATE_FILTERS,
       promptFilters: PROMPT_FILTERS,
+      sizeFilters: SIZE_FILTERS,
+      maxChars: MAX_CHARS,
       sorts: SORTS,
       perPage: PER_PAGE,
       perPageOptions: PER_PAGE_OPTIONS,
       maxVectorize: MAX_VECTORIZE,
-      noCategory: NO_CATEGORY,
     };
   },
   computed: {
@@ -78,7 +84,11 @@ export default {
     },
     filtersActive() {
       return Boolean(
-        this.query.trim() || this.state || this.prompt || this.category
+        this.query.trim() ||
+          this.state ||
+          this.prompt ||
+          this.category ||
+          this.size
       );
     },
   },
@@ -96,6 +106,9 @@ export default {
     category() {
       this.goTo(1);
     },
+    size() {
+      this.goTo(1);
+    },
     perPage() {
       this.goTo(1);
     },
@@ -105,7 +118,6 @@ export default {
   },
   mounted() {
     this.reload();
-    this.loadCategories();
   },
   beforeDestroy() {
     clearTimeout(this.searchTimer);
@@ -119,7 +131,8 @@ export default {
         q: this.query.trim() || undefined,
         state: this.state || undefined,
         prompt: this.prompt || undefined,
-        category: this.category || undefined,
+        kind: this.category || undefined,
+        size: this.size || undefined,
         sort: this.sort,
         order: this.order,
       };
@@ -140,28 +153,17 @@ export default {
         this.isLoading = false;
       }
     },
-    async loadCategories() {
-      try {
-        const { data } = await CategoryAPI.get();
-        this.categories = data || [];
-      } catch (error) {
-        this.categories = [];
-      }
-    },
     async assignSelected() {
       if (!this.selected.length || !this.bulkCategory) return;
       this.isBulkBusy = true;
-      const destino =
-        this.bulkCategory === NO_CATEGORY ? null : Number(this.bulkCategory);
       try {
-        const { data } = await CannedResponseAPI.assignCategory(
+        const { data } = await CannedResponseAPI.assignKind(
           this.selected,
-          destino
+          this.bulkCategory
         );
         this.replace(data);
         this.selected = [];
         this.bulkCategory = '';
-        this.loadCategories();
       } catch (error) {
         useAlert(this.$t('CANNED_MGMT.CATEGORIES.SAVE_ERROR'));
       } finally {
@@ -177,9 +179,7 @@ export default {
         this.order = this.order === 'asc' ? 'desc' : 'asc';
       } else {
         this.sort = columna;
-        this.order = ['short_code', 'category'].includes(columna)
-          ? 'asc'
-          : 'desc';
+        this.order = ['short_code', 'kind'].includes(columna) ? 'asc' : 'desc';
       }
       this.goTo(1);
     },
@@ -262,6 +262,14 @@ export default {
       this.state = '';
       this.prompt = '';
       this.category = '';
+      this.size = '';
+    },
+    // Público: la pestaña «Auditoría» abre la tabla con este filtro.
+    filterBySize(valor) {
+      this.size = valor;
+    },
+    sizeClass(item) {
+      return LEVEL_TEXT[sizeLevel(item.agent_chars || 0)];
     },
     // La fecha y la hora tal cual (pedido del usuario, 05/11/2026): «2 days ago» salía en
     // inglés y no decía cuándo. Formato con números: no depende del idioma.
@@ -338,21 +346,13 @@ export default {
         </option>
       </select>
       <select
-        v-if="categories.length"
         v-model="category"
         class="list-filter"
         :aria-label="$t('CANNED_MGMT.TABLE.FILTER_CATEGORY')"
       >
         <option value="">{{ $t('CANNED_MGMT.TABLE.ALL_CATEGORIES') }}</option>
-        <option :value="noCategory">
-          {{ $t('CANNED_MGMT.TABLE.NO_CATEGORY') }}
-        </option>
-        <option
-          v-for="categoria in categories"
-          :key="categoria.id"
-          :value="String(categoria.id)"
-        >
-          {{ categoria.name }}
+        <option v-for="k in kinds" :key="k" :value="k">
+          {{ $t(`CANNED_MGMT.KIND.${k.toUpperCase()}`) }}
         </option>
       </select>
       <select
@@ -365,6 +365,19 @@ export default {
             opcion
               ? $t(`CANNED_MGMT.TABLE.PROMPT_${opcion.toUpperCase()}`)
               : $t('CANNED_MGMT.TABLE.ALL_PROMPTS')
+          }}
+        </option>
+      </select>
+      <select
+        v-model="size"
+        class="list-filter"
+        :aria-label="$t('CANNED_MGMT.AUDIT.TABLE.FILTER_SIZE')"
+      >
+        <option v-for="opcion in sizeFilters" :key="opcion" :value="opcion">
+          {{
+            opcion
+              ? $t(`CANNED_MGMT.AUDIT.TABLE.SIZE_${opcion.toUpperCase()}`)
+              : $t('CANNED_MGMT.AUDIT.TABLE.ALL_SIZES')
           }}
         </option>
       </select>
@@ -400,22 +413,14 @@ export default {
         {{ $t('CANNED_MGMT.EMBEDDING.VECTORIZE') }}
       </woot-button>
       <select
-        v-if="categories.length"
         v-model="bulkCategory"
         class="!mb-0 w-48"
         :aria-label="$t('CANNED_MGMT.TABLE.BULK_CATEGORY')"
         @change="assignSelected"
       >
         <option value="">{{ $t('CANNED_MGMT.TABLE.BULK_CATEGORY') }}</option>
-        <option :value="noCategory">
-          {{ $t('CANNED_MGMT.TABLE.NO_CATEGORY') }}
-        </option>
-        <option
-          v-for="categoria in categories"
-          :key="categoria.id"
-          :value="String(categoria.id)"
-        >
-          {{ categoria.name }}
+        <option v-for="k in kinds" :key="k" :value="k">
+          {{ $t(`CANNED_MGMT.KIND.${k.toUpperCase()}`) }}
         </option>
       </select>
       <woot-button
@@ -487,17 +492,34 @@ export default {
                 {{ $t('CANNED_MGMT.TABLE.COL_CONTENT') }}
               </th>
               <th
+                class="py-3 pr-4 text-right font-semibold whitespace-nowrap text-slate-700 dark:text-slate-300"
+              >
+                <button
+                  type="button"
+                  class="flex items-center gap-1 ml-auto"
+                  :title="$t('CANNED_MGMT.AUDIT.TABLE.COL_CHARS_HELP')"
+                  @click="sortBy('chars')"
+                >
+                  {{ $t('CANNED_MGMT.AUDIT.TABLE.COL_CHARS') }}
+                  <fluent-icon
+                    v-if="sortIcon('chars')"
+                    :icon="sortIcon('chars')"
+                    size="14"
+                  />
+                </button>
+              </th>
+              <th
                 class="py-3 pr-4 text-left font-semibold text-slate-700 dark:text-slate-300"
               >
                 <button
                   type="button"
                   class="flex items-center gap-1"
-                  @click="sortBy('category')"
+                  @click="sortBy('kind')"
                 >
                   {{ $t('CANNED_MGMT.TABLE.COL_CATEGORY') }}
                   <fluent-icon
-                    v-if="sortIcon('category')"
-                    :icon="sortIcon('category')"
+                    v-if="sortIcon('kind')"
+                    :icon="sortIcon('kind')"
                     size="14"
                   />
                 </button>
@@ -562,20 +584,42 @@ export default {
                 >
                   {{ $t('CANNED_MGMT.FORM_PROMPT.LIST_BADGE_IS_PROMPT') }}
                 </span>
+                <span
+                  v-if="item.open_findings"
+                  v-tooltip.top="
+                    $t('CANNED_MGMT.AUDIT.TABLE.FINDINGS_BADGE_HELP', {
+                      count: item.open_findings,
+                    })
+                  "
+                  class="inline-flex items-center gap-0.5 ml-1 px-1.5 py-0.5 text-xs font-normal rounded bg-amber-50 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                >
+                  <fluent-icon icon="warning" size="12" />
+                  {{ item.open_findings }}
+                </span>
               </td>
               <td class="py-3 pr-4 align-top whitespace-normal md:break-all">
                 <div class="line-clamp-2" :title="item.content">
                   {{ item.content }}
                 </div>
               </td>
+              <td
+                class="py-3 pr-4 text-right align-top tabular-nums whitespace-nowrap font-medium"
+                :class="sizeClass(item)"
+              >
+                {{ (item.agent_chars || 0).toLocaleString() }}
+              </td>
               <td class="py-3 pr-4 align-top whitespace-nowrap">
                 <span
-                  v-if="item.category_name"
-                  class="px-1.5 py-0.5 font-mono text-xs rounded bg-slate-100 dark:bg-slate-700"
+                  class="px-1.5 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-700"
                 >
-                  {{ item.category_name }}
+                  {{
+                    $t(
+                      `CANNED_MGMT.KIND.${(
+                        item.kind || 'general'
+                      ).toUpperCase()}`
+                    )
+                  }}
                 </span>
-                <span v-else class="text-slate-400">—</span>
               </td>
               <td class="py-3 pr-4 align-top">
                 <EmbeddingState
@@ -598,6 +642,15 @@ export default {
               </td>
               <td class="py-3 align-top">
                 <div class="flex justify-end gap-1">
+                  <!-- proyecto@arreglar_predefinidas: solo las que pasan el tope. -->
+                  <woot-button
+                    v-if="(item.agent_chars || 0) > maxChars"
+                    v-tooltip.top="$t('CANNED_MGMT.FIX.OPEN')"
+                    variant="smooth"
+                    size="tiny"
+                    icon="wand"
+                    @click="$emit('fix', item)"
+                  />
                   <woot-button
                     v-tooltip.top="$t('CANNED_MGMT.EDIT.BUTTON_TEXT')"
                     variant="smooth"

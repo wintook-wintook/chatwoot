@@ -27,7 +27,7 @@ class Api::V1::Accounts::ArticlesController < Api::V1::Accounts::BaseController
   end
 
   def update
-    @article.update!(article_params) if params[:article].present?
+    @article.update!(update_params) if params[:article].present?
     render json: { error: @article.errors.messages }, status: :unprocessable_entity and return unless @article.valid?
   end
 
@@ -53,10 +53,22 @@ class Api::V1::Accounts::ArticlesController < Api::V1::Accounts::BaseController
 
   def article_params
     params.require(:article).permit(
-      :title, :slug, :position, :content, :description, :position, :category_id, :author_id, :associated_article_id, :status, meta: [:title,
-                                                                                                                                     :description,
-                                                                                                                                     { tags: [] }]
+      :title, :slug, :position, :content, :description, :position, :category_id, :author_id, :associated_article_id, :status,
+      meta: meta_keys
     )
+  end
+
+  # El meta recibido se combina con el guardado: la pantalla solo manda lo que edita y no debe
+  # borrar el resto (en las guías de Dali, guide_key/areas/keywords/pages/sources).
+  def update_params
+    attrs = article_params
+    attrs[:meta] = @article.meta.to_h.merge(attrs[:meta].to_h) if attrs.key?(:meta)
+    attrs
+  end
+
+  def meta_keys
+    keys = [:title, :description, { tags: [] }]
+    Article.dali_portal?(@portal) ? keys + DaliGuideArticle::EDITABLE_META : keys
   end
 
   def list_params

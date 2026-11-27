@@ -54,7 +54,7 @@ module TrackingCampaigns::SubjectTest
 
   def variant_stats(campaign, variant)
     base = campaign.contact_trackings.where(subject_variant: variant)
-    contacted = base.where('attempt_count > 0').count
+    contacted = base.where('attempt_count > 0 OR last_attempt_at IS NOT NULL').count
     replied = base.where.not(prospect_stage: nil).count
     { subject: subject(campaign, variant), contacted: contacted, replied: replied,
       rate: contacted.positive? ? (replied * 100.0 / contacted).round(1) : 0.0 }

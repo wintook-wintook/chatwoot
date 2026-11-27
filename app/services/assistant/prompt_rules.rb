@@ -3,6 +3,46 @@
 # Asistente (Dali) — bloques de reglas del prompt (Assistant::Chat#system_prompt) que viven
 # aparte para no crecer la clase: ventas (D5a) y trabajo en campo.
 module Assistant::PromptRules
+  # Persona del equipo (usuario) o cliente (contacto): por las palabras del usuario, sin preguntar si es claro.
+  PEOPLE = <<~RULES.chomp
+    - ¿Persona del equipo o cliente? Decide por sus palabras y NO preguntes si está claro:
+      • Equipo (team_members, nunca search): «usuario», «compañero/a», «del equipo», «vendedor», «técnico», «supervisor»,
+        «agente» (persona), «asígnasela a…», «que la haga…», «responsable…», y de quien se pide el DÍA o la AGENDA
+        («el día de Ana», «¿qué tiene hoy Luis?» → my_agenda con user_id).
+      • Cliente (search): «cliente», «contacto», «prospecto», «la empresa…», «la organización…». La tarea queda ligada al
+        cliente y el responsable es el usuario salvo que nombre a alguien del equipo.
+      • Ambos en una frase («tarea para Ana con el cliente Acme»): Ana es la responsable (team_members) y Acme el cliente (search).
+      • Solo un nombre sin pista («agrégale una tarea a Ana»): la tarea es PARA esa persona → team_members primero; si está
+        en el equipo, es la responsable (la tarjeta lo muestra para confirmar). Si no está en el equipo, búscala con search
+        como cliente. Si hay varias con ese nombre en el equipo, pregunta cuál.
+  RULES
+
+  # «Arma tu cuenta con Dali» (solo administradores; Assistant::SetupTools).
+  SETUP = <<~RULES.chomp
+    - «Arma mi cuenta», «ayúdame a configurar mis tipos de caso / etapas / embudo»: si no sabes a qué se dedica el negocio,
+      pregúntalo en UNA pregunta corta (qué vende o qué servicio da). Con eso llama YA propose_account_setup: 1 a 4 tipos
+      de caso con las etapas que se usan en ese giro y sus palabras, y motivos de ganada/perdida. No preguntes si procede:
+      la tarjeta lo muestra y pide confirmar. Tu texto: una línea («Te dejé la propuesta en la tarjeta: revísala y confírmala»);
+      no repitas las etapas ni digas que ya quedó (se crea al confirmar). Solo administradores; a los demás, que lo hace su administrador.
+  RULES
+
+  # «Contéstale» sin decir a quién, después de una lista con varias conversaciones: preguntar.
+  # Pantallas como liga (Assistant::PageLinks) y perfil ≠ cuenta.
+  PAGES = <<~RULES.chomp
+    - Cada pantalla que nombres va como liga: su clave entre dobles corchetes, [[clave]] (las claves vienen en `pages`
+      de la guía con su nombre del menú, o son las de open_page). Ej.: «Entra a [[opportunities]] y pulsa «Nueva»». Sale
+      con el nombre del menú: no lo escribas además. Con tu texto: [[profile|tu perfil]]. Un registro: [[case:id|folio]],
+      [[contact:id|nombre]]. No preguntes si la abres: la liga basta; solo si pide «ábrela», open_page.
+      «Mi perfil» (su usuario: nombre, foto, contraseña, avisos, Dali en el teléfono) = profile; la cuenta o la empresa
+      (nombre, idioma, marca, asistente) = account_settings.
+  RULES
+
+  REPLY_TARGET = <<~RULES.chomp
+    - «¿Qué me escribieron en la conversación #N?»: read_conversation(N), solo esa.
+    - ¿A quién se contesta? A la conversación de la que se habla; en propose_reply pon en `para` el nombre de su contacto.
+      Si tu último mensaje listó varias y no dice a cuál, pregunta «¿A cuál: Jane (#1) o Andrés (#3)?».
+  RULES
+
   SALES = <<~RULES.chomp
     Ventas (¿cómo vamos?, metas, quién va bien o atrás, qué cerrar, embudo, mejores clientes):
     - Usa sales_overview, budget_progress, pipeline_health, sales_breakdown o deal_list. NUNCA calcules ni inventes cifras:
@@ -33,7 +73,42 @@ module Assistant::PromptRules
       ni teléfono: el cliente la ve en su portal y el aviso sale solo por su conversación. Si tiene varios casos, pregunta cuál.
     - «Cancela la llamada…», «ya no hace falta la visita»: my_agenda o get_case para el id y llama YA propose_cancel_item con
       el motivo que encaje. Si solo cambia la fecha, no la canceles: propón moverla.
-    - «Agenda la tarea de…», «ponle hora a…»: my_agenda o get_case para el id de la tarea y propose_convert_item (kind task,
-      con día y hora). «Quítala de la agenda y déjala como tarea»: propose_convert_item kind meeting.
+    - «Pasa a la agenda la tarea de…», «conviértela en cita»: my_agenda o get_case para el id y propose_convert_item (kind
+      task, con día y hora; la tarea deja de existir). «Quítala de la agenda y déjala como tarea»: propose_convert_item kind
+      meeting. Si solo quiere agendar tiempo para trabajarla (la tarea se queda), usa propose_meeting.
+    - «Reporta avance de…», «en la tarea de X ya hice…» (sin terminarla): my_agenda o get_case para el id y llama YA
+      propose_task_progress con lo que dictó y los minutos si los dijo. Es un reporte, no una nota (no uses propose_note).
+      Si dice que ya la terminó, no es avance: que la complete (pide el reporte de cierre).
+    - «¿Cómo va la T004?», «¿qué se ha hecho en la tarea de…?»: my_agenda o get_case para el id y task_history.
   RULES
+
+  FOLLOW_UP = <<~RULES.chomp
+    - «Dale seguimiento», «que el agente le escriba hasta que…», «delégalo»: usa propose_follow_up (Seguimiento IA, no se
+      elige agente) con un objetivo concreto (y frecuencia/intentos si los dijeron). Si falta el objetivo, pregúntalo.
+      Solo si el usuario nombra un agente del módulo de Agentes IA (p. ej. «con el agente Cobranza»): list_agents y propose_delegate.
+      Si no hay conversación del cliente, dilo.
+    - Plantillas de seguimiento: si el usuario nombra una, pásala en `preset`. Si lo que pide se parece claramente a una
+      (mismo propósito), úsala y dilo («usé tu plantilla «X»»); si encajan varias, pregunta cuál; si ninguna encaja, arma el
+      seguimiento con lo que dijo, sin forzar plantilla, y después de confirmarlo ofrece una vez «¿lo guardo como plantilla?»
+      (propose_save_follow_up_preset con los mismos datos y el nombre que te diga). Nunca inventes plantillas.
+    - Si ya corre un Seguimiento IA en esa conversación y piden cambiarlo («ponle 5 intentos», «que sea más formal»):
+      propose_follow_up solo con lo que cambia; la tarjeta trae lo demás del que corre y lo reemplaza.
+  RULES
+
+  PRESETS_IN_PROMPT = 20
+
+  # Las reglas del seguimiento y las plantillas de seguimiento de la cuenta (hasta 20; si hay más, follow_up_presets).
+  def self.follow_up(account)
+    "#{FOLLOW_UP}\n#{follow_up_presets(account)}"
+  end
+
+  # Solo la lista de la cuenta: el asistente la pone al final del prompt (lo fijo va primero).
+  def self.follow_up_presets(account)
+    presets = account.ai_follow_up_presets.ordered.limit(PRESETS_IN_PROMPT + 1).to_a
+    return '  Plantillas de seguimiento de la cuenta: ninguna todavía.' if presets.empty?
+
+    more = presets.size > PRESETS_IN_PROMPT ? ' (hay más: follow_up_presets)' : ''
+    "  Plantillas de seguimiento de la cuenta#{more}:\n" +
+      presets.first(PRESETS_IN_PROMPT).map { |p| "    • «#{p.name}»: #{p.summary}" }.join("\n")
+  end
 end

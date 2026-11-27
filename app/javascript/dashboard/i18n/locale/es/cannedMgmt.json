@@ -10,7 +10,11 @@
       "404": "No hay respuestas predefinidas disponibles en esta cuenta.",
       "TITLE": "Gestionar respuestas predefinidas",
       "DESC": "Las Respuestas Predefinidas son plantillas de respuesta predefinidas que se pueden usar para enviar rápidamente respuestas a las conversaciones.",
-      "TABLE_HEADER": ["Código corto", "Contenido", "Acciones"]
+      "TABLE_HEADER": [
+        "Código corto",
+        "Contenido",
+        "Acciones"
+      ]
     },
     "ADD": {
       "TITLE": "Agregar respuesta predefinida",
@@ -171,6 +175,251 @@
       "URL_CONTENT": "Agregar link de dirección web alternativa",
       "URL": "Link de dirección web alternativa",
       "URL_PLACEHOLDER": "Por favor, introduzca una dirección web"
+    },
+    "AUDIT": {
+      "TAB": "Auditoría",
+      "LOADING": "Cargando la auditoría…",
+      "LOAD_ERROR": "No se pudo cargar la auditoría",
+      "RUN": "Auditar ahora",
+      "RUN_ERROR": "No se pudo iniciar la auditoría",
+      "SAVE_ERROR": "No se pudo guardar el cambio",
+      "RUNNING": "Auditando… revisa los pares parecidos y la redacción de cada respuesta. Tarda un par de minutos.",
+      "NEVER_RUN": "Todavía no se ha auditado esta cuenta.",
+      "LAST_RUN": "Última auditoría: {date} · {responses} respuestas revisadas · {pairs} pares comparados",
+      "HOW_IT_WORKS": "El tamaño se mide en vivo (tope del agente: {max} caracteres con el nombre). Duplicados, contradicciones y redacción los revisa la IA; cada respuesta se vuelve a revisar sola al guardarla.",
+      "FAILED_CALLS": "{count} revisiones no se pudieron hacer; lo que ya se había encontrado de esas respuestas se conserva.",
+      "ERRORS": {
+        "no_key": "La cuenta no tiene la integración de OpenAI: la auditoría con IA no puede correr (el tamaño sí se mide).",
+        "no_credits": "La clave de OpenAI de la cuenta se quedó sin créditos: la auditoría no terminó.",
+        "rate_limit": "OpenAI limitó las llamadas por velocidad; vuelve a auditar en unos minutos.",
+        "other": "La auditoría no terminó: {error}"
+      },
+      "CARDS": {
+        "oversize": "Pasan el tope de caracteres",
+        "duplicate": "Duplicadas",
+        "contradiction": "Contradicciones",
+        "overlap": "Se solapan",
+        "writing": "Redacción"
+      },
+      "KINDS": {
+        "duplicate": "Duplicadas",
+        "contradiction": "Se contradicen",
+        "overlap": "Se solapan",
+        "writing": "Redacción"
+      },
+      "ISSUES": {
+        "ortografia": "Ortografía",
+        "incompleta": "Incompleta",
+        "confusa": "Confusa",
+        "numeracion": "Numeración",
+        "tono": "Tú / usted"
+      },
+      "PENDING": "Pendientes",
+      "DISMISSED": "Descartados ({count})",
+      "EMPTY": "Nada pendiente. Si no has auditado, usa «Auditar ahora».",
+      "EMPTY_DISMISSED": "No hay hallazgos descartados.",
+      "OVERSIZE_TITLE": "Pasan el tope de {max} caracteres",
+      "OVERSIZE_HELP": "El agente recibe el nombre y solo las secciones que más se parecen a la pregunta. Cada renglón es un bloque (párrafo) con su tamaño: los más grandes son los que conviene llevar a otra respuesta.",
+      "SEE_IN_TABLE": "Ver en la tabla",
+      "SIMILARITY": "similitud {value}",
+      "SUGGESTION": "Sugerencia: {text}",
+      "DISMISS": "Descartar",
+      "REOPEN": "Reabrir",
+      "KEEP_THIS": "Conservar esta",
+      "KEEP_DONE": "Se eliminó la duplicada",
+      "KEEP_CONFIRM_TITLE": "¿Eliminar la duplicada?",
+      "KEEP_CONFIRM_MESSAGE": "Se conserva «{keep}» y se elimina «{drop}». No se puede deshacer.",
+      "KEEP_CONFIRM_YES": "Eliminar la otra",
+      "METER": {
+        "LABEL": "Caracteres que recibe el agente",
+        "OK": "Cabe completa: el agente la recibe entera (nombre incluido).",
+        "NEAR": "Cerca del límite.",
+        "OVER": "Pasa del tope: no se puede guardar. Pártela en varias respuestas, una por tema.",
+        "SHOW_BLOCKS": "Ver los {count} bloques",
+        "HIDE_BLOCKS": "Ocultar bloques",
+        "PROMPT_LABEL": "Caracteres del Prompt",
+        "PROMPT_OK": "El Prompt cabe completo.",
+        "PROMPT_NEAR": "Prompt cerca del límite.",
+        "PROMPT_OVER": "El Prompt pasa del tope: no se puede guardar. Deja aquí solo cómo contestar; los datos van en el mensaje."
+      },
+      "TABLE": {
+        "COL_CHARS": "Caracteres",
+        "COL_CHARS_HELP": "Lo que recibe el agente: nombre + contenido. Tope: 3,500",
+        "FILTER_SIZE": "Tamaño",
+        "ALL_SIZES": "Cualquier tamaño",
+        "SIZE_OVER": "Pasan el tope",
+        "SIZE_NEAR": "Cerca del tope",
+        "FINDINGS_BADGE_HELP": "{count} hallazgo(s) pendiente(s) en Auditoría"
+      },
+      "ACTIONS": {
+        "merge": "Unir en una",
+        "separate": "Separar temas",
+        "resolve": "Resolver",
+        "writing": "Mejorar redacción"
+      },
+      "NOT_CONTRADICTION": "No es contradicción",
+      "BULK_WRITING": "Corregir ortografía y numeración ({count})",
+      "EMPTY_BY_TAB": {
+        "open": "Nada pendiente. Si no has auditado, usa «Auditar ahora».",
+        "dismissed": "No hay hallazgos descartados.",
+        "history": "No hay arreglos aplicados en los últimos 30 días."
+      },
+      "HISTORY": {
+        "TAB": "Historial",
+        "UNDO": "Deshacer",
+        "UNDONE": "Se deshizo el arreglo: las respuestas volvieron a como estaban.",
+        "UNDO_ERROR": "No se pudo deshacer.",
+        "WAS_UNDONE": "Deshecho",
+        "RESULT": "+{created} · ~{updated} · −{deleted}",
+        "CONFIRM_TITLE": "¿Deshacer este arreglo?",
+        "CONFIRM_MESSAGE": "{names} vuelven a como estaban antes del arreglo y se elimina lo que creó.",
+        "CONFIRM_EDITED": "Alguien editó después lo que dejó el arreglo ({names}). Si deshaces, esos cambios se pierden."
+      }
+    },
+    "FIX": {
+      "OPEN": "Arreglar con IA",
+      "TITLE": "Arreglar con IA",
+      "SUBTITLE": "«{name}» mide {chars} caracteres; el agente recibe hasta {max} de cada respuesta.",
+      "LOADING": "Cargando…",
+      "LOAD_ERROR": "No se pudo cargar la propuesta",
+      "CHECK_ERROR": "No se pudieron correr las comprobaciones",
+      "INTRO": "Primero se limpia lo que el agente no puede usar (imágenes incrustadas, HTML, párrafos repetidos). Si no basta, la IA propone dividirla en partes o condensarla según su forma, sin perder ningún dato. Nada se guarda hasta que aceptes.",
+      "PROPOSE": "Proponer arreglo",
+      "PROPOSE_AGAIN": "Proponer de nuevo",
+      "RUNNING": "La IA está armando la propuesta y comprobando que no se pierda nada. Tarda de 10 a 60 segundos.",
+      "STALE": "La respuesta cambió desde que se hizo esta propuesta. Pide una nueva.",
+      "ORIGINAL": "Original",
+      "PARTS": "Propuesta ({count})",
+      "REMOVE_PART": "Quitar esta parte",
+      "DISCARD": "Descartar",
+      "RECHECK": "Volver a comprobar",
+      "APPLY": "Aceptar y aplicar",
+      "APPLIED": "Listo: {count} respuesta(s) guardada(s). Se vectorizan y auditan solas.",
+      "FORCE": "Lo que marcan estos candados ya no aplica: aceptar de todos modos",
+      "CLEANUP": "Limpieza sin IA: −{chars} caracteres ({kinds}).",
+      "ACTIONS": {
+        "clean": "Limpiar",
+        "split": "Dividir",
+        "condense": "Condensar",
+        "mark_prompt": "Son instrucciones para el agente",
+        "keep": "Dejar igual",
+        "rewrite": "Corregir redacción",
+        "merge": "Unir en una",
+        "separate": "Separar temas",
+        "resolve": "Corregir el dato"
+      },
+      "SHAPES": {
+        "sections": "Ficha con secciones",
+        "procedure": "Procedimiento paso a paso",
+        "list": "Lista de elementos",
+        "examples": "Preguntas de ejemplo",
+        "instructions": "Instrucciones para el agente",
+        "single_topic": "Un solo tema"
+      },
+      "REMOVED": {
+        "image_data": "imágenes incrustadas",
+        "html": "HTML",
+        "entities": "entidades HTML",
+        "duplicates": "párrafos repetidos",
+        "spaces": "espacios de más"
+      },
+      "FALLBACK": {
+        "rebalanced": "Una parte seguía pasando el tope: se partió por párrafos, sin reescribirla.",
+        "mechanical": "Condensar perdía contenido: se dividió el original por párrafos, sin reescribirlo."
+      },
+      "CHECKS": {
+        "TITLE": "Comprobaciones",
+        "OUTDATED": "Editaste las partes: vuelve a comprobar.",
+        "SIZE": "Cada parte cabe en el tope",
+        "DATA": "Datos conservados: {found} de {total}",
+        "MISSING": "Faltan:",
+        "GROUPS": "Prefijos de grupo que usan los agentes: {prefixes}",
+        "NAMES": "Nombres únicos en la cuenta",
+        "TAKEN": "repetidos o ya usados",
+        "COVERAGE": "Frases del original presentes: {kept} de {total}",
+        "NO_DUPLICATES": "Sin partes duplicadas ni iguales a otra respuesta",
+        "DUPLICATES": "Casi iguales: {names}",
+        "SEARCH": "Preguntas de prueba que encuentran su parte: {found} de {total}",
+        "RESOLVED": "El dato equivocado ya no aparece y el correcto sí",
+        "STILL_WRONG": "Sigue apareciendo:",
+        "MISSING_RIGHT": "Falta el correcto:",
+        "TOO_MUCH_CHANGE": "La IA cambió más de lo necesario: revisa los cambios",
+        "SMALL_CHANGE": "Solo cambió lo necesario",
+        "PAIR_OK": "Ahora se parecen menos ({before} → {after})",
+        "PAIR_BAD": "Se siguen pareciendo ({before} → {after}): quizá conviene unirlas"
+      },
+      "ERRORS": {
+        "no_key": "La cuenta no tiene la integración de OpenAI.",
+        "no_credits": "La clave de OpenAI de la cuenta no tiene créditos.",
+        "rate_limit": "OpenAI limitó las llamadas; intenta en unos minutos.",
+        "ai_failed": "La IA no entregó una propuesta válida; intenta de nuevo.",
+        "too_long": "La respuesta es demasiado larga para proponer en una sola vuelta.",
+        "timeout": "La propuesta tardó demasiado; intenta de nuevo.",
+        "blocked": "Hay comprobaciones que no pasan; corrígelas antes de aceptar.",
+        "stale": "La respuesta cambió; pide una propuesta nueva.",
+        "invalid": "No se pudo guardar: {detail}",
+        "apply_failed": "No se pudo aplicar la propuesta.",
+        "other": "No se pudo completar: {detail}",
+        "not_undoable": "Ese arreglo ya no se puede deshacer.",
+        "choices": "Elige el dato correcto de cada contradicción."
+      },
+      "TITLES": {
+        "oversize": "Arreglar con IA: pasa del tope",
+        "writing": "Mejorar redacción",
+        "merge": "Unir en una",
+        "separate": "Separar temas",
+        "resolve": "Resolver contradicción"
+      },
+      "SUBTITLES": {
+        "oversize": "{names} mide {chars} caracteres; el agente recibe hasta {max} de cada respuesta.",
+        "writing": "{names}: se corrige solo lo que señaló la auditoría, sin reescribir lo demás.",
+        "merge": "{names}: quedan en una sola con todo lo de las dos, sin repetir.",
+        "separate": "{names}: cada una se queda con su tema y deja de repetir lo de la otra.",
+        "resolve": "{names}: elige cuál dato es el correcto y la IA corrige solo eso."
+      },
+      "INTROS": {
+        "oversize": "Primero se limpia lo que el agente no puede usar (imágenes incrustadas, HTML, párrafos repetidos). Si no basta, la IA propone dividirla o condensarla según su forma, sin perder ningún dato. Nada se guarda hasta que aceptes.",
+        "writing": "La IA corrige los problemas señalados y faltas evidentes; verás los cambios marcados palabra por palabra. Nada se guarda hasta que aceptes.",
+        "merge": "La IA junta las dos con todo lo que tenga cualquiera de ellas. Se conserva la que tiene categoría o grupo (o la más antigua) y la otra se elimina al aceptar; se puede deshacer en Historial.",
+        "separate": "La IA reescribe las dos para que cada una trate solo su tema. No se borra ninguna; lo que se quite de una tiene que quedar en la otra.",
+        "resolve": "La IA no puede saber qué dato es el correcto: elígelo para cada contradicción. Puedes buscar si el dato equivocado aparece en otras respuestas y corregirlas de paso."
+      },
+      "RESOLVE": {
+        "A_RIGHT": "A es correcto:",
+        "B_RIGHT": "B es correcto:",
+        "CUSTOM": "Ninguno, lo correcto es:",
+        "FIND_ELSEWHERE": "Buscar el dato equivocado en otras respuestas",
+        "NOWHERE_ELSE": "No aparece en ninguna otra respuesta.",
+        "ALSO_IN": "El dato equivocado también aparece en estas respuestas. Marca las que quieras corregir de paso (puede ser el mismo número con otro significado: revisa):"
+      },
+      "NOT_ADVISED": "La IA recomienda no separarlas: {reason}. Puedes unirlas en una o descartar el hallazgo.",
+      "MERGE_KEEPS": "Se conserva «{keep}» y se elimina «{drop}».",
+      "LOST_GROUPS": "Ojo: la que se elimina estaba en el grupo {groups} que usa algún agente; la unida no lo conserva.",
+      "VIEW_DIFF": "Cambios",
+      "VIEW_EDIT": "Editar",
+      "CHANGED": "{pct}% cambiado",
+      "APPLIED_UNDO": "Listo. Se vectoriza y audita sola; puedes deshacerlo en Auditoría → Historial.",
+      "BULK": {
+        "TITLE": "Corregir ortografía y numeración",
+        "SUBTITLE": "Las respuestas con faltas de ortografía o numeración rota. Revisa los cambios y aplica las marcadas; lo demás va una por una.",
+        "NONE": "No hay respuestas con solo faltas de ortografía o numeración.",
+        "RUNNING": "Preparando correcciones: {done} de {total}…",
+        "WAITING": "Preparando…",
+        "FAILED": "No se pudo proponer",
+        "REVIEW": "Revisar: cambió de más o no pasa un candado",
+        "APPLY": "Aplicar seleccionadas ({count})",
+        "DONE": "Aplicadas: {ok}. Con error: {failed}.",
+        "UNCHANGED": "Sin cambios"
+      }
+    },
+    "KIND": {
+      "LABEL": "Categoría",
+      "GENERAL": "General",
+      "FICHA": "Ficha",
+      "OBJECION": "Objeción",
+      "GENERAL_HELP": "General: vale igual para todos (horarios, datos de la empresa, cómo pedir, formas de pago).",
+      "FICHA_HELP": "Ficha: es de un solo sujeto (un producto, servicio, plan, sucursal o carrera). Pon en el nombre de qué sujeto es; el agente nunca la usa para dar datos de otro.",
+      "OBJECION_HELP": "Objeción: cómo contestar un pretexto del cliente («está caro», «lo pienso»). El agente solo la usa cuando el cliente objeta."
     }
   }
 }

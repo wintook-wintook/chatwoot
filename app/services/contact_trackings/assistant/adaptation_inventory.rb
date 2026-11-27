@@ -63,6 +63,7 @@ class ContactTrackings::Assistant::AdaptationInventory
 
     scan_variables
     scan_filled_variables
+    scan_constants
     scan_named_sources
     scan_sheet_lookups
     scan_erp_queries
@@ -101,6 +102,11 @@ class ContactTrackings::Assistant::AdaptationInventory
                       kind: 'variable', name: key.to_s.delete_prefix('var:').upcase_first,
                       status: 'ok', fix: 'text', current: value.to_s }
     end
+  end
+
+  # ── [DATOS FIJOS]: EMPRESA = Kontrolya (crear_agente_conversando) ────────────
+  def scan_constants
+    ContactTrackings::Assistant::ConstantAdaptation.items(text).each { |item| @items[item[:key]] ||= item }
   end
 
   # ── {{doc:X}} {{hoja:X}} @buscar_foro(X) @soporte_contpaq(X) ────────────────

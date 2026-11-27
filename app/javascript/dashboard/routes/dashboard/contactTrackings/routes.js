@@ -17,6 +17,20 @@ export const routes = [
     component: () => import('../../../views/contactTrackings/Dashboard.vue'),
   },
   {
+    // Agentes listos: puestos empaquetados que la empresa activa en sus bandejas.
+    path: frontendURL('accounts/:accountId/tracking-dashboard/ready-agents'),
+    name: 'ready_agents',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/readyAgents/Index.vue'),
+  },
+  {
+    // «Cómo habla tu empresa»: base común de Seguimiento IA y Agentes listos.
+    path: frontendURL('accounts/:accountId/tracking-dashboard/company-voice'),
+    name: 'ai_voice',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/readyAgents/CompanyVoice.vue'),
+  },
+  {
     // proyecto@contact_tracking — Agentes IA dentro del dashboard (reutiliza la vista de Settings)
     path: frontendURL('accounts/:accountId/tracking-dashboard/agents'),
     name: 'contact_trackings_agents',
@@ -33,6 +47,24 @@ export const routes = [
     meta: { permissions: AGENTS_PERMISSIONS },
     component: () =>
       import('../../../views/contactTrackings/AgentWorkspace.vue'),
+  },
+  {
+    // Probador de agentes (Plan-Motor-Agentes.md §11.13): fuera del diseño de los agentes, para
+    // probar uno 1.0 o 2.0 como cliente, con lotes y bitácora.
+    path: frontendURL('accounts/:accountId/tracking-dashboard/tester'),
+    name: 'agent_tester',
+    meta: { permissions: AGENTS_PERMISSIONS }, // en Inicio: cualquier usuario
+    component: () => import('../../../views/agentTester/AgentTester.vue'),
+  },
+  {
+    // Motor 2.0 (Plan-Motor-Agentes.md §11.11): la ficha de un agente 2.0. Misma lista y
+    // tablas que Agentes a medida; la ficha 1.0 sigue en contact_trackings_agent.
+    path: frontendURL(
+      'accounts/:accountId/tracking-dashboard/agents2/:templateId(\\d+|new)'
+    ),
+    name: 'motor2_agent',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/motor2/AgentPage.vue'),
   },
   {
     // proyecto@asistente_agentes_ia — el Asistente ya no es una pantalla aparte: vive
@@ -72,5 +104,35 @@ export const routes = [
     meta: { permissions: ['administrator', 'agent'] },
     component: () =>
       import('../../../views/contactTrackings/CampaignDetail.vue'),
+  },
+  // Cobranza: la cartera por cortes y su agente (solo administradores)
+  {
+    path: frontendURL('accounts/:accountId/collections'),
+    name: 'collections',
+    meta: { permissions: ['administrator'] },
+    component: () => import('../../../views/collections/Index.vue'),
+  },
+  // Campaña con Vendedor IA (Motor 2.0): pantalla nueva (la 1.0 de arriba no cambia)
+  {
+    path: frontendURL('accounts/:accountId/tracking-dashboard/campaigns2/new'),
+    name: 'campaigns2_new',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () => import('../../../views/campaigns2/CampaignWizard.vue'),
+  },
+  {
+    path: frontendURL(
+      'accounts/:accountId/tracking-dashboard/campaigns2/:campaignId/edit'
+    ),
+    name: 'campaigns2_edit',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () => import('../../../views/campaigns2/CampaignWizard.vue'),
+  },
+  {
+    path: frontendURL(
+      'accounts/:accountId/tracking-dashboard/campaigns2/:campaignId'
+    ),
+    name: 'campaigns2_detail',
+    meta: { permissions: ['administrator', 'agent'] },
+    component: () => import('../../../views/campaigns2/CampaignResults.vue'),
   },
 ];

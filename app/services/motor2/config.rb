@@ -1,0 +1,140 @@
+# frozen_string_literal: true
+
+# Motor 2.0 — la ficha de un agente. Lo que comparte con el 1.0 vive en columnas de
+# tracking_templates (nombre, objetivo, contexto, bandeja, intentos, plantillas, palabras clave,
+# agendas); lo propio del 2.0, en tracking_templates.motor2 (jsonb):
+#
+#   { 'tone' => 'tu' | 'usted', 'instructions' => 'texto libre de la empresa',
+#     'welcome' => 'Hola, soy…', 'business' => [{ 'label' => 'Horario', 'value' => 'L-V 9 a 18' }],
+#     'sources' => ['canned_response', 'article', 'google_sheet:12', …],   # llaves de ContactTrackings::Ficha::Catalog
+#     'never' => 'lo que nunca debe hacer',
+#     'skills' => { 'data' => { 'on' => true, 'fields' => [...] }, 'offers' => {...}, 'appointments' => {...},
+#                   'tickets' => {...}, 'files' => {...}, 'handoff' => {...} },
+#     'answers' => { … } }   # agentes de una función (§11.14): lo que contestó en su asistente
+#
+# Un agente de función (tracking_templates.agent_function, p. ej. «Atención a prospectos») trae
+# su puesto y sus habilidades de Motor2::Functions; lo que tenga motor2['skills'] gana.
+#
+# Para el chat de prueba se le pasa lo que hay en la pantalla sin guardar (draft).
+# En una Campaña con Vendedor IA (TrackingCampaign#motor2?) la oferta y la bandeja son de la campaña:
+# Motor2::Config.for(tracking) las pone encima de lo del agente (answers: lo mismo para «Probar»).
+class Motor2::Config
+  COLUMNS = %w[name customer_display_name objective ai_context email_signature inbox_id].freeze
+  TONES = %w[tu usted].freeze
+  MAX_TEXT = 6000
+
+  attr_reader :template, :data
+
+  def initialize(template, draft: nil, campaign: nil, answers: nil)
+    @template = template
+    draft = draft.to_h.deep_stringify_keys if draft
+    @columns = template.attributes.slice(*COLUMNS).merge(draft.to_h.slice(*COLUMNS).compact)
+    @data = (draft&.key?('motor2') ? draft['motor2'] : template.motor2).to_h.deep_stringify_keys
+    with_campaign(campaign&.motor2? ? campaign : nil, answers)
+  end
+
+  # La del seguimiento: con la oferta de su campaña si es una Campaña con Vendedor IA.
+  def self.for(tracking) = new(tracking.tracking_template, campaign: tracking.tracking_campaign)
+
+  # La campaña 2.0 a la que pertenece (nil si no).
+  attr_reader :campaign
+
+  def account = @template.account
+
+  # Los archivos del agente (en el chat de prueba, los del agente del que es copia) y, en una Campaña con Vendedor IA,
+  # los de su oferta.
+  def attachments
+    own = AiAgentAttachment.where(tracking_template_id: @template.id || @template.draft_of)
+    @campaign ? own.or(AiAgentAttachment.of_campaign(@campaign)) : own
+  end
+
+  # La regla de cada archivo: los de la campaña primero (y ganan si se llaman igual), luego los del vendedor.
+  def file_rules
+    own = @template.file_rules
+    @campaign ? @campaign.file_rules.merge(own.except(*@campaign.file_rules.keys)) : own
+  end
+
+  def name = @columns['name'].to_s
+
+  # El nombre que ve el cliente (si no hay, no se presenta con nombre).
+  def display_name = @columns['customer_display_name'].to_s.squish.presence
+
+  def objective = @columns['objective'].to_s.strip
+
+  def context = @columns['ai_context'].to_s.strip
+
+  def inbox = @inbox ||= account.inboxes.find_by(id: @columns['inbox_id'])
+
+  def tone
+    return voice['tone'].to_s.match?(/\busted\b/i) ? 'usted' : 'tu' if function.respond_to?(:answer) && function.answer(:tone) == 'empresa'
+
+    function&.tone || @data['tone'].presence_in(TONES) || 'tu'
+  end
+
+  # Lo que se contestó en el asistente de la función.
+  def answers = @data['answers'].to_h
+
+  # La función del agente (Motor2::Functions::Prospects…), o nil si es a medida.
+  def function
+    return @function if defined?(@function)
+
+    @function = Motor2::Functions.for(self)
+  end
+
+  def instructions = text('instructions')
+
+  def welcome = text('welcome')
+
+  def never = text('never')
+
+  # «Cómo habla tu empresa»: el de la empresa o, si este agente lo personalizó (motor2['voice_mode'] = 'own'), solo el
+  # suyo (motor2['voice'], completo: lo que dejó vacío no se toma de la empresa).
+  def voice = own_voice? ? AgentBase::CompanyVoice.clean(@data['voice'].to_h) : AgentBase::CompanyVoice.get(account)
+
+  # Personalizado para este agente (los de antes, con algo en motor2['voice'] y sin modo, también).
+  def own_voice? = @data['voice_mode'] == 'own' || (@data['voice_mode'].blank? && @data['voice'].to_h.compact_blank.any?)
+
+  # Para el chat de prueba («habló como…»): los campos que tomó de este agente.
+  def own_voice_fields = own_voice? ? voice.keys : []
+
+  def business
+    Array(@data['business']).filter_map do |row|
+      label = row.to_h['label'].to_s.squish.first(80)
+      value = row.to_h['value'].to_s.strip.first(500)
+      { 'label' => label, 'value' => value } if label.present? && value.present?
+    end
+  end
+
+  # Las que marcó y las que pone su función (p. ej. dónde están sus productos y precios).
+  def sources
+    extra = function.respond_to?(:extra_sources) ? function.extra_sources : []
+    (Array(@data['sources']) + extra).map(&:to_s).compact_blank.uniq
+  end
+
+  def skill(key)
+    base = function ? function.skills[key.to_s].to_h : {}
+    base.merge(@data.dig('skills', key.to_s).to_h.reject { |_, v| v.nil? || v == '' })
+  end
+
+  # Pasar a una persona viene prendida: un agente sin salida a una persona se atora.
+  def skill_on?(key)
+    value = skill(key)['on']
+    value.nil? ? key.to_s == 'handoff' : ActiveModel::Type::Boolean.new.cast(value)
+  end
+
+  def keyword_actions = Array(@template.keyword_actions)
+
+  def zone = ActiveSupport::TimeZone[@template.timezone.to_s] || ActiveSupport::TimeZone[inbox&.timezone.to_s] || Time.zone
+
+  private
+
+  def with_campaign(campaign, answers)
+    @campaign = campaign
+    extra = answers.to_h.deep_stringify_keys
+    extra = TrackingCampaigns::Motor2Brief.seller_answers(campaign).merge(extra) if campaign
+    @columns['inbox_id'] = campaign.inbox_id if campaign&.inbox_id
+    @data = @data.merge('answers' => @data['answers'].to_h.merge(extra)) if extra.any?
+  end
+
+  def text(key) = @data[key].to_s.strip.first(MAX_TEXT)
+end

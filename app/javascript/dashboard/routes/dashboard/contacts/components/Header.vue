@@ -1,6 +1,11 @@
 <script>
 import { mapGetters } from 'vuex';
 import { useAdmin } from 'dashboard/composables/useAdmin';
+import {
+  canDo,
+  canSeeArea,
+  getUserAccess,
+} from 'dashboard/helper/accessHelper';
 
 export default {
   props: {
@@ -19,6 +24,11 @@ export default {
     label: {
       type: String,
       default: '',
+    },
+    // Campaña con Vendedor IA: viendo solo los contactos de listas frías en cuarentena
+    listProspects: {
+      type: Boolean,
+      default: false,
     },
   },
   setup() {
@@ -41,7 +51,14 @@ export default {
     },
     ...mapGetters({
       getAppliedContactFilters: 'contacts/getAppliedContactFilters',
+      currentUser: 'getCurrentUser',
+      accountId: 'getCurrentAccountId',
     }),
+    // Igual que ContactPolicy#export?: el permiso «Exportar» y acceso a Clientes.
+    canExport() {
+      const access = getUserAccess(this.currentUser, this.accountId);
+      return canDo(access, 'export') && canSeeArea(access, 'clients');
+    },
     hasAppliedFilters() {
       return this.getAppliedContactFilters.length;
     },
@@ -72,6 +89,9 @@ export default {
     },
     toggleImport() {
       this.$emit('onToggleImport');
+    },
+    toggleListProspects() {
+      this.$emit('onToggleListProspects');
     },
     // proyecto@bulk_tracking_assign
     toggleBulkAssign() {
@@ -206,6 +226,22 @@ export default {
             {{ $t('CREATE_CONTACT.BUTTON_LABEL') }}
           </woot-button>
 
+          <!-- Campaña con Vendedor IA: los de listas frías en cuarentena no salen hasta que contestan -->
+          <woot-button
+            :color-scheme="listProspects ? 'primary' : 'secondary'"
+            :variant="listProspects ? 'smooth' : 'clear'"
+            icon="mail"
+            class="[&>span]:hidden xs:[&>span]:block"
+            :title="$t('CONTACTS_PAGE.LIST_PROSPECTS.HINT')"
+            @click="toggleListProspects"
+          >
+            {{
+              listProspects
+                ? $t('CONTACTS_PAGE.LIST_PROSPECTS.BACK')
+                : $t('CONTACTS_PAGE.LIST_PROSPECTS.BUTTON')
+            }}
+          </woot-button>
+
           <woot-button
             v-if="isAdmin"
             color-scheme="info"
@@ -217,7 +253,7 @@ export default {
           </woot-button>
 
           <woot-button
-            v-if="isAdmin"
+            v-if="canExport"
             color-scheme="info"
             icon="download"
             class="clear [&>span]:hidden xs:[&>span]:block"

@@ -134,6 +134,11 @@ class CaseTicketsAPI extends ApiClient {
     return axios.patch(`${this.url}/${ticketId}/assign`, params);
   }
 
+  // «Ligar a un cliente»: el caso interno pasa a ser de un contacto (y su organización).
+  assignClient(ticketId, params) {
+    return axios.patch(`${this.url}/${ticketId}/assign_client`, params);
+  }
+
   escalate(ticketId, params = {}) {
     return axios.patch(`${this.url}/${ticketId}/escalate`, params);
   }

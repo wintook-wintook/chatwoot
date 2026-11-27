@@ -63,6 +63,8 @@ module FilterHelper
       tag_filter_query(query_hash, current_index)
     when 'event_status' # Plan-Eventos E2
       event_filter_query(query_hash)
+    when 'campaign_audience' # Campañas con IA: Contacts::CampaignAudienceFilters
+      campaign_audience_query(query_hash)
     when 'text_case_insensitive'
       text_case_insensitive_filter(query_hash, filter_operator_value)
     else

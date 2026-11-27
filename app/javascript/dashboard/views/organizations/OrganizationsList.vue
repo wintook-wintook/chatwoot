@@ -59,6 +59,8 @@ export default {
   },
   mounted() {
     this.fetch();
+    // Desde «Primeros pasos» (?new=1): abre de una vez el alta.
+    if (this.$route.query.new) this.showForm = true;
   },
   methods: {
     stageChipClass,

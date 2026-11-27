@@ -1,0 +1,266 @@
+<script>
+// feat/ficha_agente_ia — QUÉ CONTIENE UNA HOJA Y QUÉ HACE EL AGENTE CON ELLA
+// ============================================================================
+// Pedido del usuario (10/11/2026): «observar lo que contiene al seleccionar una hoja…
+// para contextualizar lo que el agente debe hacer con ese contenido».
+//   tabla con las primeras filas
+//   ¿Para qué la usa el agente?  [Lista de precios: contestar el precio exacto…]
+//   Busca por: [Producto ▾]    Contesta con: [Precio ✓] [Categoría]
+// v-model: { purpose, search_by, answer_with: [], remember }  (Ficha::SheetUse en el servidor)
+// remember (10/11/2026): «Recordar lo que eligió el cliente» = una variable con el nombre de
+// la columna de búsqueda (el motor las une por nombre; Ficha::Memory en el servidor).
+// ============================================================================
+import { useAlert } from 'dashboard/composables';
+import FichaAPI from 'dashboard/api/fichaAgente';
+
+// El nombre de la variable de una columna, como lo arma el motor; '' si no da uno válido.
+export const sheetVar = columna => {
+  const nombre = (columna || '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/\s+/g, '_');
+  return /^[A-Z_][A-Z0-9_]*$/.test(nombre) ? nombre : '';
+};
+
+export default {
+  model: { prop: 'value', event: 'input' },
+  props: {
+    // La tarjeta de la hoja (id, name, columns, search_by, answer_with sugeridos).
+    card: { type: Object, required: true },
+    value: { type: Object, default: null },
+    disabled: { type: Boolean, default: false },
+    // Lo capturado (nombre del agente, lo marcado) para ✨.
+    suggestContext: { type: Object, default: () => ({}) },
+  },
+  emits: ['input'],
+  data() {
+    return { preview: null, loading: false, error: false, suggesting: false };
+  },
+  computed: {
+    columns() {
+      return (this.preview && this.preview.columns) || this.card.columns || [];
+    },
+    config() {
+      const actual = this.value || {};
+      return {
+        purpose: actual.purpose || '',
+        search_by: actual.search_by || this.card.search_by || '',
+        answer_with: actual.answer_with || this.card.answer_with || [],
+        remember: !!actual.remember,
+      };
+    },
+    memoryVar() {
+      return sheetVar(this.config.search_by);
+    },
+    answerOptions() {
+      return this.columns.filter(col => col !== this.config.search_by);
+    },
+  },
+  mounted() {
+    this.load();
+  },
+  methods: {
+    t(key, args) {
+      return this.$t(`TRACKING_TEMPLATES.FICHA.${key}`, args);
+    },
+    async load() {
+      this.loading = true;
+      try {
+        const { data } = await FichaAPI.sheet(this.card.id);
+        this.preview = data;
+      } catch (error) {
+        this.error = true;
+      } finally {
+        this.loading = false;
+      }
+    },
+    set(campo, valor) {
+      if (this.disabled) return;
+      const siguiente = { ...this.config, [campo]: valor };
+      if (campo === 'search_by')
+        siguiente.answer_with = siguiente.answer_with.filter(c => c !== valor);
+      this.$emit('input', siguiente);
+    },
+    // ✨ La IA lee la hoja y propone para qué sirve y cómo buscar en ella.
+    async analyze() {
+      this.suggesting = true;
+      try {
+        const { data } = await FichaAPI.sheetSuggest(
+          this.card.id,
+          this.suggestContext
+        );
+        this.$emit('input', {
+          purpose: data.purpose || this.config.purpose,
+          search_by: data.search_by || this.config.search_by,
+          answer_with: (data.answer_with || []).length
+            ? data.answer_with
+            : this.config.answer_with,
+          remember: this.config.remember,
+        });
+      } catch (error) {
+        const datos = error && error.response && error.response.data;
+        useAlert((datos && datos.error) || this.t('SUGGEST_ERROR'));
+      } finally {
+        this.suggesting = false;
+      }
+    },
+    toggleAnswer(columna) {
+      const lista = this.config.answer_with.includes(columna)
+        ? this.config.answer_with.filter(c => c !== columna)
+        : [...this.config.answer_with, columna];
+      this.set('answer_with', lista);
+    },
+  },
+};
+</script>
+
+<template>
+  <div class="flex flex-col gap-3">
+    <p v-if="loading" class="!m-0 text-xs text-slate-500">
+      {{ t('LOADING') }}
+    </p>
+    <p v-else-if="error" class="!m-0 text-xs text-red-600">
+      {{ t('SHEET_ERROR') }}
+    </p>
+    <div v-else-if="preview" class="flex flex-col gap-1">
+      <span class="text-xs text-slate-500">
+        {{
+          t('SHEET_ROWS', {
+            total: preview.total,
+            shown: preview.rows.length,
+          })
+        }}
+      </span>
+      <div
+        class="overflow-auto border rounded max-h-48 border-slate-200 dark:border-slate-700"
+      >
+        <table class="w-full text-xs border-collapse">
+          <thead class="sticky top-0 bg-slate-50 dark:bg-slate-800">
+            <tr>
+              <th
+                v-for="col in columns"
+                :key="col"
+                class="px-2 py-1 font-medium text-left whitespace-nowrap"
+                :class="{
+                  'text-woot-700 dark:text-woot-200': col === config.search_by,
+                }"
+              >
+                {{ col }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(fila, index) in preview.rows"
+              :key="index"
+              class="border-t border-slate-100 dark:border-slate-700"
+            >
+              <td
+                v-for="(valor, col) in fila"
+                :key="col"
+                class="px-2 py-1 whitespace-nowrap text-slate-600 dark:text-slate-300"
+              >
+                {{ valor }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-1 text-sm">
+      <div class="flex items-center justify-between gap-2">
+        <span>{{ t('SHEET_PURPOSE') }}</span>
+        <woot-button
+          size="tiny"
+          variant="smooth"
+          icon="wand"
+          :is-loading="suggesting"
+          :is-disabled="disabled || suggesting"
+          @click="analyze"
+        >
+          {{ t('SHEET_ANALYZE') }}
+        </woot-button>
+      </div>
+      <textarea
+        rows="4"
+        maxlength="200"
+        class="!mb-0"
+        :value="config.purpose"
+        :disabled="disabled"
+        :placeholder="t('SHEET_PURPOSE_PLACEHOLDER')"
+        @change="set('purpose', $event.target.value)"
+      />
+    </div>
+    <div class="flex flex-wrap items-center gap-3 text-sm">
+      <label class="flex items-center gap-2 !m-0">
+        {{ t('SHEET_SEARCH_BY') }}
+        <select
+          class="!mb-0 !h-8 !py-0 !w-auto text-sm"
+          :value="config.search_by"
+          :disabled="disabled"
+          @change="set('search_by', $event.target.value)"
+        >
+          <option v-for="col in columns" :key="col" :value="col">
+            {{ col }}
+          </option>
+        </select>
+      </label>
+      <div class="flex flex-wrap items-center gap-1">
+        <span>{{ t('SHEET_ANSWER_WITH') }}</span>
+        <button
+          v-for="col in answerOptions"
+          :key="col"
+          type="button"
+          class="px-2 py-0.5 text-xs border rounded-full"
+          :class="
+            config.answer_with.includes(col)
+              ? 'border-woot-500 bg-woot-500 text-white'
+              : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'
+          "
+          :disabled="disabled"
+          @click="toggleAnswer(col)"
+        >
+          {{ col }}
+        </button>
+      </div>
+    </div>
+    <!-- Recordar lo elegido: la variable que se usa en las siguientes preguntas. -->
+    <label
+      class="flex items-start gap-2 !m-0 p-3 text-sm border rounded-lg cursor-pointer"
+      :class="
+        config.remember && memoryVar
+          ? 'border-woot-500 bg-woot-25 dark:bg-woot-900/20'
+          : 'border-slate-200 dark:border-slate-700'
+      "
+    >
+      <input
+        type="checkbox"
+        class="!m-0 mt-0.5"
+        :checked="config.remember && !!memoryVar"
+        :disabled="disabled || !memoryVar"
+        @change="set('remember', $event.target.checked)"
+      />
+      <span class="flex flex-col gap-0.5">
+        <span class="font-medium text-slate-800 dark:text-slate-100">
+          {{ t('SHEET_REMEMBER') }}
+          <span
+            v-if="memoryVar"
+            class="ml-1 px-1.5 py-0.5 text-xs font-mono rounded bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200"
+          >
+            {{ memoryVar }}
+          </span>
+        </span>
+        <span class="text-xs text-slate-500">
+          {{
+            memoryVar
+              ? t('SHEET_REMEMBER_HINT', { column: config.search_by })
+              : t('SHEET_REMEMBER_INVALID')
+          }}
+        </span>
+      </span>
+    </label>
+  </div>
+</template>

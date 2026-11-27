@@ -33,6 +33,8 @@ import CaseTicketPanel from 'dashboard/components/contacts/CaseTicket/CaseTicket
 // Seguimiento IA — el agente nuevo, botón aparte del de siempre (para probarlo sin tocarlo).
 import AiFollowUpModal from 'dashboard/views/gestorTickets/conversation/AiFollowUpModal.vue';
 import AiFollowUpStatus from 'dashboard/views/gestorTickets/conversation/AiFollowUpStatus.vue';
+import ReadyAgentStatus from 'dashboard/views/readyAgents/ReadyAgentStatus.vue'; // agente listo de la bandeja
+import { whoFollows } from 'dashboard/helper/followUpEntry';
 
 export default {
   components: {
@@ -51,6 +53,7 @@ export default {
     ContactTrackingModal,
     AiFollowUpModal,
     AiFollowUpStatus,
+    ReadyAgentStatus,
     Modal,
     CaseTicketPanel, // @tickets_cases
   },
@@ -94,6 +97,7 @@ export default {
       showTrackingModal: false,
       showAiFollowUp: false,
       aiFollowUpLive: false, // hay un Seguimiento IA corriendo → botón verde
+      customAgents: false, // la empresa tiene agentes a medida → se elige quién da el seguimiento
       showIntegrationWarning: false,
     };
   },
@@ -315,7 +319,7 @@ export default {
      * Abrir modal de seguimientos
      */
     // Seguimiento IA: solo necesita OpenAI activo.
-    openAiFollowUp() {
+    async openAiFollowUp() {
       const openai = (
         this.$store.getters['integrations/getAppIntegrations'] || []
       ).find(a => a.id === 'openai');
@@ -331,6 +335,13 @@ export default {
         );
         return;
       }
+      // Ya corre un agente a medida: se abre ese (no se arranca otro encima).
+      const who = await whoFollows(this.conversationId);
+      if (who.custom) {
+        this.handleTrackingClick();
+        return;
+      }
+      this.customAgents = !!who.custom_agents;
       this.showAiFollowUp = true;
     },
     // «Vista anterior»: cierra el Seguimiento IA y abre el agente de seguimiento de siempre.
@@ -456,6 +467,7 @@ export default {
         :conversation-id="conversationId"
         @change="aiFollowUpLive = $event"
       />
+      <ReadyAgentStatus class="mt-1.5" :conversation-id="conversationId" />
     </div>
     <!-- ============================================================ -->
     <!-- FIN: Botón Programar Seguimiento + Ticket                    -->
@@ -607,6 +619,7 @@ export default {
       v-if="showAiFollowUp"
       :show="showAiFollowUp"
       :conversation-id="conversationId"
+      :custom-agents="customAgents"
       @close="showAiFollowUp = false"
       @created="onAiFollowUpCreated"
       @legacy="openLegacyTracking"

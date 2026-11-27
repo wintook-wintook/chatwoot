@@ -48,17 +48,6 @@ module Assistant::QuoteTools
     rows
   end
 
-  # { net:, tax:, total: } igual que Quote#recalculate! (descuento por partida).
-  def self.totals(items)
-    net = items.sum { |item| item_net(item) }
-    tax = items.sum { |item| (item_net(item) * item['tax_percent'].to_d / 100).round(2) }
-    { 'net' => net.to_f, 'tax' => tax.to_f, 'total' => (net + tax).to_f }
-  end
-
-  def self.item_net(item)
-    (item['quantity'].to_d * item['unit_price'].to_d * (1 - (item['discount_percent'].to_d / 100))).round(2)
-  end
-
   # --- propuestas --------------------------------------------------------------------
   def prepare_create_quote(args)
     raise ArgumentError, 'No tienes permiso para crear cotizaciones (Ventas).' unless @grant.writable?(:sales)
@@ -101,7 +90,7 @@ module Assistant::QuoteTools
     { 'catalog_item_id' => catalog&.id, 'description' => description.to_s.first(500), 'kind' => catalog&.kind,
       'unit' => item['unit'].presence || catalog&.unit, 'quantity' => item_quantity(item),
       'unit_price' => item_price(item, catalog, description), 'discount_percent' => item['discount_percent'].to_f.clamp(0, 100),
-      'tax_percent' => quote_settings.default_tax_percent.to_f }
+      'tax_percent' => item_tax(catalog) }.merge(catalog_taxes(catalog))
   end
 
   def catalog_matches(stems)
@@ -120,8 +109,18 @@ module Assistant::QuoteTools
 
   def item_quantity(item) = [item['quantity'].to_f, 0.01].max
 
+  # El impuesto elegido y las retenciones del producto (Productos y servicios › Parámetros).
+  def catalog_taxes(catalog)
+    return { 'tax_rate_id' => nil, 'withholdings' => [] } unless catalog
+
+    { 'tax_rate_id' => catalog.effective_tax_rate&.id, 'withholdings' => catalog.quote_withholdings }
+  end
+
+  # El impuesto del producto (Productos y servicios › Parámetros); sin producto, el de por omisión.
+  def item_tax(catalog) = (catalog ? catalog.quote_tax_percent : quote_settings.default_tax_percent).to_f
+
   def item_price(item, catalog, description)
-    price = item['unit_price'].presence || catalog&.price
+    price = item['unit_price'].presence || catalog&.quote_unit_price # sin impuesto si el precio ya lo incluye
     raise ArgumentError, "Falta el precio de «#{description}»: pregúntaselo al usuario." if price.nil?
 
     price.to_f
@@ -136,9 +135,10 @@ module Assistant::QuoteTools
   end
 
   def quote_labels(contact, items, currency, opportunity, create_opportunity)
-    totals = Assistant::QuoteTools.totals(items)
+    withhold = Quotes::Withholdings.for_contact(contact)
+    totals = Quotes::Withholdings.totals(items, withhold: withhold)
     opp = opportunity ? "#{opportunity.folio} · #{opportunity.title}" : (create_opportunity && I18n.t('assistant.quotes.new_opportunity'))
     { 'rows' => [['CLIENT', contact.name], ['OPPORTUNITY', opp]].select(&:last),
-      'items' => items, 'currency' => currency, 'totals' => totals }
+      'items' => items, 'currency' => currency, 'totals' => totals, 'apply_withholdings' => withhold }
   end
 end

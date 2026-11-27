@@ -14,11 +14,27 @@
 # Las que son prompt o llevan instrucciones (content_is_prompt / content_prompts, como en el
 # motor de siempre: KnowledgeBase::CannedPrompt) se entregan con las instrucciones aparte,
 # marcadas como internas.
+#
+# proyecto@predefinidas_que_contestan: lo que se guarda es lo que llega (MAX_CHARS y
+# MAX_PROMPT_CHARS, los mismos topes del formulario) y, en las cuentas con la selección
+# prendida, la búsqueda es la de buscar y escoger (KnowledgeBase::Selection), igual que en el
+# motor de siempre.
 class AiFollowUps::KnowledgeSearch < Cases::Ai::BaseService
   LIMIT = 3
   THRESHOLD = 0.25
-  MAX_CHARS = 1200
+  MAX_CHARS = CannedResponse::MAX_AGENT_CHARS
+  MAX_PROMPT_CHARS = CannedResponse::MAX_PROMPT_CHARS
   CANNED = 'canned_response'
+  # conversation: la plática (una del probador puede forzar la búsqueda, ver
+  # KnowledgeBase::Selection.enabled?).
+  def initialize(account:, conversation: nil)
+    super(account: account)
+    @conversation = conversation
+  end
+
+  # Lo que escogió la última búsqueda con selección, para la traza (Motor2::Skills::Knowledge).
+  attr_reader :last_selection
+
   STOPWORDS = %w[
     el la los las un una unos unas de del al a en y o u que qué con por para como cómo es son se su sus
     lo le les me mi mis tu tus te nos ya hay muy mas más pero si sí no cual cuál cuando cuándo donde dónde
@@ -37,13 +53,38 @@ class AiFollowUps::KnowledgeSearch < Cases::Ai::BaseService
     return { error: 'Falta la pregunta.' } if question.blank?
     return { results: [], note: 'La empresa no tiene respuestas predefinidas disponibles.' } unless canned_available?
 
-    responses = semantic(question).presence || keyword(question)
+    responses = find(question)
     return { results: [], note: 'No hay respuesta predefinida para eso. No lo inventes.' } if responses.empty?
 
     { results: responses.map { |c| canned_result(c) } }
   end
 
   private
+
+  def selection_summary(candidates, result)
+    { candidatas: candidates.size, ninguna: result[:none], falta: result[:missing].presence,
+      escogidas: result[:chosen].map { |c| c.item.title.to_s.truncate(120) } }
+  end
+
+  # Con la selección prendida, buscar y escoger; si está apagada o falla, la de siempre.
+  def find(question)
+    responses = selected(question) if KnowledgeBase::Selection.enabled?(@account, @conversation)
+    responses.nil? ? (semantic(question).presence || keyword(question)) : responses
+  end
+
+  # Buscar y escoger: [] si la IA no escogió ninguna; nil si falló (→ la búsqueda de siempre).
+  def selected(question)
+    scope = KnowledgeItem.where(account_id: @account.id, source_type: CANNED)
+    candidates = KnowledgeBase::Candidates.new(scope, queries: [question], question: question,
+                                                      embed: ->(texto) { embed(texto) }).call
+    result = KnowledgeBase::Selector.new(@account).call(question: question, candidates: candidates)
+    return nil if result.nil?
+
+    @last_selection = selection_summary(candidates, result)
+
+    ids = result[:chosen].map { |c| c.item.source_id }
+    @account.canned_responses.where(id: ids).index_by(&:id).values_at(*ids).compact
+  end
 
   def semantic(question)
     scope = KnowledgeItem.where(account_id: @account.id, source_type: CANNED).where.not(embedding: nil)
@@ -77,12 +118,13 @@ class AiFollowUps::KnowledgeSearch < Cases::Ai::BaseService
   end
 
   def canned_result(canned)
-    base = { codigo: canned.short_code }
+    # clase: general | ficha (de un solo sujeto: no la uses para otro) | objecion.
+    base = { codigo: canned.short_code, clase: canned.try(:kind) }.compact
     if canned.content_is_prompt
-      base.merge(tipo: 'instrucciones', instrucciones_internas: canned.content.to_s.first(MAX_CHARS * 2))
+      base.merge(tipo: 'instrucciones', instrucciones_internas: canned.content.to_s.first(MAX_CHARS))
     elsif canned.content_prompts.present?
       base.merge(tipo: 'informacion_con_instrucciones', informacion: canned.content.to_s.first(MAX_CHARS),
-                 instrucciones_internas: canned.content_prompts.to_s.first(MAX_CHARS))
+                 instrucciones_internas: canned.content_prompts.to_s.first(MAX_PROMPT_CHARS))
     else
       base.merge(tipo: 'informacion', informacion: canned.content.to_s.first(MAX_CHARS))
     end

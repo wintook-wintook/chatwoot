@@ -67,6 +67,8 @@ class Cases::TicketCreatorService
   # el gate de @agendar_calendar distinguir "acabo de pedir un dato, no agendes
   # todavía" de "ya hay ticket / no aplica, seguí con el flujo normal".
   attr_reader :outcome
+  # feat/ficha_agente_ia: el ticket recién creado (para mandar los archivos de su tipo).
+  attr_reader :ticket
 
   # `directive:` permite pasar la directiva de UNA rama concreta (@ruta) en lugar de
   # dejar que el servicio la busque en el prompt entero. Así cada rama puede escalar a
@@ -147,6 +149,7 @@ class Cases::TicketCreatorService
     ticket = build_ticket(directive_overrides, fields)
     return false unless ticket
 
+    @ticket = ticket
     Cases::RuleEngineService.new(ticket, trigger_message: @message).evaluate!
     send_confirmation(ticket)
     true

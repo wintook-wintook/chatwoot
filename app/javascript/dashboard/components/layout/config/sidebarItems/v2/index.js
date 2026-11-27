@@ -87,6 +87,7 @@ const CATALOG_CASE_SETTINGS = [
 ];
 // Plan-Catalogo-Cotizaciones — pantallas propias de Ventas.
 const SALES_ROUTES = [
+  'collections', // Cobranza
   'gestorTickets_quotes',
   'gestorTickets_quote_new',
   'gestorTickets_quote',
@@ -122,6 +123,7 @@ const MOVED_CASE_SETTINGS = [...SERVICE_TOOLS, ...CATALOG_CASE_SETTINGS];
 // El puntaje de tareas («Mi día») es una regla, no una lista: se queda en
 // Ajustes, como opción propia (ordena tareas, no es configuración de casos).
 const TASK_SCORING = 'gestorTickets_task_settings';
+const QUOTE_FORMATS = 'gestorTickets_quote_formats';
 // El Centro de ayuda (`accounts/:id/portals...`) trae su propio menú interno.
 const HELP_CENTER_PATH = /\/accounts\/\d+\/portals(\/|$)/;
 
@@ -317,8 +319,9 @@ export const primaryMenuV2 = (accountId, route) => {
       key: 'agentes',
       label: 'AI_AGENTS',
       featureFlag: FEATURE_FLAGS.CAMPAIGNS,
-      toState: url('tracking-dashboard/agents'),
-      toStateName: 'contact_trackings_agents',
+      // Abre en «Agentes listos» (la primera del submenú).
+      toState: url('tracking-dashboard/ready-agents'),
+      toStateName: 'ready_agents',
     },
     {
       icon: 'arrow-trending-lines',
@@ -345,6 +348,8 @@ export const primaryMenuV2 = (accountId, route) => {
         alternatives: rest.map(target),
       };
     })(),
+    // El Centro de ayuda ya no va en el menú principal: está en Agentes IA, junto a Bases de
+    // conocimiento (sus artículos son una de las fuentes que leen los agentes).
     {
       icon: 'settings',
       key: 'settings',
@@ -364,6 +369,8 @@ const inicio = accountId => ({
     'notifications_index',
     'gestorTickets_business_summary',
     'gestorTickets_sales_budgets',
+    'academy',
+    'agent_tester', // Probar agentes: para cualquier usuario
   ],
   // Las notificaciones son una pestaña de Mi resumen (?tab=notifications); su página
   // de siempre (/notifications) sigue abriendo y marca Inicio.
@@ -392,6 +399,21 @@ const inicio = accountId => ({
       toState: frontendURL(`accounts/${accountId}/tickets/budget`),
       toStateName: 'gestorTickets_sales_budgets',
     },
+    // Academia Kontrolya: lecciones y ejercicios que la plataforma revisa sola.
+    {
+      icon: 'book',
+      label: 'ACADEMY',
+      featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+      toState: frontendURL(`accounts/${accountId}/academy`),
+      toStateName: 'academy',
+    },
+    // Probar agentes (1.0 y 2.0): cualquier usuario prueba los agentes «En prueba».
+    {
+      icon: 'chat-multiple',
+      label: 'AGENT_TESTER',
+      toState: frontendURL(`accounts/${accountId}/tracking-dashboard/tester`),
+      toStateName: 'agent_tester',
+    },
   ],
 });
 
@@ -408,6 +430,14 @@ const conversationsV2 = accountId => {
         featureFlag: FEATURE_FLAGS.INBOX_VIEW,
         toState: frontendURL(`accounts/${accountId}/inbox-view`),
         toStateName: 'inbox_view',
+      },
+      // «Agente IA» (Plan-Agente-IA-en-Conversaciones): lo que están atendiendo los agentes de IA; en la lista, el
+      // combo «Agente IA» deja elegir uno (con cuántas tiene cada uno).
+      {
+        icon: 'bot',
+        label: 'AI_AGENTS_CONVERSATIONS',
+        toState: frontendURL(`accounts/${accountId}/dashboard?ai_agent=with`),
+        toStateName: 'home',
       },
     ],
   };
@@ -439,6 +469,13 @@ const ventas = accountId => {
         toState: frontendURL(`accounts/${accountId}/tickets/quotes`),
         toStateName: 'gestorTickets_quotes',
         activeRoutes: ['gestorTickets_quote_new', 'gestorTickets_quote'],
+      },
+      // Cobranza: la cartera (Excel o sistema administrativo) y su agente
+      {
+        icon: 'building-bank',
+        label: 'COLLECTIONS',
+        toState: frontendURL(`accounts/${accountId}/collections`),
+        toStateName: 'collections',
       },
     ],
   };
@@ -482,21 +519,14 @@ const servicio = (accountId, route) => {
       },
       // Mismos ítems (íconos y permisos de administrador) que en Casos y etapas.
       ...caseSettingsItems(accountId, SERVICE_TOOLS),
-      {
-        icon: 'library',
-        label: 'HELP_CENTER.TITLE',
-        featureFlag: FEATURE_FLAGS.HELP_CENTER,
-        toState: frontendURL(`accounts/${accountId}/portals`),
-        toStateName: 'default_portal_articles',
-      },
     ],
   };
 };
 
-// Dentro del Centro de ayuda manda su propio menú: este registro, sin opciones,
-// solo marca Servicio en el menú principal (Secondary no pinta un menú vacío).
+// Dentro del Centro de ayuda manda su propio menú: este registro, sin opciones, solo marca
+// Agentes IA en el menú principal (ahí vive el Centro de ayuda; Secondary no pinta un menú vacío).
 const centroDeAyuda = () => ({
-  parentNav: 'servicio',
+  parentNav: 'agentes',
   routes: [],
   matches: route => HELP_CENTER_PATH.test((route && route.path) || ''),
   menuItems: [],
@@ -644,6 +674,7 @@ const agenda = accountId => ({
   routes: [
     'gestorTickets_tasks',
     'gestorTickets_task_reports',
+    'gestorTickets_recurring_tasks',
     'google_calendar',
   ],
   menuItems: [
@@ -660,6 +691,14 @@ const agenda = accountId => ({
       featureFlag: FEATURE_FLAGS.GOOGLE_CALENDAR,
       toState: frontendURL(`accounts/${accountId}/google-calendar`),
       toStateName: 'google_calendar',
+    },
+    // Tareas fijas que se vuelven a crear cada cierto tiempo.
+    {
+      icon: 'arrow-clockwise',
+      label: 'RECURRING_TASKS',
+      featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+      toState: frontendURL(`accounts/${accountId}/tickets/recurring-tasks`),
+      toStateName: 'gestorTickets_recurring_tasks',
     },
     // Reportes de cierre y llegadas, en dos pestañas.
     {
@@ -691,17 +730,56 @@ const campaignItem = (accountId, name, label) => ({
 const agentesIa = accountId => ({
   parentNav: 'agentes',
   routes: [
+    'ready_agents',
+    'ai_voice',
     'contact_trackings_agents',
     'contact_trackings_agent',
+    'motor2_agent', // Motor 2.0
     'contact_trackings_assistant',
     'contact_trackings_dashboard',
     ...AI_TOOL_ROUTES,
     ...DUPLICATED_SETTINGS,
   ],
   menuItems: [
+    // Agentes listos (puestos empaquetados) primero; los de siempre son «Agentes a medida».
+    {
+      icon: 'bot',
+      label: 'READY_AGENTS',
+      hasSubMenu: false,
+      beta: true,
+      featureFlag: FEATURE_FLAGS.CAMPAIGNS,
+      toState: frontendURL(
+        `accounts/${accountId}/tracking-dashboard/ready-agents`
+      ),
+      toStateName: 'ready_agents',
+    },
+    // «Cómo habla tu empresa»: lo general de Seguimiento IA y Agentes listos.
+    {
+      icon: 'chat-multiple',
+      label: 'AI_VOICE',
+      hasSubMenu: false,
+      featureFlag: FEATURE_FLAGS.CAMPAIGNS,
+      toState: frontendURL(
+        `accounts/${accountId}/tracking-dashboard/company-voice`
+      ),
+      toStateName: 'ai_voice',
+    },
     campaignItem(accountId, 'contact_trackings_agents', 'AI_AGENT_LIST'),
     campaignItem(accountId, 'contact_trackings_dashboard', 'TRACKINGS'),
-    ...settingsItems(accountId, AI_TOOLS),
+    // Lo que saben: Bases de conocimiento y, junto, el Centro de ayuda (sus artículos son una fuente).
+    ...settingsItems(accountId, ['knowledge_sources_list']),
+    {
+      icon: 'library',
+      label: 'HELP_CENTER.TITLE',
+      hasSubMenu: false,
+      featureFlag: FEATURE_FLAGS.HELP_CENTER,
+      toState: frontendURL(`accounts/${accountId}/portals`),
+      toStateName: 'default_portal_articles',
+    },
+    ...settingsItems(
+      accountId,
+      AI_TOOLS.filter(name => name !== 'knowledge_sources_list')
+    ),
   ],
 });
 
@@ -710,6 +788,10 @@ const campanas = accountId => ({
   routes: [
     'contact_trackings_campaigns',
     'contact_trackings_campaign_detail',
+    // Campaña con Vendedor IA: crear, modificar y resultados (si no, el menú no sale ahí)
+    'campaigns2_new',
+    'campaigns2_edit',
+    'campaigns2_detail',
     'ongoing_campaigns',
     'one_off',
     'contact_trackings_metrics',
@@ -717,7 +799,15 @@ const campanas = accountId => ({
     'event_detail',
   ],
   menuItems: [
-    campaignItem(accountId, 'contact_trackings_campaigns', 'CAMPAIGNS_AI'),
+    {
+      ...campaignItem(accountId, 'contact_trackings_campaigns', 'CAMPAIGNS_AI'),
+      activeRoutes: [
+        'contact_trackings_campaign_detail',
+        'campaigns2_new',
+        'campaigns2_edit',
+        'campaigns2_detail',
+      ],
+    },
     campaignItem(accountId, 'ongoing_campaigns', 'CAMPAIGNS_WEB'),
     campaignItem(accountId, 'one_off', 'CAMPAIGNS_SMS'),
     campaignItem(accountId, 'contact_trackings_metrics', 'CAMPAIGNS_DASHBOARD'),
@@ -744,6 +834,7 @@ const ajustes = accountId => {
       ...CASE_SETTINGS_ROUTES.filter(
         name => !MOVED_CASE_SETTINGS.includes(name)
       ),
+      QUOTE_FORMATS,
     ],
     menuItems: [
       ...base.menuItems.filter(
@@ -752,6 +843,14 @@ const ajustes = accountId => {
       ...caseSettingsItems(accountId, [TASK_SCORING], {
         [TASK_SCORING]: 'TASK_SCORING',
       }),
+      // Cotizaciones › Formatos: cómo se ve la cotización (liga del cliente y PDF).
+      {
+        icon: 'document',
+        label: 'QUOTE_FORMATS',
+        featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
+        toState: frontendURL(`accounts/${accountId}/tickets/quotes/formats`),
+        toStateName: QUOTE_FORMATS,
+      },
       ...(caseGroup
         ? [
             {

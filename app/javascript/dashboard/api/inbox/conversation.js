@@ -16,9 +16,11 @@ class ConversationApi extends ApiClient {
     conversationType,
     sortBy,
     updatedWithin,
+    aiAgent,
   }) {
     return axios.get(this.url, {
       params: {
+        ai_agent: aiAgent, // «Agente IA»: with | without | una función
         inbox_id: inboxId,
         team_id: teamId,
         status,
@@ -97,9 +99,18 @@ class ConversationApi extends ApiClient {
     return axios.post(`${this.url}/${conversationId}/unmute`);
   }
 
-  meta({ inboxId, status, assigneeType, labels, teamId, conversationType }) {
+  meta({
+    inboxId,
+    status,
+    assigneeType,
+    labels,
+    teamId,
+    conversationType,
+    aiAgent,
+  }) {
     return axios.get(`${this.url}/meta`, {
       params: {
+        ai_agent: aiAgent,
         inbox_id: inboxId,
         status,
         assignee_type: assigneeType,

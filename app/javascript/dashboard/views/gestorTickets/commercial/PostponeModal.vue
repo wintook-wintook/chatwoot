@@ -14,16 +14,18 @@ export default {
   props: {
     show: { type: Boolean, default: false },
     folio: { type: String, default: '' },
-    // Fecha actual de «retomar el» (al cambiar una pospuesta).
+    // Al cambiar una pospuesta: su fecha de «retomar el», su motivo y su comentario.
     current: { type: String, default: '' },
+    currentReasonId: { type: [Number, String], default: '' },
+    currentNote: { type: String, default: '' },
     isSaving: { type: Boolean, default: false },
   },
   emits: ['close', 'confirm'],
   data() {
     return {
       until: this.current || isoDayFromToday(7),
-      reasonId: '',
-      reason: '',
+      reasonId: this.currentReasonId || '',
+      reason: this.currentNote || '',
       reasons: [],
     };
   },
@@ -64,7 +66,11 @@ export default {
     <div class="flex flex-col h-auto overflow-auto">
       <woot-modal-header
         :header-title="
-          $t('CASE_TICKETS.COMMERCIAL.POSTPONE_MODAL.TITLE', { folio })
+          current
+            ? $t('CASE_TICKETS.COMMERCIAL.POSTPONE_MODAL.CHANGE_TITLE', {
+                folio,
+              })
+            : $t('CASE_TICKETS.COMMERCIAL.POSTPONE_MODAL.TITLE', { folio })
         "
       />
       <form
@@ -122,7 +128,11 @@ export default {
             :is-loading="isSaving"
             :disabled="!canConfirm"
           >
-            {{ $t('CASE_TICKETS.COMMERCIAL.POSTPONE_MODAL.CONFIRM') }}
+            {{
+              current
+                ? $t('CASE_TICKETS.COMMERCIAL.POSTPONE_MODAL.SAVE_CHANGE')
+                : $t('CASE_TICKETS.COMMERCIAL.POSTPONE_MODAL.CONFIRM')
+            }}
           </woot-button>
         </div>
       </form>

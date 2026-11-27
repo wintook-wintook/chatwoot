@@ -29,6 +29,8 @@
 #
 class Article < ApplicationRecord
   include PgSearch::Model
+  # Antes de ensure_article_slug: las guías de Dali llevan slug «kontrolya-<clave>».
+  include DaliGuideArticle
 
   has_many :associated_articles,
            class_name: :Article,

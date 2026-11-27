@@ -248,29 +248,9 @@ export default {
       );
     },
 
-    // NUEVO: Computed para determinar si debemos mostrar el sidebar secundario
+    // ¿Se ve el menú de la sección? Según la preferencia (el botón general de Dashboard.vue lo oculta y lo muestra en
+    // todas las pantallas). Antes Casos, Oportunidades y el Embudo lo forzaban siempre (no tenían ☰ y quedabas sin menú).
     shouldShowSecondarySidebar() {
-      const currentRoute = this.$route.name;
-
-      // Rutas que siempre muestran el sidebar sin importar la preferencia del usuario
-      const alwaysShowRoutes = [
-        'kanban_dashboard',
-        'kanban_board',
-        'kanban_processes',
-        'kanban_label',
-        'kanban_status',
-        'kanban_type',
-        'gestorTickets_index',
-        'gestorTickets_detail',
-        'gestorTickets_rules',
-        'gestorTickets_metrics', // @tickets_cases
-        'gestorTickets_class_list',
-        'gestorTickets_class_board',
-        'gestorTickets_class_metrics', // Plan-Casos E1
-      ];
-      if (alwaysShowRoutes.includes(currentRoute)) return true;
-
-      // Para el resto, respetar la preferencia del usuario
       if (!this.showSecondarySidebar) return false;
       return Object.keys(this.activeSecondaryMenu).length > 0;
     },

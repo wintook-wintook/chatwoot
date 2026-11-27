@@ -16,6 +16,10 @@ class Assistant::Executor
   include Assistant::ClientTaskRunner # tareas con el cliente
   include Assistant::CancelRunner # cancelar con motivo
   include Assistant::ConvertRunner # tarea ↔ tarea agendada
+  include Assistant::FollowUpPresetRunner # guardar plantilla de seguimiento
+  include Assistant::ProgressRunner # reportar avance de una tarea
+  include Assistant::SetupRunner # «Arma tu cuenta con Dali»
+  include Assistant::CallRunner # llamar por WhatsApp
 
   class Refused < StandardError; end
 
@@ -70,7 +74,8 @@ class Assistant::Executor
   def run_meeting(payload)
     ticket = payload['case_id'].present? ? writable_case(payload['case_id']) : nil
     meeting = AgendaItems::Creator.new(account: @account, user: @user, attrs: meeting_attrs(payload),
-                                       client: ticket ? { case_ticket: ticket } : client(payload)).call
+                                       client: ticket ? { case_ticket: ticket } : client(payload),
+                                       participant_ids: payload['participant_ids']).call
     done("Tarea agendada «#{meeting.title}»", ticket ? case_path(ticket) : "#{base}/tickets/tasks")
   end
 

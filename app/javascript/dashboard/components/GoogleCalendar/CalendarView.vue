@@ -1,9 +1,3 @@
-<template>
-  <div class="flex flex-col flex-1 h-full overflow-hidden fc-wrapper">
-    <FullCalendar ref="fullCalendar" :options="calendarOptions" />
-  </div>
-</template>
-
 <script>
 import FullCalendar from '@fullcalendar/vue';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -11,18 +5,21 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import esLocale from '@fullcalendar/core/locales/es';
+import { agentColor, agentTextColor, coworkerColorsFrom } from './agentColor';
 
-const COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-const AGENT_COLORS = ['#f43f5e', '#fb923c', '#a3e635', '#22d3ee', '#818cf8', '#e879f9'];
+const COLORS = [
+  '#6366f1',
+  '#0ea5e9',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#8b5cf6',
+];
 const LOCAL_COLOR = '#475569';
 
 // Color de respaldo cuando no conocemos el calendario del evento (hash del id).
 function fallbackColor(eventId) {
   return COLORS[(eventId?.charCodeAt(0) || 0) % COLORS.length];
-}
-
-function agentColor(agentId) {
-  return AGENT_COLORS[(agentId || 0) % AGENT_COLORS.length];
 }
 
 export default {
@@ -33,13 +30,126 @@ export default {
     agendaItems: { type: Array, default: () => [] },
     availability: { type: Array, default: () => [] },
     calendars: { type: Array, default: () => [] },
+    // fix/calendario_google — compañeros palomeados: [{ agent_id, name, access, events }].
+    coworkerEvents: { type: Array, default: () => [] },
   },
-  emits: ['rangeChanged', 'eventDropped', 'eventClicked', 'dateSelected'],
+  emits: [
+    'rangeChanged',
+    'eventDropped',
+    'eventClicked',
+    'dateSelected',
+    'coworkerEventClicked',
+  ],
+  computed: {
+    // fix/calendario_eliminar F4 — colores que escogí para mis compañeros (ui_settings).
+    coworkerColors() {
+      return coworkerColorsFrom(this.$store.getters.getUISettings);
+    },
+    calendarOptions() {
+      return {
+        plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
+        locale: esLocale,
+        initialView: 'timeGridWeek',
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'timeGridWeek,dayGridMonth,listWeek',
+        },
+        buttonText: {
+          today: this.$t('GOOGLE_CALENDAR.AGENDA.TODAY'),
+          week: this.$t('GOOGLE_CALENDAR.CALENDAR.WEEK'),
+          month: this.$t('GOOGLE_CALENDAR.CALENDAR.MONTH'),
+          list: this.$t('GOOGLE_CALENDAR.CALENDAR.AGENDA'),
+        },
+        height: '100%',
+        editable: true,
+        droppable: false,
+        eventDurationEditable: true,
+        selectable: true,
+        selectMirror: true,
+        // Arrastre en un hueco → rango prellenado.
+        select: info => {
+          this.$emit('dateSelected', {
+            start: info.startStr,
+            end: info.endStr,
+            allDay: info.allDay,
+          });
+          this.$refs.fullCalendar?.getApi().unselect();
+        },
+        // Clic simple en una hora → cita de 1h (o tarea si es todo el día) prellenada.
+        dateClick: info => {
+          const end = info.allDay
+            ? info.dateStr
+            : new Date(info.date.getTime() + 60 * 60 * 1000).toISOString();
+          this.$emit('dateSelected', {
+            start: info.dateStr,
+            end,
+            allDay: info.allDay,
+          });
+        },
+        datesSet: info => {
+          this.$emit('rangeChanged', {
+            start: info.startStr,
+            end: info.endStr,
+          });
+        },
+        eventClick: info => {
+          // Evento de un compañero: solo se mira, nunca abre el editor.
+          const coworker = info.event.extendedProps?.coworker;
+          if (coworker) {
+            this.$emit('coworkerEventClicked', {
+              ...coworker,
+              start: info.event.start,
+              end: info.event.end,
+              allDay: info.event.allDay,
+            });
+            return;
+          }
+          this.$emit('eventClicked', info.event);
+        },
+        eventDrop: info => {
+          this.$emit('eventDropped', {
+            eventId: info.event.id,
+            start_time: info.event.startStr,
+            end_time: info.event.endStr,
+            calendar_id: info.event.extendedProps?.calendarId || 'primary',
+            agendaItem: info.event.extendedProps?.agendaItem,
+            revert: info.revert,
+          });
+        },
+        eventResize: info => {
+          this.$emit('eventDropped', {
+            eventId: info.event.id,
+            start_time: info.event.startStr,
+            end_time: info.event.endStr,
+            calendar_id: info.event.extendedProps?.calendarId || 'primary',
+            agendaItem: info.event.extendedProps?.agendaItem,
+            revert: info.revert,
+          });
+        },
+      };
+    },
+  },
   watch: {
-    events() { this.syncEvents(); },
-    agendaItems() { this.syncEvents(); },
-    availability() { this.syncEvents(); },
-    calendars() { this.syncEvents(); },
+    events() {
+      this.syncEvents();
+    },
+    // fix/calendario_eliminar F4 — al escoger un color se repinta al momento.
+    coworkerColors() {
+      this.syncEvents();
+    },
+    agendaItems() {
+      this.syncEvents();
+    },
+    availability() {
+      this.syncEvents();
+    },
+    calendars() {
+      this.syncEvents();
+    },
+    coworkerEvents() {
+      this.syncEvents();
+    },
   },
   methods: {
     // Cada evento se pinta con el color de SU calendario (igual que Google y que el
@@ -55,7 +165,11 @@ export default {
     },
     itemTitle(title, item) {
       const client = item && (item.contact || item.organization);
-      return client ? `${title} · ${client.name}` : title;
+      // Agenda: la ve por ser participante (otro es el responsable).
+      const own = item?.participating
+        ? `${this.$t('AGENDA_PARTICIPANTS.PARTICIPATING')} · ${title}`
+        : title;
+      return client ? `${own} · ${client.name}` : own;
     },
     // Lo que no vino en la lista de Google: sin Google conectado, o sin evento allá.
     addLocalItems(api) {
@@ -113,14 +227,20 @@ export default {
             location: e.location || '',
             attendees: e.attendees || [],
             agendaItem,
+            // fix/calendario_eliminar F3 — para «Eliminar evento» / «Quitar de mi calendario».
+            organizerSelf: !e.organizer || e.organizer.self === true,
+            recurringEventId: e.recurringEventId || null,
           },
         });
       });
 
       this.addLocalItems(api);
 
+      // Los palomeados ya van como eventos: no repetir su franja de fondo.
+      const shownCoworkers = new Set(this.coworkerEvents.map(c => c.agent_id));
       this.availability.forEach(agent => {
-        const color = agentColor(agent.agent_id);
+        if (shownCoworkers.has(agent.agent_id)) return;
+        const color = agentColor(agent.agent_id, this.coworkerColors);
         (agent.busy || []).forEach((period, i) => {
           api.addEvent({
             id: `busy-${agent.agent_id}-${i}`,
@@ -132,85 +252,59 @@ export default {
           });
         });
       });
+
+      this.addCoworkerEvents(api);
     },
-  },
-  computed: {
-    calendarOptions() {
-      return {
-        plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
-        locale: esLocale,
-        initialView: 'timeGridWeek',
-        headerToolbar: {
-          left: 'prev,next today',
-          center: 'title',
-          right: 'timeGridWeek,dayGridMonth,listWeek',
-        },
-        buttonText: {
-          today: this.$t('GOOGLE_CALENDAR.AGENDA.TODAY'),
-          week: this.$t('GOOGLE_CALENDAR.CALENDAR.WEEK'),
-          month: this.$t('GOOGLE_CALENDAR.CALENDAR.MONTH'),
-          list: this.$t('GOOGLE_CALENDAR.CALENDAR.AGENDA'),
-        },
-        height: '100%',
-        editable: true,
-        droppable: false,
-        eventDurationEditable: true,
-        selectable: true,
-        selectMirror: true,
-        // Arrastre en un hueco → rango prellenado.
-        select: info => {
-          this.$emit('dateSelected', {
-            start: info.startStr,
-            end: info.endStr,
-            allDay: info.allDay,
+    // Eventos de compañeros tal como Google los entregó: sin título = «Ocupado»
+    // (solo libre/ocupado, o evento privado). No se arrastran ni se editan.
+    addCoworkerEvents(api) {
+      this.coworkerEvents.forEach(row => {
+        const color = agentColor(row.agent_id, this.coworkerColors);
+        const textColor = agentTextColor(row.agent_id, this.coworkerColors);
+        (row.events || []).forEach(e => {
+          const summary =
+            e.summary || this.$t('GOOGLE_CALENDAR.COWORKERS.BUSY');
+          api.addEvent({
+            id: `coworker-${row.agent_id}-${e.id}`,
+            title: `${row.name} · ${summary}`,
+            start: e.start,
+            end: e.end,
+            allDay: e.all_day,
+            editable: false,
+            startEditable: false,
+            durationEditable: false,
+            backgroundColor: color,
+            borderColor: color,
+            textColor,
+            classNames: ['fc-coworker'],
+            extendedProps: {
+              coworker: {
+                agentId: row.agent_id,
+                name: row.name,
+                summary: e.summary,
+                location: e.location,
+                private: e.private,
+                // feat/ventana_evento_calendario F5 (D7) — cancelar o eliminar con su permiso.
+                eventId: e.id,
+                recurringEventId: e.recurring_event_id || null,
+                guests: e.guests || 0,
+                agendaItem: e.agenda_item || null,
+                canSchedule: !!row.can_schedule,
+              },
+            },
           });
-          this.$refs.fullCalendar?.getApi().unselect();
-        },
-        // Clic simple en una hora → cita de 1h (o tarea si es todo el día) prellenada.
-        dateClick: info => {
-          const end = info.allDay
-            ? info.dateStr
-            : new Date(info.date.getTime() + 60 * 60 * 1000).toISOString();
-          this.$emit('dateSelected', {
-            start: info.dateStr,
-            end,
-            allDay: info.allDay,
-          });
-        },
-        datesSet: info => {
-          this.$emit('rangeChanged', {
-            start: info.startStr,
-            end: info.endStr,
-          });
-        },
-        eventClick: info => {
-          this.$emit('eventClicked', info.event);
-        },
-        eventDrop: info => {
-          this.$emit('eventDropped', {
-            eventId: info.event.id,
-            start_time: info.event.startStr,
-            end_time: info.event.endStr,
-            calendar_id: info.event.extendedProps?.calendarId || 'primary',
-            agendaItem: info.event.extendedProps?.agendaItem,
-            revert: info.revert,
-          });
-        },
-        eventResize: info => {
-          this.$emit('eventDropped', {
-            eventId: info.event.id,
-            start_time: info.event.startStr,
-            end_time: info.event.endStr,
-            calendar_id: info.event.extendedProps?.calendarId || 'primary',
-            agendaItem: info.event.extendedProps?.agendaItem,
-            revert: info.revert,
-          });
-        },
-      };
+        });
+      });
     },
   },
 };
 </script>
+
+<template>
+  <div class="flex flex-col flex-1 h-full overflow-hidden fc-wrapper">
+    <FullCalendar ref="fullCalendar" :options="calendarOptions" />
+  </div>
+</template>
 
 <style>
 .fc-wrapper {
@@ -265,6 +359,13 @@ export default {
 
 .fc-wrapper .fc-event:active {
   cursor: grabbing;
+}
+
+/* fix/calendario_google — evento de un compañero: solo lectura. */
+.fc-wrapper .fc-event.fc-coworker {
+  cursor: pointer;
+  opacity: 0.85;
+  border-style: dashed;
 }
 
 /* Plan-Agenda — evento de Google que aún no tiene tarea. */

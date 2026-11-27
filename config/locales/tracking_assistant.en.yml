@@ -132,6 +132,43 @@ en:
       default_route_line_broken: >-
         Line %{line}: the engine does not read this default branch. It goes like this:
         @ruta_por_defecto: branch_name (with the colon). As it is, messages that match no branch go nowhere.
+      variables_outside_section: >-
+        Line %{line}: variables are declared here as "NAME = A | B" (%{name}), but outside the
+        [VARIABLES] section, so the engine does not store them: the agent has to guess their values
+        from the history, and the history gets trimmed. Move them to Variables.
+      variable_undeclared: >-
+        Line %{line}: %{name} is used but it is not in [VARIABLES] (declared: %{declared}). The engine
+        does not store it; add it to Variables or use one that already exists.
+      variable_unused: >-
+        The variable %{name} is in [VARIABLES] but no part of the Training reads or changes it. Use it
+        in a rule ("If %{name}=…", "Set %{name}=…") or remove it.
+      variable_value_unknown: >-
+        Line %{line}: %{name}=%{value}, but %{name} can only be %{options}. The engine drops that value
+        when saving. Change the value or add it to the variable's list.
+      variable_initial_invalid: >-
+        Line %{line}: the initial value %{name}=%{value} is not in the list of %{name}. The agent will
+        start at "%{first}".
+      variable_initial_unknown: >-
+        Line %{line}: "Inicial:" gives a value to %{name}, but that variable is not declared in
+        [VARIABLES]. The engine ignores it.
+      constant_undeclared: >-
+        Line %{line}: %%%{name}%% is cited but it is not in [DATOS FIJOS] (declared: %{declared}). The
+        agent will read "%%%{name}%%" literally. Add it to Fixed data or fix the name.
+      constant_bad_name: >-
+        Line %{line}: "%{name}" was meant to be fixed data, but the name has spaces, lowercase letters
+        or symbols and the system does not read it. Write it like this: %{suggestion}.
+      constant_duplicate: >-
+        Line %{line}: %{name} is already declared on line %{first}. The first one applies; remove this
+        one or rename it.
+      constant_unused: >-
+        The fixed data %{name} is not cited anywhere. Use it with %%%{name}%% where its content goes, or
+        remove it.
+      constant_saves_unknown: >-
+        Line %{line}: question %{name} saves the answer in %{variable}, but %{variable} is not in
+        Variables. Without that, the system does not remember it. Add it to Variables.
+      constant_same_value: >-
+        %{names} have the same content. If they really are the same, keep one; if they should differ
+        (for example, two links), fix the wrong one.
       duplicate_section: >-
         Section [%{title}] appears twice (lines %{first} and %{line}): the agent reads both and, if they
         differ, does not know which one applies. Merge them.

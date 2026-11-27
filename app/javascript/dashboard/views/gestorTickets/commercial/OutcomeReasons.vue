@@ -15,6 +15,7 @@ export default {
   data() {
     return {
       reasons: [],
+      toDelete: null,
       newLabels: { won: '', lost: '', postponed: '', cancelled: '' },
       isLoadingReasons: false,
     };
@@ -80,6 +81,10 @@ export default {
       this.updateReason(reason, { label });
     },
     async deleteReason(reason) {
+      this.toDelete = reason;
+      const ok = await this.$refs.confirmDelete.showConfirmation();
+      this.toDelete = null;
+      if (!ok) return;
       try {
         await CaseOutcomeReasonsAPI.delete(reason.id);
         await this.fetchReasons();
@@ -172,5 +177,16 @@ export default {
         </form>
       </div>
     </div>
+    <woot-confirm-modal
+      ref="confirmDelete"
+      :title="
+        $t('CASE_TICKETS.CONFIRM_DELETE.TITLE', {
+          label: toDelete ? toDelete.label : '',
+        })
+      "
+      :description="$t('CASE_TICKETS.CONFIRM_DELETE.MESSAGE')"
+      :confirm-label="$t('CASE_TICKETS.CONFIRM_DELETE.YES')"
+      :cancel-label="$t('CASE_TICKETS.CONFIRM_DELETE.NO')"
+    />
   </div>
 </template>

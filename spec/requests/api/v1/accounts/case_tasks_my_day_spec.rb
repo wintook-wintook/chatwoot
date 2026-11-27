@@ -154,7 +154,7 @@ RSpec.describe 'Case Tasks Index API — Mi día' do
   end
 
   describe 'el día en la hora del agente' do
-    around { |example| travel_to(Time.utc(2026, 10, 31, 2)) { example.run } } # 8 p. m. del 30 en México
+    before { travel_to(Time.utc(2026, 10, 31, 2)) } # 8 p. m. del 30 en México
 
     let(:tz) { 'America/Mexico_City' }
 
@@ -180,6 +180,42 @@ RSpec.describe 'Case Tasks Index API — Mi día' do
                                                        headers: agent.create_new_auth_token
 
       expect(response.parsed_body['case_tasks'].pluck('title')).to eq(['Hoy local'])
+    end
+  end
+
+  describe 'el día de otra persona' do
+    let(:admin) { create(:user, account: account, role: :administrator) }
+
+    def dia_de(user, as:)
+      get "/api/v1/accounts/#{account.id}/case_tasks",
+          params: { mode: 'my_day', assignee_id: user.id }, headers: as.create_new_auth_token, as: :json
+      response.parsed_body
+    end
+
+    it 'el administrador ve su orden, sus pendientes y su agenda de hoy' do
+      tarea('Planeada de Ana', planned_on: Time.zone.today, focus_position: 0)
+      tarea('Pendiente de Ana', due_at: 1.day.ago)
+      tarea('Mía no', assignee: admin)
+      CaseMeeting.create!(account: account, case_ticket: ticket, title: 'Cita de Ana', organizer: agent,
+                          starts_at: Time.zone.now.end_of_day - 1.hour, ends_at: Time.zone.now.end_of_day - 30.minutes)
+
+      body = dia_de(agent, as: admin)
+
+      expect(body['case_tasks'].pluck('title')).to eq(['Planeada de Ana', 'Pendiente de Ana'])
+      expect(body['meta']['plan_count']).to eq(1)
+      expect(body['meta']['agenda'].pluck('title')).to eq(['Cita de Ana'])
+    end
+
+    it 'con Agenda en «solo lo suyo» pide el de otro y le llega el suyo' do
+      role = AccessRole.for_account(account).find { |r| r.key == 'technician' }
+      role.update!(areas: role.areas.merge('agenda' => 'own'))
+      account.account_users.find_by(user: other).update!(access_role: role)
+      tarea('De Ana')
+      tarea('Del técnico', assignee: other)
+
+      body = dia_de(agent, as: other)
+
+      expect(body['case_tasks'].pluck('title')).to eq(['Del técnico'])
     end
   end
 end

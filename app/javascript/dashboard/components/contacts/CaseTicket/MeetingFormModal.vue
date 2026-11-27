@@ -7,8 +7,11 @@
   horaria (§11.3/§11.5). No se permiten series infinitas.
 -->
 <script>
+import ParticipantsPicker from 'dashboard/components/agenda/ParticipantsPicker.vue';
+
 export default {
   name: 'MeetingFormModal',
+  components: { ParticipantsPicker },
   props: {
     show: { type: Boolean, default: false },
     // Reunión existente (edición) o null (alta).
@@ -23,6 +26,8 @@ export default {
     // Tarea preseleccionada al abrir desde la fila de una tarea.
     contextTask: { type: Object, default: null },
     isSaving: { type: Boolean, default: false },
+    // Realizada, no asistió o cancelada: se ve, no se cambia (para cambiarla, Reabrir).
+    readonly: { type: Boolean, default: false },
     // Plan-Clase-Orden-de-Trabajo F2b — valores iniciales del ALTA (título,
     // lugar, organizador); «Programar visita» los toma de la orden.
     defaults: { type: Object, default: null },
@@ -40,12 +45,11 @@ export default {
         organizer_id: '',
         notify_client: true,
         guests: '',
+        // Agenda: otros del equipo que van (además del responsable).
+        participant_ids: [],
       },
       // F4 — repetición. `single` = reunión suelta (lo de F2).
       mode: 'single',
-      // Agendar desde una tarea: por omisión la tarea se convierte (sale de Tareas); con
-      // esto solo se agenda una sesión ligada y la tarea se queda.
-      keepTask: false,
       series: {
         freq: 'weekly',
         interval: 1,
@@ -61,6 +65,8 @@ export default {
       return !!this.meeting;
     },
     modalTitle() {
+      if (this.readonly)
+        return this.$t('CASE_TICKETS.MEETINGS.MODAL.VIEW_TITLE');
       return this.isEditing
         ? this.$t('CASE_TICKETS.MEETINGS.MODAL.EDIT_TITLE')
         : this.$t('CASE_TICKETS.MEETINGS.MODAL.TITLE');
@@ -89,17 +95,6 @@ export default {
     },
     isSeries() {
       return this.mode === 'series';
-    },
-    // Alta desde la fila de una tarea (una sola vez, no serie).
-    fromTask() {
-      return !this.isEditing && !!this.contextTask && !this.isSeries;
-    },
-    taskReplaceable() {
-      return !!this.contextTask && this.contextTask.replaceable !== false;
-    },
-    // Al guardar, la tarea pasa a la agenda (Cases::Conversion).
-    converting() {
-      return this.fromTask && this.taskReplaceable && !this.keepTask;
     },
     weekDays() {
       // Orden de la semana laboral primero, como el mockup del plan.
@@ -190,7 +185,6 @@ export default {
       const organizerOk = this.organizers.some(o => o.id === d.organizer_id);
       // Editar siempre es de una reunión concreta: el bloque de serie no aplica.
       this.mode = 'single';
-      this.keepTask = false;
       // Desde una tarea: hereda su título, descripción y duración estimada.
       const task = m ? null : this.contextTask;
       this.form = {
@@ -208,6 +202,7 @@ export default {
         // prometía un aviso al cliente que nunca iba a salir.
         notify_client: m ? m.notify_client : !!this.contactEmail,
         guests: (m?.attendee_emails || []).join(', '),
+        participant_ids: (m?.participants || []).map(p => p.id),
       };
     },
     // Mañana a las 10:00 como valor por defecto: agendar es casi siempre a futuro.
@@ -254,7 +249,7 @@ export default {
       else this.series.by_day.splice(i, 1);
     },
     submit() {
-      if (!this.isValid || this.isSaving) return;
+      if (this.readonly || !this.isValid || this.isSaving) return;
       if (this.isSeries) {
         this.$emit('submitSeries', this.seriesPayload());
         return;
@@ -272,12 +267,11 @@ export default {
         ends_at: new Date(this.form.ends_at).toISOString(),
         location: this.form.location,
         is_visit: this.form.is_visit,
-        case_task_id: this.converting ? null : this.form.case_task_id || null,
-        // La tarea que se convierte (la agenda TicketMeetings con /schedule).
-        convert_task_id: this.converting ? this.contextTask.id : null,
+        case_task_id: this.form.case_task_id || null,
         organizer_id: this.form.organizer_id || null,
         notify_client: this.form.notify_client,
         attendee_emails: [...new Set(attendees)],
+        participant_ids: this.form.participant_ids,
         // Zona horaria del navegador del agente: se guarda para no re-interpretar
         // los históricos si luego cambia (plan §8.6).
         time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -322,309 +316,310 @@ export default {
         :header-content="$t('CASE_TICKETS.MEETINGS.MODAL.DESC')"
       />
 
+      <!-- Compacto: campos cortos lado a lado; cabe sin scroll. -->
       <form
-        class="flex flex-col self-stretch w-full gap-3 pb-8"
+        class="meeting-form flex flex-col self-stretch w-full gap-2.5 pb-6"
         @submit.prevent="submit"
       >
-        <label class="block">
-          <span class="text-sm text-slate-700 dark:text-slate-200">{{
-            $t('CASE_TICKETS.MEETINGS.MODAL.TITLE_LABEL')
-          }}</span>
-          <input
-            v-model="form.title"
-            type="text"
-            :placeholder="$t('CASE_TICKETS.MEETINGS.MODAL.TITLE_PLACEHOLDER')"
-          />
-        </label>
-
-        <div class="flex gap-3">
-          <label class="flex-1">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CASE_TICKETS.MEETINGS.MODAL.STARTS_LABEL')
-            }}</span>
-            <input
-              v-model="form.starts_at"
-              type="datetime-local"
-              class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-            />
-          </label>
-          <label class="flex-1">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CASE_TICKETS.MEETINGS.MODAL.ENDS_LABEL')
-            }}</span>
-            <input
-              v-model="form.ends_at"
-              type="datetime-local"
-              class="w-full h-10 p-2 bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100"
-            />
-          </label>
-        </div>
-        <p v-if="dateError" class="m-0 text-xs text-red-600 dark:text-red-400">
-          {{ dateError }}
-        </p>
-
-        <!-- Agendar una tarea: se convierte (sale de Tareas) o solo una sesión ligada -->
-        <div
-          v-if="fromTask"
-          class="flex flex-col gap-1 p-2 text-xs border rounded-md border-woot-100 bg-woot-25 dark:bg-slate-800 dark:border-slate-600"
+        <p
+          v-if="readonly && meeting && meeting.cancel_reason"
+          class="m-0 text-sm text-slate-600 dark:text-slate-300"
         >
-          <template v-if="taskReplaceable">
-            <p class="m-0 text-slate-700 dark:text-slate-200">
-              {{
-                keepTask
-                  ? $t('CASE_TICKETS.MEETINGS.MODAL.KEEP_HINT')
-                  : $t('CASE_TICKETS.MEETINGS.MODAL.CONVERT_HINT', {
-                      title: contextTask.title,
-                    })
-              }}
-            </p>
-            <label
-              class="flex items-center gap-2 text-slate-600 dark:text-slate-300"
-            >
-              <input v-model="keepTask" type="checkbox" class="!m-0" />
-              {{ $t('CASE_TICKETS.MEETINGS.MODAL.KEEP_TASK') }}
+          {{
+            $t('CANCEL_ITEM.CANCELLED_AS', { reason: meeting.cancel_reason })
+          }}
+        </p>
+        <fieldset
+          :disabled="readonly"
+          class="flex flex-col min-w-0 gap-2.5 p-0 m-0 border-0"
+        >
+          <label class="block">
+            <span class="field-label">{{
+              $t('CASE_TICKETS.MEETINGS.MODAL.TITLE_LABEL')
+            }}</span>
+            <input
+              v-model="form.title"
+              type="text"
+              :placeholder="$t('CASE_TICKETS.MEETINGS.MODAL.TITLE_PLACEHOLDER')"
+            />
+          </label>
+
+          <!-- Inicia · Termina · Responsable -->
+          <div class="grid grid-cols-3 gap-3">
+            <label class="block">
+              <span class="field-label">{{
+                $t('CASE_TICKETS.MEETINGS.MODAL.STARTS_LABEL')
+              }}</span>
+              <input v-model="form.starts_at" type="datetime-local" />
             </label>
-          </template>
-          <p v-else class="m-0 text-slate-700 dark:text-slate-200">
-            {{ $t('CASE_TICKETS.MEETINGS.MODAL.KEEP_LOCKED') }}
+            <label class="block">
+              <span class="field-label">{{
+                $t('CASE_TICKETS.MEETINGS.MODAL.ENDS_LABEL')
+              }}</span>
+              <input v-model="form.ends_at" type="datetime-local" />
+            </label>
+            <label class="block">
+              <span class="field-label">{{
+                $t('CASE_TICKETS.MEETINGS.MODAL.ORGANIZER_LABEL')
+              }}</span>
+              <select v-model="form.organizer_id">
+                <option value="">
+                  {{ $t('CASE_TICKETS.MEETINGS.MODAL.ORGANIZER_ME') }}
+                </option>
+                <option v-for="o in organizers" :key="o.id" :value="o.id">
+                  {{ o.name }}
+                </option>
+              </select>
+            </label>
+          </div>
+          <p
+            v-if="dateError"
+            class="m-0 text-xs text-red-600 dark:text-red-400"
+          >
+            {{ dateError }}
           </p>
-        </div>
 
-        <div class="flex gap-3">
-          <label v-if="!converting" class="flex-1">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CASE_TICKETS.MEETINGS.MODAL.TASK_LABEL')
-            }}</span>
-            <select v-model="form.case_task_id">
-              <option value="">
-                {{ $t('CASE_TICKETS.MEETINGS.MODAL.TASK_NONE') }}
-              </option>
-              <option v-for="t in tasks" :key="t.id" :value="t.id">
-                {{ taskLabel(t) }}
-              </option>
-            </select>
-          </label>
+          <!-- Agenda: participantes (en una serie no aplican) -->
+          <ParticipantsPicker
+            v-if="!isSeries && !readonly"
+            v-model="form.participant_ids"
+            :organizer-id="form.organizer_id || $store.getters.getCurrentUserID"
+            :starts-at="form.starts_at"
+            :ends-at="form.ends_at"
+            :exclude-id="meeting && meeting.id"
+            :current="(meeting && meeting.participants) || []"
+          />
 
-          <label class="flex-1">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CASE_TICKETS.MEETINGS.MODAL.ORGANIZER_LABEL')
-            }}</span>
-            <select v-model="form.organizer_id">
-              <option value="">
-                {{ $t('CASE_TICKETS.MEETINGS.MODAL.ORGANIZER_ME') }}
-              </option>
-              <option v-for="o in organizers" :key="o.id" :value="o.id">
-                {{ o.name }}
-              </option>
-            </select>
-          </label>
-        </div>
-
-        <!-- F4 — reunión única o serie. Editar una reunión concreta no muestra
-             esto: la repetición se toca en la serie, no en una ocurrencia. -->
-        <div v-if="!isEditing" class="flex flex-col gap-2">
-          <div class="flex items-center gap-4">
-            <label class="flex items-center gap-2 m-0">
-              <input v-model="mode" type="radio" value="single" class="m-0" />
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
-                $t('CASE_TICKETS.MEETINGS.MODAL.MODE_SINGLE')
+          <!-- Tarea · Lugar -->
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">
+              <span class="field-label">{{
+                $t('CASE_TICKETS.MEETINGS.MODAL.TASK_LABEL')
               }}</span>
+              <select v-model="form.case_task_id">
+                <option value="">
+                  {{ $t('CASE_TICKETS.MEETINGS.MODAL.TASK_NONE') }}
+                </option>
+                <option v-for="t in tasks" :key="t.id" :value="t.id">
+                  {{ taskLabel(t) }}
+                </option>
+              </select>
             </label>
-            <label class="flex items-center gap-2 m-0">
-              <input v-model="mode" type="radio" value="series" class="m-0" />
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
-                $t('CASE_TICKETS.MEETINGS.MODAL.MODE_SERIES')
+            <label class="block">
+              <span class="field-label">{{
+                $t('CASE_TICKETS.MEETINGS.MODAL.LOCATION_LABEL')
               }}</span>
+              <input
+                v-model="form.location"
+                type="text"
+                :placeholder="
+                  $t('CASE_TICKETS.MEETINGS.MODAL.LOCATION_PLACEHOLDER')
+                "
+              />
             </label>
           </div>
 
-          <div
-            v-if="isSeries"
-            class="flex flex-col gap-3 p-3 border rounded-md border-slate-100 dark:border-slate-600 bg-slate-25 dark:bg-slate-900/40"
-          >
-            <div class="flex items-end gap-2">
-              <label class="m-0">
+          <!-- F4 — reunión única o serie. Editar una reunión concreta no muestra
+             esto: la repetición se toca en la serie, no en una ocurrencia. -->
+          <div v-if="!isEditing" class="flex flex-col gap-2">
+            <!-- Una sola vez / Serie · Es una visita, en una línea -->
+            <div class="flex flex-wrap items-center gap-4">
+              <label class="flex items-center gap-2 m-0">
+                <input v-model="mode" type="radio" value="single" class="m-0" />
                 <span class="text-sm text-slate-700 dark:text-slate-200">{{
-                  $t('CASE_TICKETS.MEETINGS.MODAL.REPEAT_EVERY')
+                  $t('CASE_TICKETS.MEETINGS.MODAL.MODE_SINGLE')
                 }}</span>
+              </label>
+              <label class="flex items-center gap-2 m-0">
+                <input v-model="mode" type="radio" value="series" class="m-0" />
+                <span class="text-sm text-slate-700 dark:text-slate-200">{{
+                  $t('CASE_TICKETS.MEETINGS.MODAL.MODE_SERIES')
+                }}</span>
+              </label>
+              <label class="flex items-center gap-2 m-0 ml-4 cursor-pointer">
+                <input v-model="form.is_visit" type="checkbox" class="!mb-0" />
+                <span class="text-sm text-slate-700 dark:text-slate-200">
+                  {{ $t('QUICK_ACTIONS.TASK.IS_VISIT') }}
+                </span>
+              </label>
+            </div>
+
+            <div
+              v-if="isSeries"
+              class="flex flex-col gap-1.5 p-2.5 border rounded-md border-slate-100 dark:border-slate-600 bg-slate-25 dark:bg-slate-900/40"
+            >
+              <!-- Dos renglones, como «Se repite»:
+                   Repetir cada [N] [semanas ▾]  [Lu][Ma]…
+                   Termina [Después de ▾] [N] veces  |  [fecha] -->
+              <div class="flex flex-wrap items-center gap-1.5 text-sm">
+                <span class="text-slate-700 dark:text-slate-200">
+                  {{ $t('CASE_TICKETS.MEETINGS.MODAL.REPEAT_EVERY') }}
+                </span>
                 <input
                   v-model="series.interval"
                   type="number"
                   min="1"
                   max="52"
-                  class="w-20"
+                  class="!w-14 !mb-0 !h-8 !py-0 leading-8 text-sm"
                 />
-              </label>
-              <select v-model="series.freq" class="w-40">
-                <option value="daily">
-                  {{ $t('CASE_TICKETS.MEETINGS.MODAL.FREQ.DAILY') }}
-                </option>
-                <option value="weekly">
-                  {{ $t('CASE_TICKETS.MEETINGS.MODAL.FREQ.WEEKLY') }}
-                </option>
-                <option value="monthly">
-                  {{ $t('CASE_TICKETS.MEETINGS.MODAL.FREQ.MONTHLY') }}
-                </option>
-              </select>
-            </div>
-
-            <div v-if="series.freq === 'weekly'">
-              <span class="text-sm text-slate-700 dark:text-slate-200">{{
-                $t('CASE_TICKETS.MEETINGS.MODAL.DAYS_LABEL')
-              }}</span>
-              <div class="flex flex-wrap gap-1 mt-1">
-                <button
-                  v-for="d in weekDays"
-                  :key="d.code"
-                  type="button"
-                  class="px-2 py-1 text-xs font-medium border rounded"
-                  :class="
-                    series.by_day.includes(d.code)
-                      ? 'bg-woot-500 text-white border-woot-500'
-                      : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
-                  "
-                  @click="toggleDay(d.code)"
+                <select
+                  v-model="series.freq"
+                  class="!w-auto !mb-0 !h-8 !py-0 leading-8 text-sm"
                 >
-                  {{ d.label }}
-                </button>
+                  <option value="daily">
+                    {{ $t('CASE_TICKETS.MEETINGS.MODAL.FREQ.DAILY') }}
+                  </option>
+                  <option value="weekly">
+                    {{ $t('CASE_TICKETS.MEETINGS.MODAL.FREQ.WEEKLY') }}
+                  </option>
+                  <option value="monthly">
+                    {{ $t('CASE_TICKETS.MEETINGS.MODAL.FREQ.MONTHLY') }}
+                  </option>
+                </select>
+                <span
+                  v-if="series.freq === 'weekly'"
+                  class="inline-flex gap-0.5 ltr:ml-2 rtl:mr-2"
+                >
+                  <button
+                    v-for="d in weekDays"
+                    :key="d.code"
+                    type="button"
+                    class="w-8 h-8 text-xs border rounded"
+                    :class="
+                      series.by_day.includes(d.code)
+                        ? 'bg-woot-500 text-white border-woot-500'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200'
+                    "
+                    @click="toggleDay(d.code)"
+                  >
+                    {{ d.label }}
+                  </button>
+                </span>
               </div>
-            </div>
 
-            <div class="flex flex-wrap items-center gap-4">
-              <label class="flex items-center gap-2 m-0">
-                <input
+              <div class="flex flex-wrap items-center gap-1.5 text-sm">
+                <span class="text-slate-700 dark:text-slate-200">
+                  {{ $t('RECURRING_TASKS.ENDS') }}
+                </span>
+                <select
                   v-model="series.end_mode"
-                  type="radio"
-                  value="count"
-                  class="m-0"
-                />
-                <span class="text-sm text-slate-700 dark:text-slate-200">{{
-                  $t('CASE_TICKETS.MEETINGS.MODAL.END_AFTER')
-                }}</span>
+                  class="!w-auto !mb-0 !h-8 !py-0 leading-8 text-sm"
+                >
+                  <option value="count">
+                    {{ $t('RECURRING_TASKS.ENDS_AFTER') }}
+                  </option>
+                  <option value="until">
+                    {{ $t('RECURRING_TASKS.ENDS_ON') }}
+                  </option>
+                </select>
+                <template v-if="series.end_mode === 'count'">
+                  <input
+                    v-model="series.count"
+                    type="number"
+                    min="1"
+                    max="100"
+                    class="!w-14 !mb-0 !h-8 !py-0 leading-8 text-sm"
+                  />
+                  <span class="text-slate-700 dark:text-slate-200">
+                    {{ $t('RECURRING_TASKS.TIMES') }}
+                  </span>
+                </template>
                 <input
-                  v-model="series.count"
-                  type="number"
-                  min="1"
-                  max="100"
-                  class="w-20 m-0"
-                  :disabled="series.end_mode !== 'count'"
-                />
-              </label>
-              <label class="flex items-center gap-2 m-0">
-                <input
-                  v-model="series.end_mode"
-                  type="radio"
-                  value="until"
-                  class="m-0"
-                />
-                <span class="text-sm text-slate-700 dark:text-slate-200">{{
-                  $t('CASE_TICKETS.MEETINGS.MODAL.END_ON')
-                }}</span>
-                <input
+                  v-else
                   v-model="series.until_at"
                   type="date"
-                  class="m-0"
-                  :disabled="series.end_mode !== 'until'"
+                  class="!w-auto !mb-0 !h-8 !py-0 leading-8 text-sm"
                 />
-              </label>
+              </div>
+
+              <!-- Vista previa: lo que se va a crear, antes de confirmar. -->
+              <p class="m-0 text-xs text-slate-500 dark:text-slate-400">
+                {{
+                  $t('CASE_TICKETS.MEETINGS.MODAL.PREVIEW', {
+                    count: seriesPreview.length,
+                    dates: previewLabel,
+                  })
+                }}
+              </p>
             </div>
-
-            <!-- Vista previa: lo que se va a crear, antes de confirmar. -->
-            <p class="m-0 text-xs text-slate-500 dark:text-slate-400">
-              {{
-                $t('CASE_TICKETS.MEETINGS.MODAL.PREVIEW', {
-                  count: seriesPreview.length,
-                  dates: previewLabel,
-                })
-              }}
-            </p>
           </div>
-        </div>
 
-        <label class="flex items-center gap-2 cursor-pointer w-fit">
-          <input v-model="form.is_visit" type="checkbox" class="!mb-0" />
-          <span class="text-sm text-slate-700 dark:text-slate-200">
-            {{ $t('QUICK_ACTIONS.TASK.IS_VISIT') }}
-          </span>
-        </label>
-
-        <label class="block">
-          <span class="text-sm text-slate-700 dark:text-slate-200">{{
-            $t('CASE_TICKETS.MEETINGS.MODAL.LOCATION_LABEL')
-          }}</span>
-          <input
-            v-model="form.location"
-            type="text"
-            :placeholder="
-              $t('CASE_TICKETS.MEETINGS.MODAL.LOCATION_PLACEHOLDER')
-            "
-          />
-        </label>
-
-        <label class="block">
-          <span class="text-sm text-slate-700 dark:text-slate-200">{{
-            $t('CASE_TICKETS.MEETINGS.MODAL.DESCRIPTION_LABEL')
-          }}</span>
-          <textarea
-            v-model="form.description"
-            rows="3"
-            :placeholder="
-              $t('CASE_TICKETS.MEETINGS.MODAL.DESCRIPTION_PLACEHOLDER')
-            "
-          />
-        </label>
-
-        <!-- Invitados: el cliente (si el ticket tiene contacto con correo) y
-             quien se agregue a mano. Hoy es un registro de a quién se invitó;
-             el correo lo manda Google cuando F3 espeje el evento. -->
-        <div class="flex flex-col gap-2">
-          <label class="flex items-center gap-2 m-0">
-            <input
-              v-model="form.notify_client"
-              type="checkbox"
-              :disabled="!canInviteClient"
-              class="m-0"
-            />
+          <label
+            v-if="isEditing"
+            class="flex items-center gap-2 cursor-pointer w-fit"
+          >
+            <input v-model="form.is_visit" type="checkbox" class="!mb-0" />
             <span class="text-sm text-slate-700 dark:text-slate-200">
-              {{ $t('CASE_TICKETS.MEETINGS.MODAL.INVITE_CLIENT') }}
+              {{ $t('QUICK_ACTIONS.TASK.IS_VISIT') }}
             </span>
-            <span
-              v-if="canInviteClient"
-              class="text-sm text-slate-500 dark:text-slate-400"
-              >{{ contactEmail }}</span
-            >
-            <span v-else class="text-xs text-slate-400 dark:text-slate-500">{{
-              $t('CASE_TICKETS.MEETINGS.MODAL.NO_CLIENT_EMAIL')
-            }}</span>
           </label>
 
           <label class="block">
-            <span class="text-sm text-slate-700 dark:text-slate-200">{{
-              $t('CASE_TICKETS.MEETINGS.MODAL.GUESTS_LABEL')
+            <span class="field-label">{{
+              $t('CASE_TICKETS.MEETINGS.MODAL.DESCRIPTION_LABEL')
             }}</span>
-            <input
-              v-model="form.guests"
-              type="text"
+            <textarea
+              v-model="form.description"
+              rows="2"
               :placeholder="
-                $t('CASE_TICKETS.MEETINGS.MODAL.GUESTS_PLACEHOLDER')
+                $t('CASE_TICKETS.MEETINGS.MODAL.DESCRIPTION_PLACEHOLDER')
               "
             />
           </label>
-        </div>
 
-        <p
-          v-if="!hasOrganizers"
-          class="flex items-center gap-1 m-0 text-xs text-amber-700 dark:text-amber-300"
-        >
-          <fluent-icon icon="info" size="14" />
-          {{ $t('CASE_TICKETS.MEETINGS.MODAL.LOCAL_ONLY_HINT') }}
-        </p>
+          <!-- Invitados: el cliente (si el ticket tiene contacto con correo) y
+             quien se agregue a mano. Hoy es un registro de a quién se invitó;
+             el correo lo manda Google cuando F3 espeje el evento. -->
+          <div class="grid items-end grid-cols-2 gap-3">
+            <label class="flex items-center gap-2 m-0 pb-2">
+              <input
+                v-model="form.notify_client"
+                type="checkbox"
+                :disabled="!canInviteClient"
+                class="m-0"
+              />
+              <span class="text-sm text-slate-700 dark:text-slate-200">
+                {{ $t('CASE_TICKETS.MEETINGS.MODAL.INVITE_CLIENT') }}
+              </span>
+              <span
+                v-if="canInviteClient"
+                class="text-sm text-slate-500 dark:text-slate-400"
+                >{{ contactEmail }}</span
+              >
+              <span v-else class="text-xs text-slate-400 dark:text-slate-500">{{
+                $t('CASE_TICKETS.MEETINGS.MODAL.NO_CLIENT_EMAIL')
+              }}</span>
+            </label>
+
+            <label class="block">
+              <span class="field-label">{{
+                $t('CASE_TICKETS.MEETINGS.MODAL.GUESTS_LABEL')
+              }}</span>
+              <input
+                v-model="form.guests"
+                type="text"
+                :placeholder="
+                  $t('CASE_TICKETS.MEETINGS.MODAL.GUESTS_PLACEHOLDER')
+                "
+              />
+            </label>
+          </div>
+
+          <p
+            v-if="!hasOrganizers"
+            class="flex items-center gap-1 m-0 text-xs text-amber-700 dark:text-amber-300"
+          >
+            <fluent-icon icon="info" size="14" />
+            {{ $t('CASE_TICKETS.MEETINGS.MODAL.LOCAL_ONLY_HINT') }}
+          </p>
+        </fieldset>
 
         <div class="flex items-center justify-end gap-2">
           <woot-button variant="clear" type="button" @click="$emit('close')">
             {{ $t('CASE_TICKETS.MEETINGS.MODAL.CANCEL') }}
           </woot-button>
           <woot-button
+            v-if="!readonly"
             :is-loading="isSaving"
             :disabled="!isValid"
             type="submit"
@@ -640,3 +635,34 @@ export default {
     </div>
   </woot-modal>
 </template>
+
+<style lang="scss" scoped>
+// Formulario compacto (igual que el de la tarea): etiquetas chicas y campos de 36 px.
+.meeting-form {
+  .field-label {
+    @apply block mb-1 text-xs font-medium text-slate-600 dark:text-slate-300;
+  }
+
+  input[type='text'],
+  input[type='date'],
+  input[type='number'],
+  input[type='datetime-local'] {
+    @apply h-9 py-1 px-2 mb-0 text-sm;
+  }
+
+  // La flecha del select es su fondo: se deja espacio a la derecha para verla.
+  select {
+    @apply h-9 py-1 pl-2 pr-8 mb-0 text-sm;
+  }
+
+  textarea {
+    @apply mb-0 text-sm;
+  }
+
+  // Los de fecha y hora no traen estilo base: se les da el borde de los demás.
+  input[type='datetime-local'],
+  input[type='time'] {
+    @apply w-full bg-white border rounded-md border-slate-200 dark:border-slate-600 dark:bg-slate-900 text-slate-800 dark:text-slate-100;
+  }
+}
+</style>

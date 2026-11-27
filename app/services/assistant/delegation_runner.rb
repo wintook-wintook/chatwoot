@@ -10,7 +10,7 @@ module Assistant::DelegationRunner
 
   def run_delegate(payload)
     conversation = @tools.find_conversation(payload['conversation_id'])
-    agent = @account.tracking_templates.where(archived_at: nil).find(payload['agent_id'])
+    agent = @account.tracking_templates.listable.where(archived_at: nil).find(payload['agent_id'])
     ticket = payload['case_id'].present? ? @tools.cases.find(payload['case_id']) : nil
     tracking = ContactTracking.create!(tracking_attrs(payload, conversation, agent))
     link_case(ticket, tracking, agent) if ticket
@@ -37,11 +37,11 @@ module Assistant::DelegationRunner
     conversation = @tools.find_conversation(payload['conversation_id'])
     ticket = payload['case_id'].present? ? @tools.cases.find(payload['case_id']) : nil
     params = payload.slice('objective', 'starts_at', 'max_attempts', 'interval_value', 'interval_unit',
-                           'template_name', 'template_language')
+                           'template_name', 'template_language', 'on_finish', 'replace')
                     .merge('instructions' => payload['instruction'], 'time_zone' => @zone.tzinfo.name)
     AiFollowUps::Creator.new(account: @account, user: @user, conversation: conversation, case_ticket: ticket,
                              params: params).call
-    done("Seguimiento delegado a #{AiFollowUp::DISPLAY_NAME}",
+    done(payload['replace'] ? "#{AiFollowUp::DISPLAY_NAME} cambiado (se canceló el anterior)" : "Seguimiento delegado a #{AiFollowUp::DISPLAY_NAME}",
          ticket ? "#{base}/tickets/#{ticket.id}" : "#{base}/contacts/#{conversation.contact_id}")
   rescue ArgumentError => e
     raise Assistant::Executor::Refused, e.message

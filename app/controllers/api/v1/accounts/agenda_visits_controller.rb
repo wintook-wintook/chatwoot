@@ -30,9 +30,14 @@ class Api::V1::Accounts::AgendaVisitsController < Api::V1::Accounts::BaseControl
 
   private
 
+  # Verla: el responsable, un participante o quien ve todo. Marcar «Voy en camino» y «Llegué»: solo el responsable
+  # (o quien ve toda la Agenda, como siempre); el participante solo la ve, sin esos botones.
   def set_meeting
     @meeting = Current.account.case_meetings.where(is_visit: true).find(params[:id])
-    render_access_denied unless @meeting.organizer_id == current_user.id || see_all?
+    return if @meeting.organizer_id == current_user.id || see_all?
+    return if action_name == 'show' && @meeting.participant?(current_user)
+
+    render_access_denied
   end
 
   def see_all?

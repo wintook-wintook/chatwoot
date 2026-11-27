@@ -16,6 +16,7 @@
 #  identifier            :string
 #  last_activity_at      :datetime
 #  last_name             :string           default("")
+#  list_quarantine       :boolean          default(FALSE), not null
 #  location              :string           default("")
 #  middle_name           :string           default("")
 #  name                  :string           default("")
@@ -27,18 +28,21 @@
 #  account_id            :integer          not null
 #  organization_id       :bigint
 #  owner_id              :bigint
+#  prospect_list_id      :bigint
 #
 # Indexes
 #
 #  index_contacts_on_account_id                          (account_id)
 #  index_contacts_on_account_id_and_last_activity_at     (account_id,last_activity_at DESC NULLS LAST)
 #  index_contacts_on_blocked                             (blocked)
+#  index_contacts_on_list_quarantine                     (account_id,list_quarantine) WHERE list_quarantine
 #  index_contacts_on_lower_email_account_id              (lower((email)::text), account_id)
 #  index_contacts_on_name_email_phone_number_identifier  (name,email,phone_number,identifier) USING gin
 #  index_contacts_on_nonempty_fields                     (account_id,email,phone_number,identifier) WHERE (((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))
 #  index_contacts_on_organization_id                     (organization_id)
 #  index_contacts_on_owner_id                            (owner_id)
 #  index_contacts_on_phone_number_and_account_id         (phone_number,account_id)
+#  index_contacts_on_prospect_list_id                    (prospect_list_id)
 #  index_resolved_contact_account_id                     (account_id) WHERE (((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))
 #  uniq_email_per_account_contact                        (email,account_id) UNIQUE
 #  uniq_identifier_per_account_contact                   (identifier,account_id) UNIQUE
@@ -51,7 +55,7 @@
 
 # rubocop:enable Layout/LineLength
 
-class Contact < ApplicationRecord
+class Contact < ApplicationRecord # rubocop:disable Metrics/ClassLength -- ya pasaba del límite antes de este fix
   include Avatarable
   include AvailabilityStatusable
   include Labelable
@@ -71,15 +75,21 @@ class Contact < ApplicationRecord
   validate :owner_belongs_to_account, if: :will_save_change_to_owner_id?
   # Plan-Organizaciones O1 — la empresa o el público en general que es prospecto o cliente.
   belongs_to :organization, optional: true
+  # Campaña con Vendedor IA: vino de una lista fría de correos; en cuarentena no sale en Contactos (ProspectList)
+  belongs_to :prospect_list, optional: true
   has_many :event_attendees, dependent: :destroy # Plan-Eventos E1
   validate :organization_in_account, if: :will_save_change_to_organization_id?
   # Al ligarlo por primera vez, lo suyo que no tenía organización pasa a ella. Cambiar de
   # una a otra solo con Organizations::ChangeContactOrganization.
   after_update_commit :adopt_unlinked_records, if: -> { saved_change_to_organization_id?(from: nil) }
-  has_many :quotes, dependent: :destroy_async # Plan-Catalogo-Cotizaciones
+  # Plan-Catalogo-Cotizaciones. Síncrono: la FK de quotes (sin ON DELETE) frena el borrar si quedan.
+  has_many :quotes, dependent: :destroy
   has_many :customer_assets, dependent: :destroy_async # Plan-Trabajo-Campo R4
   has_many :maintenance_plans, dependent: :destroy_async # Plan-Trabajo-Campo R4
   has_many :contracts, dependent: :destroy_async # Plan-Contratos R1
+  # Seguimiento IA y Agentes listos: la FK no deja borrar el contacto si quedan filas.
+  has_many :ai_follow_ups, dependent: :destroy
+  has_many :ready_agent_sessions, dependent: :destroy
   # ================================================================================
   # proyecto@contact_tracking
   # ================================================================================
@@ -115,7 +125,6 @@ class Contact < ApplicationRecord
   before_save :sync_contact_attributes
 
   enum contact_type: { visitor: 0, lead: 1, customer: 2 }
-  
 
   scope :order_on_last_activity_at, lambda { |direction|
     order(

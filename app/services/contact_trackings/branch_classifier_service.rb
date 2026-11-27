@@ -26,32 +26,39 @@ module ContactTrackings
     # Devuelve la Route elegida, o nil si no se pudo decidir y no hay rama por defecto.
     def classify
       return nil if @route_map.blank?
-      return @route_map.routes.first if @route_map.routes.one?
+      return traced(@route_map.routes.first, :unica) if @route_map.routes.one?
 
       name = ask_llm
       route = @route_map[name]
       if route
         Rails.logger.info "[BranchClassifier] 🧭 Rama: #{route.name}"
-        return route
+        return traced(route, :clasificada)
       end
 
       fallback = @route_map.default
       Rails.logger.info "[BranchClassifier] ⚠️ Sin rama reconocida (#{name.inspect}) → " \
                         "#{fallback ? "por defecto: #{fallback.name}" : 'sin ruteo'}"
-      fallback
+      traced(fallback, :por_defecto)
     rescue StandardError => e
       Rails.logger.warn "[BranchClassifier] ⚠️ #{e.message} → rama por defecto"
-      @route_map.default
+      traced(@route_map.default, :por_defecto)
     end
 
     private
+
+    # proyecto@diagrama_agente_ia F0: la ruta del turno y cómo se eligió, para la traza.
+    def traced(route, como)
+      ContactTrackings::EngineTrace.route(route, como)
+      route
+    end
 
     def ask_llm
       api_key = openai_api_key
       return nil if api_key.blank?
 
-      body = post_json(api_key)
-      raw  = JSON.parse(body).dig('choices', 0, 'message', 'content').to_s
+      body = JSON.parse(post_json(api_key))
+      ContactTrackings::EngineTrace.usage(ContactTrackings::EngineConfig.model_for_tracking(@tracking, :router), body)
+      raw = body.dig('choices', 0, 'message', 'content').to_s
       JSON.parse(raw)['rama'].to_s.strip.downcase.presence
     rescue StandardError => e
       Rails.logger.warn "[BranchClassifier] ⚠️ LLM: #{e.message}"
@@ -91,10 +98,12 @@ module ContactTrackings
         - Si quiere RESOLVER una falla, error o problema de algo que ya usa, es la rama
           técnica o de soporte, aunque mencione una factura, una cotización o un vendedor.
         - Si el mensaje continúa un tema que ya se venía tratando, conservá esa misma rama.
+        - Un saludo solo (hola, buenos días, buenas tardes) sin ninguna pregunta NO continúa el
+          tema anterior: elegí la rama de saludo si existe; si no, null.
         - Si ninguna encaja con claridad, devolvé null.
 
         #{contexto}Mensaje actual del cliente:
-        "#{ContactTrackings::AttachmentText.message_text(@message).strip.truncate(600)}"
+        "#{ContactTrackings::MediaNote.with_marks(ContactTrackings::AttachmentText.message_text(@message), @message).truncate(600)}"
 
         Respondé SOLO un JSON: {"rama": "<uno de: #{@route_map.names.join(' | ')} | null>"}
       PROMPT
@@ -103,7 +112,9 @@ module ContactTrackings
     def contexto
       return '' if @context.blank?
 
-      "Mensajes recientes de la conversación:\n#{@context.truncate(MAX_HISTORY_CHARS)}\n\n"
+      # Si no cabe, se pierde lo más viejo: lo último es lo que el cliente está contestando.
+      reciente = @context.size > MAX_HISTORY_CHARS ? "…#{@context.last(MAX_HISTORY_CHARS - 1)}" : @context
+      "Mensajes recientes de la conversación:\n#{reciente}\n\n"
     end
 
     def openai_api_key

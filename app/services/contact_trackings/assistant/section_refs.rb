@@ -25,7 +25,8 @@ module ContactTrackings::Assistant::SectionRefs
   # [N] seguido de hasta 5 palabras en MAYÚSCULAS (la parte citada), o [N. TÍTULO].
   NUMBER_REF_RE = %r{\[(\d{1,2})(?:[.)]\s*([^\]]+))?\](?:[ \t]+((?:[A-ZÁÉÍÓÚÑ]{3,}(?:[ \t]*/?[ \t]*)){1,5}))?}
   NAME_REF_RE = %r{\[([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ /]{3,60})\]}
-  IGNORED_NAMES = %w[PENDIENTE PENDING].freeze
+  # [NOMBRE] es el nombre del contacto en la bienvenida (ContactTrackings::WelcomeName), no una sección.
+  IGNORED_NAMES = %w[PENDIENTE PENDING NOMBRE].freeze
   MAX_FINDINGS = 15
 
   module_function

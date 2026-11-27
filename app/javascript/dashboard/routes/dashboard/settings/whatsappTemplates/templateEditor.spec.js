@@ -1,6 +1,7 @@
 import {
   emptyForm,
   formFromTemplate,
+  formFromMetaTemplate,
   templatePayload,
   sanitizeName,
   syncSamples,
@@ -306,5 +307,58 @@ describe('nameTaken', () => {
 
   it('no se cuenta a sí misma', () => {
     expect(nameTaken(lista, { ...datos, id: 1 })).toBe(false);
+  });
+});
+
+// fix/campanas (punto 3): la plantilla tal como la trae Meta, lista para la vista previa.
+describe('formFromMetaTemplate', () => {
+  it('toma encabezado, cuerpo con ejemplos, pie y botones', () => {
+    const form = formFromMetaTemplate({
+      name: 'promo',
+      language: 'es_MX',
+      category: 'MARKETING',
+      components: [
+        {
+          type: 'HEADER',
+          format: 'IMAGE',
+          example: { header_handle: ['https://meta/img.jpg'] },
+        },
+        {
+          type: 'BODY',
+          text: 'Hola {{1}}, tu cita es el {{2}}',
+          example: { body_text: [['Ana', 'lunes']] },
+        },
+        { type: 'FOOTER', text: 'Kontrolya' },
+        {
+          type: 'BUTTONS',
+          buttons: [
+            { type: 'URL', text: 'Ver más', url: 'https://k.mx' },
+            { type: 'QUICK_REPLY', text: 'Me interesa' },
+          ],
+        },
+      ],
+    });
+    expect(form).toMatchObject({
+      name: 'promo',
+      header_type: 'image',
+      header_media_url: 'https://meta/img.jpg',
+      body_text: 'Hola {{1}}, tu cita es el {{2}}',
+      footer_text: 'Kontrolya',
+      sample_values: { body: ['Ana', 'lunes'], header: [] },
+    });
+    expect(form.buttons.map(b => [b.type, b.text])).toEqual([
+      ['URL', 'Ver más'],
+      ['QUICK_REPLY', 'Me interesa'],
+    ]);
+  });
+
+  it('un encabezado de texto queda como texto y sin componentes no truena', () => {
+    const form = formFromMetaTemplate({
+      name: 'a',
+      components: [{ type: 'HEADER', format: 'TEXT', text: '¡Hola!' }],
+    });
+    expect(form.header_type).toBe('text');
+    expect(form.header_content).toBe('¡Hola!');
+    expect(formFromMetaTemplate({ name: 'b' }).body_text).toBe('');
   });
 });

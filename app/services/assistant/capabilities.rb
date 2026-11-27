@@ -13,6 +13,7 @@ module Assistant::Capabilities
     keys = %w[consult record] + work_keys(grant)
     keys << (grant.own?(:sales) ? 'sales_own' : 'sales') if grant.allowed?(:sales)
     keys << 'quotes' if grant.writable?(:sales)
+    keys << 'setup' if grant.admin?
     keys << 'guide'
     { lines: keys.map { |k| I18n.t("assistant.capabilities.#{k}") } << I18n.t('assistant.capabilities.limits'),
       starters: starters(grant) }
@@ -24,10 +25,17 @@ module Assistant::Capabilities
     keys << 'cases' if grant.case_area_allowed?
     keys << 'reply' if grant.writable?(:conversations)
     keys << 'delegate'
-    keys << 'field' if grant.allowed?(:agenda)
+    keys.concat(agenda_keys(grant))
     keys << 'client_tasks' if grant.case_area_allowed?
     keys << 'nfc' if grant.allowed?(:campaigns)
     keys
+  end
+
+  # Campo y, si ve la Agenda de todos, el día de las personas del equipo.
+  def agenda_keys(grant)
+    return [] unless grant.allowed?(:agenda)
+
+    grant.own?(:agenda) ? %w[field] : %w[field team_day]
   end
 
   def starters(grant)

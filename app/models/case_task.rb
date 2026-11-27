@@ -73,6 +73,7 @@ class CaseTask < ApplicationRecord
   include TaskReportable
   include CaseTaskActivity # Plan Actividad del caso
   belongs_to :assignee, class_name: 'User', optional: true
+  belongs_to :task_recurrence, optional: true # Tareas que se repiten: la vez que la creó
   # @tickets_cases — solicitante: quién dio de alta la tarea. Se fija al crear con
   # el agente actual y no se edita desde la UI (a diferencia del responsable).
   belongs_to :requester, class_name: 'User', optional: true
@@ -119,11 +120,16 @@ class CaseTask < ApplicationRecord
     done?
   end
 
-  # La orden de trabajo ya cierra con su reporte de servicio y firma: su lista de
-  # verificación no lleva un reporte por punto.
-  # Tampoco las del cliente: lo que hizo queda en sus entradas del portal.
+  # Las del cliente no llevan reporte: lo que hizo queda en sus entradas del portal.
+  # Las de una orden de trabajo sí, salvo cuando el técnico las palomea en la lista de
+  # verificación (Mi ruta o el reporte de servicio de la orden): ver checklist_item?.
   def report_required?
-    !case_ticket&.work_order? && !for_client?
+    !for_client?
+  end
+
+  # Punto de la lista de verificación de una orden de trabajo (Mi ruta en campo).
+  def checklist_item?
+    case_ticket&.work_order? || false
   end
 
   def report_ready?

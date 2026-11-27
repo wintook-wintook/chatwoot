@@ -33,4 +33,28 @@ describe Notification::PushNotificationService do
     expect(urls.grep(%r{/conversations/#{conversation.display_id}\z}).size).to eq(1)
     expect(sent.first).to have_key('body')
   end
+
+  describe 'chat interno' do
+    let(:ana) { create(:user, account: account, name: 'Ana') }
+    let!(:internal) { InternalChannel::Setup.new(account).call }
+
+    def internal_notification(room)
+      message = room.messages.create!(account: account, inbox: internal, sender: ana, message_type: :outgoing, content: 'hola')
+      create(:notification, user: user, account: account, notification_type: 'participating_conversation_new_message',
+                            primary_actor: room, secondary_actor: message)
+    end
+
+    it 'un directo avisa al teléfono de Dali aunque no tenga el aviso de participante; un grupo no' do
+      direct = InternalChannel::Direct.new(account: account, user: ana).open!(user.id)
+      general = internal.conversations.find_by("additional_attributes -> 'internal' ->> 'kind' = 'general'")
+      with_modified_env VAPID_PUBLIC_KEY: 'test', FRONTEND_URL: 'https://app.test' do
+        subscription(dali: true)
+        subscription(dali: false)
+        described_class.new(notification: internal_notification(direct)).perform
+        expect(sent.size).to eq(1)
+        described_class.new(notification: internal_notification(general)).perform
+        expect(sent.size).to eq(1)
+      end
+    end
+  end
 end

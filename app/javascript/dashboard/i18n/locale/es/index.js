@@ -42,6 +42,8 @@ import events from './events.json'; // Plan-Eventos E1
 import contactTracking from './contactTracking.js';
 
 import trackingTemplates from './trackingTemplates.json'; // proyecto@tracking_templates
+import motor2 from './motor2.json'; // Motor 2.0 de Agentes a medida
+import agentTester from './agentTester.json'; // Probador de agentes
 import knowledgeSources from './knowledgeSources.js'; // @knowledge_sources
 import googleCalendar from './googleCalendar.js'; // proyecto@google_calendar
 import gestorTickets from './gestorTickets.json'; // @tickets_cases
@@ -49,9 +51,13 @@ import assistant from './assistant.json'; // Asistente (Dali)
 import erp from './erp.json'; // @query_databases
 import bulkTrackingAssign from './bulkTrackingAssign.json'; // proyecto@bulk_tracking_assign
 import trackingCampaigns from './trackingCampaigns.json'; // @campanas_vendedor
+import campaigns2 from './campaigns2.json'; // Campaña con Vendedor IA (Motor 2.0)
+import collections from './collections.json'; // Cobranza
 import trackingAssistant from './trackingAssistant.json'; // proyecto@asistente_agentes_ia
 import whatsappCalls from './whatsappCalls.json'; // diag/llamadas_whatsapp
-import internalChat from './internalChat.json'; // feat/chat_interno
+import whatsappHealth from './whatsappHealth.json'; // diag/waba
+import internalChat from './internalChat.json';
+import academy from './academy.json'; // Academia Kontrolya // feat/chat_interno
 
 export default {
   ...advancedFilters,
@@ -95,6 +101,8 @@ export default {
   ...events,
   ...contactTracking,
   ...trackingTemplates, // proyecto@tracking_templates
+  ...motor2, // Motor 2.0 de Agentes a medida
+  ...agentTester, // Probador de agentes
   ...knowledgeSources, // @knowledge_sources
   ...googleCalendar, // proyecto@google_calendar
   ...gestorTickets, // @tickets_cases
@@ -102,8 +110,12 @@ export default {
   ...erp, // @query_databases
   ...bulkTrackingAssign, // proyecto@bulk_tracking_assign
   ...trackingCampaigns, // @campanas_vendedor
+  ...campaigns2, // Campaña con Vendedor IA (Motor 2.0)
+  ...collections, // Cobranza
   ...trackingAssistant, // proyecto@asistente_agentes_ia
   ...whatsappCalls, // diag/llamadas_whatsapp
+  ...whatsappHealth, // diag/waba
   ...internalChat, // feat/chat_interno
   ...crmZeus, // CrmZeus
+  ...academy, // Academia Kontrolya
 };

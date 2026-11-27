@@ -1,9 +1,8 @@
 class Integrations::OpenaiBaseService
-  # gpt-4o-mini supports 128,000 tokens
-  # 1 token is approx 4 characters
-  # sticking with 120000 to be safe
-  # 120000 * 4 = 480,000 characters (rounding off downwards to 400,000 to be safe)
-  TOKEN_LIMIT = 400_000
+  # Caracteres de conversación (los más recientes) para resumir o sugerir respuesta.
+  # Antes 400,000 (~100K tokens: lo que cabe en el modelo); un resumen o una sugerencia no
+  # necesita más que lo reciente. 40,000 caracteres ≈ 10K tokens.
+  TOKEN_LIMIT = 40_000
   API_URL = 'https://api.openai.com/v1/chat/completions'.freeze
   GPT_MODEL = ENV.fetch('OPENAI_GPT_MODEL', 'gpt-4o-mini').freeze
 

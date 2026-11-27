@@ -22,13 +22,14 @@
 
 # KANBAN0725-MODEL
 
-class Account < ApplicationRecord
+class Account < ApplicationRecord # rubocop:disable Metrics/ClassLength -- develop ya estaba en el tope (175)
   # used for single column multi flags
   include FlagShihTzu
   include Reportable
   include Featurable
   include CacheKeys
   include InternalChatToggle # feat/chat_interno
+  include CrmZeusAccount # CrmZeus — tablas crm_* (app/models/concerns/crm_zeus_account.rb)
 
   has_many :scheduled_messages, dependent: :destroy
 
@@ -44,38 +45,39 @@ class Account < ApplicationRecord
   has_many :case_tickets, dependent: :destroy # @tickets_cases
   has_many :case_tasks, dependent: :destroy # Plan-Agenda — incluye las que no tienen caso
   has_many :case_meetings, dependent: :destroy
+  has_many :task_recurrences, dependent: :destroy # Tareas que se repiten
   has_many :task_outcomes, dependent: :destroy # Reporte de cierre
   has_many :task_reports, dependent: :destroy
   has_many :access_roles, dependent: :destroy # Plan-Roles-Permisos
   has_many :catalog_items, dependent: :destroy # Plan-Catalogo-Cotizaciones
+  # Productos y servicios › Parámetros
+  has_many :catalog_categories, dependent: :delete_all
+  has_many :catalog_units, dependent: :delete_all
+  has_many :tax_rates, dependent: :delete_all
+  has_many :quote_formats, dependent: :destroy # Cotizaciones › Formatos (con su logo)
   has_many :quotes, dependent: :destroy # Plan-Catalogo-Cotizaciones
   has_many :sales_budget_lines, dependent: :delete_all # Presupuesto de ventas
   has_many :customer_assets, dependent: :destroy # Plan-Trabajo-Campo R4
   has_many :maintenance_plans, dependent: :destroy # Plan-Trabajo-Campo R4
   has_many :contracts, dependent: :destroy # Plan-Contratos R1
   has_many :organizations, dependent: :destroy # Plan-Organizaciones O1
+  # Cobranza (agente listo «Cobranza»): la cartera por cortes (Receivables::Snapshot)
+  has_many :receivable_imports, dependent: :destroy_async
+  has_many :receivable_customers, dependent: :destroy_async
+  has_many :receivables, dependent: :destroy_async
+  has_many :payment_promises, dependent: :destroy_async
+  has_many :payment_claims, dependent: :destroy_async
   has_many :events, dependent: :destroy # Plan-Eventos E1
   has_many :client_portal_links, dependent: :destroy # Portal del cliente (tareas con el cliente)
   has_many :contract_types, dependent: :destroy # Plan-Contratos R1
-  has_many :crm_quotes, dependent: :destroy # CrmZeus Q0 (antes que las organizaciones: su FK es restrictiva)
-  has_many :crm_quote_series, dependent: :delete_all # CrmZeus Q0
-  has_one :crm_setting, dependent: :delete # CrmZeus Q3.1
-  has_many :crm_organizations, dependent: :destroy # CrmZeus O0
-  has_many :crm_lookups, dependent: :destroy # CrmZeus O0
-  has_many :crm_sellers, dependent: :destroy # CrmZeus O0
-  has_many :crm_payment_terms, dependent: :destroy # CrmZeus O0
-  has_many :crm_currencies, dependent: :destroy # CrmZeus O0
-  has_many :crm_countries, dependent: :destroy # CrmZeus O0
-  # Antes que los artículos: un artículo que es componente de un kit no se deja borrar.
-  has_many :crm_article_components, dependent: :delete_all # CrmZeus A3
-  has_many :crm_articles, dependent: :destroy # CrmZeus A0
-  has_many :crm_article_lines, dependent: :destroy # CrmZeus A0
-  has_many :crm_units, dependent: :destroy # CrmZeus A0
-  has_many :crm_taxes, dependent: :destroy # CrmZeus A0
   has_many :external_db_connections, dependent: :destroy # @query_databases
   has_many :external_db_queries,     dependent: :destroy # @query_databases
   has_many :erp_collection_bots,     dependent: :destroy # @query_databases
   has_many :whatsapp_templates,      dependent: :destroy # @waba_templates
+  has_many :ai_follow_up_presets,    dependent: :destroy # plantillas de seguimiento
+  has_many :ready_agents,            dependent: :destroy # agentes listos (puestos empaquetados)
+  has_many :ready_agent_sessions,    dependent: :destroy
+  has_many :ai_follow_ups,           dependent: :destroy # Seguimiento IA
   has_many :case_rules,         dependent: :destroy # @tickets_cases
   has_many :case_types,         dependent: :destroy # @tickets_cases
   has_many :case_services,      dependent: :destroy # @tickets_cases 2B
@@ -104,7 +106,10 @@ class Account < ApplicationRecord
   has_many :macros, dependent: :destroy_async
   has_many :campaigns, dependent: :destroy_async
   has_many :canned_responses, dependent: :destroy_async
-  has_many :canned_response_categories, dependent: :destroy_async
+  # proyecto@auditoria_predefinidas
+  has_many :canned_response_audits, dependent: :delete_all
+  has_many :canned_response_findings, dependent: :delete_all
+  has_many :canned_response_fixes, dependent: :delete_all # proyecto@arreglar_predefinidas
   has_many :knowledge_sources, dependent: :destroy # @knowledge_sources
   has_many :knowledge_items, dependent: :destroy   # @knowledge_sources
   has_many :categories, dependent: :destroy_async, class_name: '::Category'

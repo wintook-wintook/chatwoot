@@ -61,7 +61,7 @@ const hasAppliedFiltersOrActiveFolders = computed(() => {
         hasAppliedFiltersOrActiveFolders,
     }"
   >
-    <div class="flex max-w-[85%] justify-center items-center">
+    <div class="flex max-w-[85%] min-w-0 justify-center items-center">
       <h1
         class="text-xl font-medium break-words truncate text-black-900 dark:text-slate-100"
         :title="pageTitle"
@@ -75,7 +75,11 @@ const hasAppliedFiltersOrActiveFolders = computed(() => {
         {{ $t(`CHAT_LIST.CHAT_STATUS_FILTER_ITEMS.${activeStatus}.TEXT`) }}
       </span>
     </div>
-    <div class="flex items-center gap-1">
+    <!-- «Agente IA» (Plan-Agente-IA-en-Conversaciones): entre el estado y el botón de filtro. -->
+    <div class="flex flex-1 justify-end min-w-0 mx-1 overflow-hidden">
+      <slot name="aiAgent" />
+    </div>
+    <div class="flex items-center gap-1 shrink-0">
       <div v-if="hasAppliedFilters && !hasActiveFolders">
         <woot-button
           v-tooltip.top-end="$t('FILTER.CUSTOM_VIEWS.ADD.SAVE_BUTTON')"

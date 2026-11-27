@@ -75,6 +75,22 @@
         "META_TAGS": {
           "LABEL": "Meta etiquetas",
           "PLACEHOLDER": "Agregar meta etiquetas separadas por coma..."
+        },
+        "DALI": {
+          "TITLE": "Guía de Dali",
+          "ABOUT": "Dali usa este artículo para contestar en todas las cuentas.",
+          "KEY": "Clave",
+          "KEY_HELP": "No se cambia: Dali y sus enlaces la usan para encontrar la guía.",
+          "AREAS": "Áreas",
+          "AREAS_PLACEHOLDER": "Todas las áreas",
+          "AREAS_HELP": "Solo la ve quien tiene alguna de estas áreas. Vacío: la ve todo el mundo.",
+          "KEYWORDS": "Palabras clave",
+          "KEYWORDS_PLACEHOLDER": "Agrega palabras separadas por coma...",
+          "KEYWORDS_EMPTY": "Sin palabras clave Dali casi no encuentra esta guía.",
+          "PAGES": "Pantallas",
+          "PAGES_PLACEHOLDER": "Pantallas que menciona la guía",
+          "REVIEWED": "Revisada el",
+          "REVIEWED_HELP": "Último día en que se revisó contra las pantallas, aunque el texto no cambiara."
         }
       },
       "BUTTONS": {

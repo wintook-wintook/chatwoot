@@ -15,8 +15,11 @@ class Api::V1::Accounts::GoogleCalendar::EventsController < Api::V1::Accounts::B
   end
 
   def create
+    target_calendar = schedule_target_calendar
+    return if performed?
+
     event = calendar_service.create_event(
-      calendar_id: params[:calendar_id].presence || 'primary',
+      calendar_id: target_calendar,
       summary:     params[:summary],
       description: params[:description],
       attendees:   Array(params[:attendees]),
@@ -46,31 +49,57 @@ class Api::V1::Accounts::GoogleCalendar::EventsController < Api::V1::Accounts::B
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
-  def agent_events
-    agent_integration = UserCalendarIntegration.find_by(
-      user_id: params[:agent_id],
-      account: Current.account
-    )
-    return render json: { error: 'Agent not connected' }, status: :not_found unless agent_integration
+  # fix/calendario_eliminar F1 — DELETE /google_calendar/events/:id?calendar_id=&scope=one|all&notify=
+  # Solo eventos de Google sin tarea agendada (las tareas se cancelan). Ver GoogleCalendarEventDeleter.
+  DELETE_STATUS = { 'linked_to_agenda_item' => :conflict, 'no_permission' => :forbidden }.freeze
 
-    service = GoogleCalendarService.new(agent_integration)
+  def destroy
+    target = delete_target
+    return if performed?
 
-    if params[:agent_id].to_s == current_user.id.to_s
-      events = service.list_events(time_min: time_min, time_max: time_max)
-      render json: { events: events }
-    else
-      busy = service.free_busy(
-        calendars: ['primary'],
-        time_min: time_min,
-        time_max: time_max
-      )
-      render json: { busy: busy.dig('calendars', 'primary', 'busy') || [] }
-    end
+    result = GoogleCalendarEventDeleter.new(
+      account: Current.account, user: current_user, service: calendar_service, event_id: params[:id], options: delete_options(target)
+    ).call
+    return render json: { deleted: true, scope: result.scope } if result.ok
+
+    render json: { error: I18n.t("google_calendar_delete.#{result.reason}"), reason: result.reason },
+           status: DELETE_STATUS.fetch(result.reason, :unprocessable_entity)
   rescue StandardError => e
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
   private
+
+  def delete_options(target)
+    target.merge(scope: params[:scope], notify: params[:notify].to_s != 'false')
+  end
+
+  # feat/ventana_evento_calendario F5 (D7) — con `agent_id` de un compañero se borra en SU
+  # calendario, solo si me dio «Hacer cambios» (lo pregunta el guardián a Google).
+  def delete_target
+    agent_id = params[:agent_id].presence
+    return { calendar_id: params[:calendar_id] } if agent_id.nil? || agent_id.to_i == current_user.id
+
+    guard = GoogleCalendarScheduleGuard.new(account: Current.account, viewer: current_user, agent_id: agent_id).call
+    return render(json: { error: guard.error }, status: :forbidden) && {} unless guard.ok?
+
+    email = guard.coworker_integration.google_email
+    { calendar_id: email, owner_email: email }
+  end
+
+  # F3b «Agendar a» (fix/calendario_google): con `agent_id` de un compañero, el evento va a SU
+  # calendario principal, creado con MI conexión y solo si me dio «Hacer cambios» en Google.
+  # Yo no quedo como invitado: no aparece en mi calendario.
+  def schedule_target_calendar
+    agent_id = params[:agent_id].presence
+    return params[:calendar_id].presence || 'primary' if agent_id.nil? || agent_id.to_i == current_user.id
+
+    guard = GoogleCalendarScheduleGuard.new(account: Current.account, viewer: current_user, agent_id: agent_id).call
+    return guard.coworker_integration.google_email if guard.ok?
+
+    render json: { error: guard.error }, status: :forbidden
+    nil
+  end
 
   def require_integration
     @integration = current_user.user_calendar_integrations.find_by(account: Current.account)

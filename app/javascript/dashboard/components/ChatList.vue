@@ -29,6 +29,7 @@ import { CONVERSATION_EVENTS } from '../helper/AnalyticsHelper/events';
 import IntersectionObserver from './IntersectionObserver.vue';
 import NewInternalChatModal from './internalChat/NewInternalChatModal.vue'; // feat/chat_interno
 import InternalChatList from './internalChat/InternalChatList.vue'; // feat/chat_interno_pulido
+import AiAgentFilter from './widgets/conversation/AiAgentFilter.vue'; // «Agente IA» (Plan-Agente-IA-en-Conversaciones)
 import { INBOX_TYPES } from 'shared/mixins/inboxMixin';
 import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
 import {
@@ -43,6 +44,7 @@ import { ASSIGNEE_TYPE_TAB_PERMISSIONS } from 'dashboard/constants/permissions.j
 
 export default {
   components: {
+    AiAgentFilter,
     ChatListHeader,
     NewInternalChatModal,
     AddCustomViews,
@@ -186,6 +188,8 @@ export default {
       activeAssigneeTab: wootConstants.ASSIGNEE_TYPE.ME,
       activeStatus: wootConstants.STATUS_TYPE.OPEN,
       activeSortBy: wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC,
+      // «Agente IA»: '' todos · without · with · una función. Se recuerda por usuario (o viene en ?ai_agent=).
+      aiAgent: this.$route?.query?.ai_agent || this.savedAiAgent(),
       showAdvancedFilters: false,
       advancedFilterTypes: advancedFilterTypes.map(filter => ({
         ...filter,
@@ -365,6 +369,7 @@ export default {
         labels: this.label ? [this.label] : undefined,
         teamId: this.teamId || undefined,
         conversationType: this.conversationType || undefined,
+        aiAgent: this.aiAgent || undefined,
       };
     },
     conversationListPagination() {
@@ -485,6 +490,10 @@ export default {
     label() {
       this.resetAndFetchData();
       this.updateVirtualListProps('label', this.label);
+    },
+    // Desde el menú «🤖 Agentes de IA» (?ai_agent=…).
+    '$route.query.ai_agent'(value) {
+      if (value !== undefined && value !== this.aiAgent) this.setAiAgent(value);
     },
     conversationType() {
       this.resetAndFetchData();
@@ -750,6 +759,22 @@ export default {
     resetBulkActions() {
       this.$store.dispatch('bulkActions/clearSelectedConversationIds');
       this.selectedInboxes = [];
+    },
+    savedAiAgent() {
+      try {
+        return window.localStorage.getItem('kontrolya:ai_agent_filter') || '';
+      } catch (e) {
+        return '';
+      }
+    },
+    setAiAgent(value) {
+      this.aiAgent = value || '';
+      try {
+        window.localStorage.setItem('kontrolya:ai_agent_filter', this.aiAgent);
+      } catch (e) {
+        // sin almacenamiento: solo esta vez
+      }
+      this.resetAndFetchData();
     },
     onBasicFilterChange(value, type) {
       if (type === 'status') {
@@ -1029,7 +1054,15 @@ export default {
       @resetFilters="resetAndFetchData"
       @basicFilterChange="onBasicFilterChange"
       @newInternalChat="showNewInternalChat = true"
-    />
+    >
+      <template #aiAgent>
+        <AiAgentFilter
+          v-if="!isInternalInbox && !hasAppliedFiltersOrActiveFolders"
+          :value="aiAgent"
+          @change="setAiAgent"
+        />
+      </template>
+    </ChatListHeader>
 
     <AddCustomViews
       v-if="showAddFoldersModal"

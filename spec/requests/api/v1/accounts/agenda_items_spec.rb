@@ -25,6 +25,18 @@ RSpec.describe 'Agenda Items API' do
   end
 
   describe 'POST alta' do
+    # feat/ventana_evento_calendario F3
+    it 'con un correo invitado mal escrito no la crea' do
+      expect { create_item(meeting_params(contact_id: contact.id, attendee_emails: ['ok@x.com', 'mal@'])) }
+        .not_to change(CaseMeeting, :count)
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it 'guarda los invitados limpios y los devuelve' do
+      body = create_item(meeting_params(contact_id: contact.id, attendee_emails: [' Ok@X.com ', 'ok@x.com']))
+      expect(body['agenda_item']['attendee_emails']).to eq(['ok@x.com'])
+    end
+
     it 'crea la tarea agendada solo con su contacto, le pone la organización y la manda a Google' do
       expect { create_item(meeting_params(contact_id: contact.id)) }.to have_enqueued_job(Cases::MeetingSyncJob)
 
@@ -38,6 +50,36 @@ RSpec.describe 'Agenda Items API' do
       create_item(meeting_params(assignee_id: tecnico.id))
 
       expect(CaseMeeting.last).to have_attributes(contact_id: nil, organization_id: nil, case_ticket_id: nil, organizer_id: tecnico.id)
+    end
+
+    # fix/calendario_google F3b — si el otro tiene Google, la tarea acaba en SU calendario:
+    # solo si me dio «Hacer cambios» (lo pregunta GoogleCalendarScheduleGuard).
+    context 'when es para otra persona con Google Calendar' do
+      let(:tecnico) { create(:user, account: account, role: :agent) }
+      let(:guard) { instance_double(GoogleCalendarScheduleGuard) }
+
+      before do
+        allow(GoogleCalendarScheduleGuard).to receive(:new).and_return(guard)
+        allow(guard).to receive(:call).and_return(guard)
+      end
+
+      it 'sin su permiso no la crea y dice por qué' do
+        allow(guard).to receive(:error).and_return('Tu compañero no te dio permiso')
+        expect { create_item(meeting_params(assignee_id: tecnico.id)) }.not_to change(CaseMeeting, :count)
+
+        expect(response).to have_http_status(:forbidden)
+        expect(response.parsed_body['error']).to eq('Tu compañero no te dio permiso')
+      end
+
+      it 'con su permiso queda como responsable' do
+        allow(guard).to receive(:error).and_return(nil)
+        create_item(meeting_params(assignee_id: tecnico.id))
+
+        expect(response).to have_http_status(:created)
+        expect(CaseMeeting.last.organizer_id).to eq(tecnico.id)
+        expect(GoogleCalendarScheduleGuard).to have_received(:new)
+          .with(account: account, viewer: agent, agent_id: tecnico.id, allow_without_google: true)
+      end
     end
 
     it 'no acepta un contacto de otra cuenta' do
@@ -110,6 +152,61 @@ RSpec.describe 'Agenda Items API' do
       expect do
         patch "#{base}/#{meeting.id}", params: { starts_at: 2.days.from_now, ends_at: 49.hours.from_now }, headers: headers, as: :json
       end.to have_enqueued_job(Cases::MeetingSyncJob)
+    end
+
+    # fix/calendario_eliminar F2 — «Cancelar tarea agendada» desde la ventana del calendario.
+    it 'la cancela con motivo, deja el motivo y avisa que no es de una serie' do
+      reason = TaskOutcome.ensure_defaults_for(account, purpose: 'cancel').find { |r| !r.other? }
+      meeting = cita
+
+      patch "#{base}/#{meeting.id}", params: { status: 'cancelled', reason_id: reason.id, scope: 'one' },
+                                     headers: headers, as: :json
+
+      expect(response).to have_http_status(:success)
+      item = response.parsed_body['agenda_item']
+      expect(item).to include('status' => 'cancelled', 'series' => false)
+      expect(meeting.reload.cancel_reason).to include(reason.label)
+    end
+
+    it 'sin motivo no la cancela' do
+      meeting = cita
+
+      patch "#{base}/#{meeting.id}", params: { status: 'cancelled' }, headers: headers, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(meeting.reload.status).to eq('scheduled')
+    end
+
+    # feat/ventana_evento_calendario F3 — invitados por correo también al editar.
+    it 'cambia sus invitados por correo (limpios y sin repetir) y lo lleva a Google' do
+      meeting = cita(attendee_emails: ['viejo@cliente.com'])
+
+      expect do
+        patch "#{base}/#{meeting.id}", params: { attendee_emails: [' Jefe@Empresa.com', 'jefe@empresa.com', 'b@y.com'] },
+                                       headers: headers, as: :json
+      end.to have_enqueued_job(Cases::MeetingSyncJob)
+
+      expect(response).to have_http_status(:success)
+      expect(meeting.reload.attendee_emails).to eq(['jefe@empresa.com', 'b@y.com'])
+      expect(response.parsed_body['agenda_item']['attendee_emails']).to eq(['jefe@empresa.com', 'b@y.com'])
+    end
+
+    it 'un correo mal escrito no se guarda: responde cuál' do
+      meeting = cita(attendee_emails: ['a@x.com'])
+
+      patch "#{base}/#{meeting.id}", params: { attendee_emails: ['b@y.com', 'jefe@empresa,com'] }, headers: headers, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to include('jefe@empresa,com')
+      expect(meeting.reload.attendee_emails).to eq(['a@x.com'])
+    end
+
+    it 'sin attendee_emails en la petición no toca los invitados' do
+      meeting = cita(attendee_emails: ['a@x.com'])
+
+      patch "#{base}/#{meeting.id}", params: { title: 'Otro' }, headers: headers, as: :json
+
+      expect(meeting.reload.attendee_emails).to eq(['a@x.com'])
     end
 
     it 'la liga a un caso y toma el consecutivo del caso' do

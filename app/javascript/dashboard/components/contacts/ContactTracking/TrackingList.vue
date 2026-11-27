@@ -82,7 +82,8 @@ import {
     getStatusLabel,
     canCancel,
     canEdit,
-    canDuplicate
+    canDuplicate,
+    canPause
 } from '../../../helper/trackingHelpers';
 
 export default {
@@ -256,7 +257,7 @@ export default {
                     renderBodyCell: ({ row }) => {
                         return (
                             <div class="button-wrapper">
-                                {(row.status === 'active' || row.status === 'scheduled') && (
+                                {this.canPause(row.status) && (
                                     <woot-button
                                         color-scheme="secondary"
                                         variant="smooth"
@@ -320,6 +321,7 @@ export default {
         getStatusLabel,
         canCancel,
         canEdit,
+        canPause,
         canDuplicate,
     },
 };

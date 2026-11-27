@@ -8,15 +8,23 @@
 // ============================================================================
 import AssistantAPI from 'dashboard/api/assistant';
 import EngineCatalog from '../assistant/EngineCatalog.vue';
+import SourceProfiles from '../assistant/SourceProfiles.vue';
 
 export default {
-  components: { EngineCatalog },
+  components: { EngineCatalog, SourceProfiles },
   data() {
     return { inventory: null, isLoading: false, error: '' };
   },
   computed: {
     catalog() {
       return (this.inventory && this.inventory.catalog) || [];
+    },
+    // FR (crear_agente_conversando): qué tiene cada fuente y qué falta.
+    profiles() {
+      return (this.inventory && this.inventory.profiles) || [];
+    },
+    missingSources() {
+      return (this.inventory && this.inventory.missing_sources) || [];
     },
     phrases() {
       return (this.inventory && this.inventory.customer_phrases) || [];
@@ -58,6 +66,13 @@ export default {
     <p v-if="error" class="mb-4 text-sm text-red-600 dark:text-red-400">
       {{ error }}
     </p>
+
+    <SourceProfiles
+      v-if="inventory"
+      class="mb-6"
+      :profiles="profiles"
+      :missing="missingSources"
+    />
 
     <EngineCatalog :catalog="catalog" />
 

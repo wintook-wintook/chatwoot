@@ -65,7 +65,7 @@ class TrackingCampaigns::Enroll
     return 'daily_cap' if daily_cap_reached?
     return 'active_tracking' if @skip_active && active_tracking?
 
-    contact_reason
+    rest_reason || contact_reason
   end
 
   # prospeccion V4: quien pidió no ser contactado nunca se inscribe, aunque el canal pudiera.
@@ -85,22 +85,72 @@ class TrackingCampaigns::Enroll
   end
 
   # Continua: el que pasa del tope del día queda omitido. Por lote se reparte (batch_day_offset).
+  # Campaña con Vendedor IA: no se omite; el tope del día lo cuida SendGate al mandar (pasa al día siguiente).
   def daily_cap_reached?
-    return false if @campaign.daily_cap.blank? || !@campaign.continuous?
+    return false if @campaign.daily_cap.blank? || !@campaign.continuous? || @campaign.motor2?
 
     day = @at.in_time_zone(@campaign.inbox.timezone.presence || 'UTC')
-    @campaign.entries.enrolled.where(created_at: day.all_day).count >= @campaign.daily_cap
+    @campaign.entries.enrolled.where(created_at: day.all_day).count >= cap_today(day)
   end
+
+  # Campaña con Vendedor IA calentando el dominio: el tope de hoy sube cada día desde que empezó (Motor2Brief).
+  def cap_today(day)
+    return @campaign.daily_cap unless warmup?
+
+    started = (@campaign.scheduled_for || @campaign.created_at).in_time_zone(day.time_zone).to_date
+    TrackingCampaigns::Motor2Brief.warmup_cap(@campaign.daily_cap, (day.to_date - started).to_i)
+  end
+
+  def warmup? = @campaign.motor2? && @campaign.brief.to_h['warmup'] == true
 
   # prospeccion V3: por lote, con tope, el inscrito número n sale el día hábil n / tope.
   def batch_day_offset
     return 0 if @campaign.continuous? || @campaign.daily_cap.blank?
+    return TrackingCampaigns::Motor2Brief.warmup_day(@campaign.entries.enrolled.count, @campaign.daily_cap) if warmup?
 
     @campaign.entries.enrolled.count / @campaign.daily_cap
   end
 
+  # Campaña con Vendedor IA: si otra campaña 2.0 ya le escribió hace menos de rest_days, se omite (no saturar).
+  def recently_contacted?
+    days = @campaign.motor2? && !@campaign.test_run? ? @campaign.brief.to_h['rest_days'].to_i : 0
+    return false unless days.positive?
+
+    TrackingCampaignEntry.enrolled.where(contact_id: @contact.id, account_id: @campaign.account_id)
+                         .where.not(tracking_campaign_id: @campaign.id).where('tracking_campaign_entries.created_at > ?', days.days.ago)
+                         .joins(:tracking_campaign).exists?(tracking_campaigns: { engine: '2', test_of_id: nil })
+  end
+
+  # Campaña con IA: otra le escribió hace poco, o pidió no recibir campañas de este tipo.
+  def rest_reason
+    return 'recently_contacted' if recently_contacted?
+
+    'excluded_label' if excluded_label?
+  end
+
+  # Campaña con IA: el que pidió no recibir campañas de este tipo (su etiqueta «no…», TrackingCampaigns::CampaignKit)
+  # no se inscribe. La baja general (opted_out) es aparte.
+  def excluded_label?
+    return false unless @campaign.motor2? && !@campaign.test_run?
+
+    title = TrackingCampaigns::CampaignKit.label(@campaign.brief, 'opt_out')
+    title.present? && @contact.label_list.include?(title)
+  end
+
   def active_tracking?
+    close_stale_trackings! if @campaign.motor2?
     ContactTracking.exists?(contact_id: @contact.id, inbox_id: @campaign.inbox_id, status: ACTIVE_STATUSES)
+  end
+
+  STALE_AFTER = 7.days
+
+  # Campaña con Vendedor IA: el seguimiento «solo contesta» del agente de la bandeja (o uno que quedó pausado tras un
+  # relevo) no tiene toques pendientes; si lleva STALE_AFTER sin moverse, ya no detiene la campaña nueva: se cierra.
+  # Uno con toques por salir (pending/scheduled) o con plática reciente sí la detiene.
+  def close_stale_trackings!
+    ContactTracking.where(contact_id: @contact.id, inbox_id: @campaign.inbox_id).where('updated_at < ?', STALE_AFTER.ago)
+                   .where("status = 'paused' OR (status = 'active' AND (scheduled_for IS NULL OR scheduled_for > ?))", 1.year.from_now)
+                   .update_all(status: 'completed', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def contactability
@@ -122,7 +172,12 @@ class TrackingCampaigns::Enroll
   def follow_up_delay
     template = @campaign.tracking_template
     value = template.retry_interval_value.presence || 1
-    case template.retry_interval_unit
+    unit = template.retry_interval_unit
+    if @campaign.motor2?
+      value, unit = TrackingCampaigns::Motor2Brief.tracking_touches(@campaign).values_at(:retry_interval_value,
+                                                                                         :retry_interval_unit)
+    end
+    case unit
     when 'minutes' then value.minutes
     when 'hours' then value.hours
     else value.days

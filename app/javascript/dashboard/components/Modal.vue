@@ -86,7 +86,9 @@ export default {
       <div
         class="relative max-h-full overflow-auto bg-white shadow-md modal-container rtl:text-right dark:bg-slate-800 skip-context-menu"
         :class="{
-          'rounded-xl w-[37.5rem]': !fullWidth,
+          // max-w-full: en teléfono o ventana partida no pasa del ancho de la pantalla
+          // (Plan-Pantallas-Responsive #6).
+          'rounded-xl w-[37.5rem] max-w-full': !fullWidth,
           'items-center rounded-none flex h-full justify-center w-full':
             fullWidth,
           [size]: true,
@@ -115,6 +117,11 @@ export default {
     &.medium {
       @apply max-w-[80%] w-[56.25rem];
     }
+
+    // Asistentes de los agentes listos: formulario con pestañas y chat de prueba lado a lado.
+    &.large {
+      @apply max-w-[95%] w-[75rem];
+    }
     // .content-box {
     //   @apply h-auto p-0;
     // }
@@ -136,7 +143,7 @@ export default {
 .modal-mask.right-aligned {
   @apply justify-end;
   .modal-container {
-    @apply rounded-none h-full w-[30rem];
+    @apply rounded-none h-full w-[30rem] max-w-full;
     // Formulario de contacto: campos a dos columnas.
     &.wide {
       @apply w-[45rem] max-w-full;

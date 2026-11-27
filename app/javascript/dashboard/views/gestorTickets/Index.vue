@@ -351,6 +351,7 @@
           fixed-header
           max-height="100%"
           row-key-field-name="id"
+          :scroll-width="tableWidth"
           :columns="columns"
           :table-data="tickets"
           :border-around="false"
@@ -860,6 +861,7 @@ export default {
           key: 'select',
           align: 'left',
           width: 44,
+          fixed: 'left',
           // Checkbox "seleccionar todo" en la cabecera (indeterminado si es parcial).
           renderHeaderCell: () => (
             <input
@@ -887,6 +889,7 @@ export default {
           key: 'edit',
           align: 'left',
           width: 48,
+          fixed: 'left',
           // Editar desde la cola. El .stop en el wrapper impide abrir el detalle.
           // Oculto en cerrado/cancelado (solo lectura).
           renderBodyCell: ({ row }) =>
@@ -947,6 +950,8 @@ export default {
           title: this.$t('CASE_TICKETS.TABLE.CONTACT_SUBJECT'),
           align: 'left',
           width: 360,
+          // Fija a la izquierda (con la casilla y editar): al moverse de lado no se pierde de qué caso es.
+          fixed: 'left',
           // Dos líneas: arriba el contacto, abajo el asunto (badges + título).
           renderBodyCell: ({ row }) => (
             <div class="min-w-0">
@@ -1092,6 +1097,11 @@ export default {
       if (this.isCommercialList) return this.commercialColumns(cols);
       if (this.isProjectList) return this.projectColumns(cols);
       return this.isWorkOrderList ? this.workOrderColumns(cols) : cols;
+    },
+    // Ancho total de las columnas: la tabla se mueve de lado (con el contacto y el asunto fijos a la
+    // izquierda) en vez de esconder las de la derecha (Plan-Pantallas-Responsive #1).
+    tableWidth() {
+      return this.columns.reduce((sum, c) => sum + (c.width || 0), 0);
     },
   },
   watch: {

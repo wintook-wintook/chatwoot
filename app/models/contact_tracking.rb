@@ -103,11 +103,20 @@ class ContactTracking < ApplicationRecord
   belongs_to :account
   belongs_to :tracking_template, optional: true
   belongs_to :tracking_campaign, optional: true # @campanas_vendedor
+  # Campaña · Recordar: el contrato que se le recuerda y las fechas de sus toques (ContactTrackings::DueSchedule).
+  belongs_to :contract, optional: true
+  prepend ContactTrackings::DueSchedule
 
   # Embudo de contactos — la cita que agenda el agente de seguimiento mueve la
   # tarjeta de la conversación a la columna «se agenda cita».
   after_commit :advance_contact_funnel, on: %i[create update],
                                         if: -> { conversation_id.present? && appointment_at.present? && saved_change_to_appointment_at? }
+
+  # «Agente IA» (Plan-Agente-IA-en-Conversaciones): al terminar el agente de IA sin entregarla, la conversación se resuelve
+  # sola si nadie la tiene (Conversations::AiAttendant.finished!).
+  after_update_commit :ai_attendant_finished, if: -> { saved_change_to_status? && %w[completed objective_met cancelled].include?(status) }
+
+  def ai_attendant_finished = Conversations::AiAttendant.finished!(self)
 
   def advance_contact_funnel
     Kanban::FunnelTriggerJob.perform_later(conversation_id, 'appointment_scheduled')
@@ -182,6 +191,24 @@ class ContactTracking < ApplicationRecord
   # ==============================================================================
   # Callbacks
   # ==============================================================================
+  # proyecto@crear_agente_conversando (F2, D1): el motor lee el Entrenamiento con los
+  # Datos fijos ya sustituidos (%EMPRESA% → Kontrolya) y sin la sección [DATOS FIJOS].
+  # Todo lo que le habla al modelo —respuesta, clasificador, seco, seguimientos— lee
+  # este atributo, así que es el único punto. Para escribirlo de vuelta sin perder las
+  # referencias, usar raw_complementary_prompt.
+  def complementary_prompt
+    raw = super
+    return raw if raw.blank?
+    return @expanded_prompt if @expanded_prompt_source.equal?(raw)
+
+    @expanded_prompt_source = raw
+    @expanded_prompt = ContactTrackings::PromptConstants.expand(raw)
+  end
+
+  def raw_complementary_prompt
+    self[:complementary_prompt]
+  end
+
   before_save :ensure_account_id
   before_save :ensure_whatsapp_templates_array  # ⭐ NUEVO
   after_create :schedule_job, if: :pending?

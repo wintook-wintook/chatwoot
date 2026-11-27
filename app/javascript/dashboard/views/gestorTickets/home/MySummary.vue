@@ -16,6 +16,7 @@ import { formatDay } from 'dashboard/helper/caseCommercial';
 import MyDayNotices from '../tasks/MyDayNotices.vue';
 import Tasks from '../Tasks.vue';
 import NotificationsView from 'dashboard/routes/dashboard/notifications/components/NotificationsView.vue';
+import AcademyAPI from 'dashboard/api/academy'; // «Mi capacitación»: su avance en el botón
 
 // Pestañas de Mi resumen, en orden. Va en la dirección (?tab=…).
 const TABS = ['summary', 'my_day', 'notifications'];
@@ -28,6 +29,7 @@ export default {
   components: { MyDayNotices, Tasks, NotificationsView },
   data() {
     return {
+      academy: null, // { done, total }
       isLoading: true,
       tasks: [],
       agenda: [],
@@ -35,6 +37,9 @@ export default {
     };
   },
   computed: {
+    academyPending() {
+      return !!this.academy && this.academy.done < this.academy.total;
+    },
     ...mapGetters({
       currentUser: 'getCurrentUser',
       canViewBusinessSummary: 'caseTickets/getCanViewBusinessSummary',
@@ -111,6 +116,7 @@ export default {
   },
   mounted() {
     this.$store.dispatch('caseTickets/fetchSettings');
+    this.loadAcademy();
   },
   methods: {
     t(key, params) {
@@ -182,12 +188,22 @@ export default {
     openConversation(id) {
       this.$router.push(`/app/accounts/${this.accountId}/conversations/${id}`);
     },
+    // Con caso, a sus tareas; sin caso (captura rápida), al contacto o a Mi día.
     openTask(row) {
-      this.$router.push({
-        name: 'gestorTickets_detail',
-        params: { id: row.case_ticket.id },
-        query: { tab: 'tasks' },
-      });
+      if (row.case_ticket) {
+        this.$router.push({
+          name: 'gestorTickets_detail',
+          params: { id: row.case_ticket.id },
+          query: { tab: 'tasks' },
+        });
+      } else if (row.contact) {
+        this.$router.push({
+          name: 'contact_profile_dashboard',
+          params: { contactId: row.contact.id },
+        });
+      } else {
+        this.goMyDay();
+      }
     },
     // «Ver todo» de la tarjeta: a la pestaña Mi día, sin salir de Mi resumen.
     goMyDay() {
@@ -205,6 +221,20 @@ export default {
     },
     goBusinessSummary() {
       this.$router.push({ name: 'gestorTickets_business_summary' });
+    },
+    // «Mi capacitación» (antes «Primeros pasos»): el botón lleva su avance.
+    async loadAcademy() {
+      try {
+        const { data } = await AcademyAPI.get();
+        this.academy = data.total
+          ? { done: data.done, total: data.total }
+          : null;
+      } catch {
+        this.academy = null;
+      }
+    },
+    openAcademy() {
+      this.$router.push({ name: 'academy' });
     },
   },
 };
@@ -224,15 +254,28 @@ export default {
             {{ t('SUBTITLE') }}
           </p>
         </div>
-        <woot-button
-          v-if="canViewBusinessSummary"
-          size="small"
-          variant="smooth"
-          icon="arrow-trending-lines"
-          @click="goBusinessSummary"
-        >
-          {{ t('BUSINESS_SUMMARY') }}
-        </woot-button>
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Mi capacitación: resaltado mientras le falten pasos -->
+          <woot-button
+            v-if="academy"
+            size="small"
+            :variant="academyPending ? 'smooth' : 'clear'"
+            :color-scheme="academyPending ? 'primary' : 'secondary'"
+            icon="book"
+            @click="openAcademy"
+          >
+            {{ t('ONBOARDING.BUTTON', academy) }}
+          </woot-button>
+          <woot-button
+            v-if="canViewBusinessSummary"
+            size="small"
+            variant="smooth"
+            icon="arrow-trending-lines"
+            @click="goBusinessSummary"
+          >
+            {{ t('BUSINESS_SUMMARY') }}
+          </woot-button>
+        </div>
       </header>
       <woot-tabs
         v-if="hasCases"

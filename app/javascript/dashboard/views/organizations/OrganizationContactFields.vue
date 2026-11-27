@@ -16,6 +16,8 @@ export default {
   components: { ContactPicker, OrganizationPicker },
   props: {
     value: { type: Object, default: null },
+    // Lado a lado (formularios compactos, p. ej. la captura rápida de tareas).
+    horizontal: { type: Boolean, default: false },
     organization: { type: Object, default: null },
   },
   emits: ['input', 'update:organization'],
@@ -51,7 +53,9 @@ export default {
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 mb-3">
+  <div
+    :class="horizontal ? 'grid grid-cols-2 gap-3' : 'flex flex-col gap-3 mb-3'"
+  >
     <div>
       <span class="text-sm font-medium text-slate-800 dark:text-slate-100">
         {{ $t('ORGANIZATIONS.PICKER.LABEL') }}

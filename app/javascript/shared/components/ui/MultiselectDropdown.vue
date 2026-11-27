@@ -35,6 +35,12 @@ export default {
       type: String,
       default: 'Search',
     },
+    // Más ancho que el botón, abierto hacia la izquierda: en columnas angostas (datos del contacto) los valores
+    // largos no se cortan.
+    wide: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -52,6 +58,12 @@ export default {
   methods: {
     toggleDropdown() {
       this.showSearchDropdown = !this.showSearchDropdown;
+      // Si abre cerca del final de una columna con scroll, se recorre para que se vea completo.
+      if (this.showSearchDropdown) {
+        this.$nextTick(() =>
+          this.$refs.pane?.scrollIntoView?.({ block: 'nearest' })
+        );
+      }
     },
 
     onCloseDropdown() {
@@ -109,7 +121,11 @@ export default {
       </div>
     </woot-button>
     <div
-      :class="{ 'dropdown-pane--open': showSearchDropdown }"
+      ref="pane"
+      :class="{
+        'dropdown-pane--open': showSearchDropdown,
+        'dropdown-pane--wide': wide,
+      }"
       class="dropdown-pane"
     >
       <div class="flex justify-between items-center mb-1">
@@ -142,5 +158,10 @@ export default {
 <style lang="scss" scoped>
 .dropdown-pane {
   @apply box-border top-[2.625rem] w-full;
+}
+
+.dropdown-pane--wide {
+  @apply w-auto min-w-full max-w-[18rem] ltr:left-auto ltr:right-0 rtl:right-auto rtl:left-0;
+  width: max-content;
 }
 </style>

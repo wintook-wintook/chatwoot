@@ -87,14 +87,14 @@ RSpec.describe 'Assistant API' do
       expect(response.parsed_body.dig('proposal', 'status')).to eq('done')
     end
 
-    it 'la tarea toma la hora local y lo que el usuario cambió en la tarjeta' do
-      proposal = propose('propose_task', case_id: ticket.id, title: 'Llamar', due_at: '2030-01-10T09:00')
-      expect(proposal.dig('payload', 'due_at')).to eq('2030-01-10T09:00:00-06:00')
+    it 'la tarea vence al final del día (sin hora) y toma lo que el usuario cambió en la tarjeta' do
+      proposal = propose('propose_task', case_id: ticket.id, title: 'Llamar', due_at: '2030-01-10')
+      expect(proposal.dig('payload', 'due_at')).to eq('2030-01-10T23:59:59-06:00')
 
       confirm(proposal, title: 'Llamar a Mario')
       task = ticket.case_tasks.last
       expect(task.title).to eq('Llamar a Mario')
-      expect(task.due_at).to eq(Time.utc(2030, 1, 10, 15, 0))
+      expect(task.due_at).to be_within(1.second).of(Time.utc(2030, 1, 11, 5, 59, 59))
       expect(task.assignee).to eq(admin)
     end
 
@@ -318,7 +318,7 @@ RSpec.describe 'Assistant API' do
     end
 
     it '«¿cómo vamos?» trae la tarjeta de datos y preguntas para seguir; explica con el modelo de análisis' do
-      account.update!(custom_attributes: { 'assistant_analysis_model' => 'gpt-4o' })
+      stub_const('AiModels::DALI_ANALYSIS', 'gpt-4o')
       models = []
       replies = [tool_call('sales_overview', period: 'this_month'), answer('Van al 80 %.')]
       allow_any_instance_of(Assistant::Chat).to receive(:complete) do |chat, _messages| # rubocop:disable RSpec/AnyInstance
@@ -356,13 +356,15 @@ RSpec.describe 'Assistant API' do
       expect(AssistantThread.last.messages.last['cards']).to eq([])
     end
 
-    it 'el administrador elige los modelos; uno fuera de la lista se rechaza' do
-      patch "#{base}/settings", params: { model: 'gpt-4.1-mini', analysis_model: 'gpt-4o' }, headers: admin.create_new_auth_token, as: :json
-      expect(response.parsed_body['models']).to include('model' => 'gpt-4.1-mini', 'analysis_model' => 'gpt-4o')
-      expect(Assistant::Settings.model_for(account.reload, :analysis)).to eq('gpt-4o')
+    it 'los modelos los define el código para todas las cuentas: Ajustes solo enseña la tabla por grupo' do
+      account.update!(custom_attributes: { 'assistant_model' => 'gpt-4o' }) # lo que se eligió antes ya no cuenta
+      patch "#{base}/settings", params: { name: 'Sofi', model: 'gpt-4.1' }, headers: admin.create_new_auth_token, as: :json
 
-      patch "#{base}/settings", params: { model: 'gpt-x' }, headers: admin.create_new_auth_token, as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
+      groups = response.parsed_body.dig('models', 'groups').to_h { |g| [g['key'], g['model']] }
+      expect(groups).to include('dali' => AiModels::DALI, 'agents' => AiModels::AGENTS, 'review' => AiModels::REVIEW,
+                                'canned_selector' => KnowledgeBase::Selector::MODEL, 'agents_v1' => nil)
+      expect(Assistant::Settings.model_for(account.reload)).to eq(AiModels::DALI)
+      expect(account.custom_attributes['assistant_model']).to eq('gpt-4o') # no se toca, solo se ignora
     end
   end
 

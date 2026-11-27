@@ -103,8 +103,17 @@ class ContactTrackings::Assistant::SaveService
     template.previous_complementary_prompt = template.complementary_prompt
     template.complementary_prompt = @draft
     template.assign_attributes(version_origin)
+    assign_definition(template)
     assign_calendars(template)
     template.save ? saved(template) : Result.new(error: :invalid, details: template.errors.full_messages)
+  end
+
+  # feat/ficha_agente_ia: la Definición que se ve en la Estructura también se publica al
+  # reemplazar (antes solo el texto: lo cambiado ahí se perdía). Solo lo que viene con
+  # contenido: un campo vacío no borra lo que el agente ya tiene.
+  def assign_definition(template)
+    template.objective = @params[:objective].to_s.strip if @params[:objective].to_s.strip.length >= 5
+    template.ai_context = @params[:ai_context].to_s.strip if @params[:ai_context].present?
   end
 
   # Los calendarios elegidos al guardar (pedido del usuario, 24/09/2026: un agente con

@@ -13,7 +13,7 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
   before_action :fetch_tracking_template, only: [:show, :update, :destroy]
 
   def index
-    @tracking_templates = Current.account.tracking_templates.includes(:user, :inbox, :publication, :published_prompt).ordered
+    @tracking_templates = listed_templates.includes(:user, :inbox, :publication, :published_prompt).ordered
     @tracking_templates = @tracking_templates.search_by_name(params[:search]) if params[:search].present?
     @tracking_templates = @tracking_templates.by_tag(params[:tag]) if params[:tag].present?
     @tracking_templates = @tracking_templates.by_inbox(params[:inbox_id]) if params[:inbox_id].present?
@@ -121,6 +121,7 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
       :version_note, # feat/agentes_ia_unificado: nota del guardado, viaja a la versión
       :email_signature, # prospeccion V1: firma en correo
       :customer_display_name, # el nombre con que el cliente ve al agente
+      :follow_up_attempts, # feat/ficha_agente_ia: núm. de intentos sin plantillas (antes no se guardaba)
       whatsapp_templates: [],
       tags: [],
       keyword_actions: [:keyword, :action, :direction, :label, :assignee_id, :team_id], # proyecto@contact_tracking
@@ -180,13 +181,18 @@ class Api::V1::Accounts::TrackingTemplatesController < Api::V1::Accounts::BaseCo
   end
 
   def template_json(template)
-    json = template.as_json(except: [:user_id])
+    # function_title: agentes por función (Plan-Motor-Agentes §11.14), se abren con su asistente.
+    json = template.as_json(except: [:user_id], methods: [:function_title])
     json['creator'] = ({ id: template.user.id, name: template.user.available_name || template.user.name } if template.user)
     json['inbox_name']      = template.inbox&.name
     json['keyword_actions'] = template.keyword_actions || [] # proyecto@contact_tracking
+    json['follow_up_attempts'] = template.follow_up_attempts # feat/ficha_agente_ia
     json['training_structure'] = template.training_blocks # proyecto@asistente_agentes_ia
     json['publication'] = template.publication&.slice(:status, :version) # proyecto@publicar_prompts
     json['published_prompt_update'] = template.published_prompt_update # proyecto@publicar_prompts (F7)
     json
   end
+
+  # Los archivados (p. ej. un agente de función borrado que ya tenía historia) no salen.
+  def listed_templates = Current.account.tracking_templates.listable.where(archived_at: nil)
 end

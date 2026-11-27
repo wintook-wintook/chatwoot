@@ -8,7 +8,7 @@
     "LOADING": "Loading campaigns…",
     "EMPTY_TITLE": "No campaigns yet.",
     "EMPTY_HINT": "Create one with the “Add campaign” button or bulk-assign an AI Agent from Contacts.",
-    "SEARCH_PLACEHOLDER": "Search by name, AI Agent or channel…",
+    "SEARCH_PLACEHOLDER": "Search by name or channel…",
     "FILTER_STATUS_ALL": "All statuses",
     "NO_RESULTS": "No campaigns match the filter.",
     "DELETE": "Delete campaign",
@@ -61,6 +61,22 @@
     "LAUNCH_SUCCESS": "Campaign started.",
     "LAUNCH_QUEUED": "Campaign started: enrolling {count} contacts.",
     "LAUNCH_ERROR": "Could not start the campaign.",
+    "LAUNCH_WINDOW": "Starts: {from} · Ends: {to}",
+    "LAUNCH_NOW": "as soon as you start it",
+    "DATE_ALERTS": {
+      "ENDS_PASSED": "The window already ended ({date}): change the end date before starting it.",
+      "ENDS_BEFORE_START": "The end must be after the start.",
+      "NO_START": "No start date: it starts as soon as you start it.",
+      "START_PASSED": "The start ({date}) already passed: when you start it, it begins at that moment.",
+      "START_FAR": "It starts in {days} days ({date}): check that the date is right.",
+      "SHORT_WINDOW": "The window lasts only {hours} h (ends {date}): it may not be enough to reach everyone.",
+      "ENDS_SOON": "It ends soon ({date}): after that date nothing else is sent."
+    },
+    "DUPLICATE": "Duplicate",
+    "DUPLICATE_CAMPAIGN": "Duplicate campaign “{name}”",
+    "DUPLICATE_NAME": "{name} (copy)",
+    "DUPLICATE_HINT": "This is a copy: check the dates and audience. Once saved it stays Saved and sends nothing until you start it.",
+    "DUPLICATE_ERROR": "The campaign could not be opened to duplicate it.",
     "SAVED_HINT": "Campaign saved. Nothing is sent until you press «Start».",
     "SAVED_BANNER": "Saved: it does not enroll anyone or send messages until you start it.",
     "EDIT": "Edit",
@@ -71,15 +87,25 @@
     "PAUSED_BANNER": "Paused automatically: WhatsApp rejected a message because of a configuration problem, so the rest would fail too. Reason: {reason}",
     "PAUSED_BANNER_HINT": "Fix the problem (template, payment or WhatsApp account in Meta) and resume the campaign: paused follow-ups resend the attempt that failed.",
     "PAUSE": "Pause campaign",
-    "PAUSE_CONFIRM": "No new contacts will enter and pending messages stop when their turn comes. The AI Agent keeps answering whoever already replied. You can resume it anytime. Pause the campaign",
+    "PAUSE_CONFIRM": "No new contacts will enter, pending messages stop and the AI Agent stops answering in the campaign conversations: your team handles any incoming messages. You can resume it anytime. Pause the campaign",
     "PAUSE_YES": "Yes, pause",
     "PAUSE_SUCCESS": "Campaign paused.",
     "PAUSE_ERROR": "The campaign could not be paused.",
-    "PAUSED_MANUAL_BANNER": "Campaign paused: no new contacts enter and no campaign messages go out.",
-    "PAUSED_MANUAL_HINT": "The AI Agent keeps answering whoever already replied. When resumed, the stopped messages go out again starting in a minute.",
+    "PAUSED_MANUAL_BANNER": "Campaign paused: no new contacts enter, no messages go out and the AI Agent does not answer in its conversations.",
+    "PAUSED_MANUAL_HINT": "Messages that arrive while it is paused are handled by your team from the conversation. When resumed, the AI Agent answers again and the stopped messages go out again starting in a minute.",
     "RESUME": "Resume campaign",
     "RESUME_SUCCESS": "Campaign resumed: {count} follow-ups send again in a minute.",
-    "RESUME_ERROR": "The campaign could not be resumed."
+    "RESUME_ERROR": "The campaign could not be resumed.",
+    "FILTER_ENGINE": {
+      "all": "All campaigns",
+      "motor2": "With AI Seller",
+      "classic": "Classic (Engine 1.0)"
+    },
+    "FINISH": "End campaign",
+    "FINISH_CONFIRM": "It will be Finished and cannot be resumed: no new contacts come in and the pending messages are cancelled. The AI keeps replying to whoever is already chatting and the Results are kept. End the campaign",
+    "FINISH_YES": "Yes, end it",
+    "FINISH_SUCCESS": "Campaign ended: {count} pending messages cancelled.",
+    "FINISH_ERROR": "Could not end the campaign."
   },
   "TRACKING_CAMPAIGN_DETAIL": {
     "BACK": "Campaigns",
@@ -197,6 +223,9 @@
     "HANDOFF_ATTENDED": "✓ Attended",
     "HANDOFF_OVERDUE": "⏰ Overdue",
     "HANDOFF_DUE": "✓ Handed off · due {at}",
+    "SETTINGS_MENU": {
+      "BUTTON": "Settings"
+    },
     "HANDOFF_SETTINGS": {
       "TITLE": "🤝 Interested prospects hand-off",
       "DESC": "What happens when a prospect says they are interested. Applies to the next interested prospects.",

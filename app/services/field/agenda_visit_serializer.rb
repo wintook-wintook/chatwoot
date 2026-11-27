@@ -11,7 +11,9 @@ class Field::AgendaVisitSerializer
       work_address: @meeting.location, state: state,
       contact: contact && { id: contact.id, name: contact.name, phone_number: contact.phone_number },
       organization: @meeting.client_organization&.name,
-      meeting: { id: @meeting.id, starts_at: @meeting.starts_at, ends_at: @meeting.ends_at } }
+      meeting: { id: @meeting.id, starts_at: @meeting.starts_at, ends_at: @meeting.ends_at },
+      # Participantes: la ven en Mi ruta; solo el responsable (organizer) marca llegada y concluye.
+      organizer: @meeting.organizer&.slice(:id, :name), participant_ids: @meeting.participants.pluck(:user_id) }
   end
 
   def as_json(*)

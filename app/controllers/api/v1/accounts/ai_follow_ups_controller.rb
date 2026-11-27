@@ -4,6 +4,7 @@
 #   GET  …/ai_follow_ups?case_id= | ?conversation_id=(display_id) | ?contact_id=   → los últimos (el vivo primero)
 #   POST …/ai_follow_ups { conversation_id (display_id), case_id, objective, instructions, starts_at,
 #                          max_attempts, interval_value, interval_unit, on_finish, tz }
+#   replace: true → si ya hay uno vivo, se cancela y arranca el nuevo (cambiar el que corre)
 #   POST …/ai_follow_ups/:id/pause | resume | cancel
 #   GET  …/ai_follow_ups/templates?conversation_id=   → plantillas de WhatsApp que el agente puede usar
 #   GET  …/ai_follow_ups/context?conversation_id=     → si hay respuestas predefinidas y la nota IA del contacto
@@ -51,11 +52,36 @@ class Api::V1::Accounts::AiFollowUpsController < Api::V1::Accounts::BaseControll
     render json: { payload: entries.map { |entry| { id: entry[:inbox].id, name: entry[:inbox].name, channel_type: entry[:inbox].channel_type } } }
   end
 
+  # GET /ai_follow_ups/running?conversation_id= | contact_id= | case_id= — quién le da seguimiento:
+  # { ai: {...}|null, custom: { conversation_id, agent, status }|null, custom_agents: bool }.
+  def running
+    found = AiFollowUps::WhoFollows.new(Current.account, **running_scope).call
+    custom = found[:custom]
+    render json: { ai: found[:ai] && follow_up_json(found[:ai]), custom_agents: found[:custom_agents],
+                   custom: custom && { conversation_id: custom.conversation&.display_id, agent: custom.tracking_template&.name,
+                                       status: custom.status } }
+  end
+
   def pause = change(:pause!)
   def resume = change(:resume!)
   def cancel = change(:cancel!)
 
   private
+
+  def running_scope
+    return case_running_scope(visible_case(params[:case_id])) if params[:case_id].present?
+
+    if params[:contact_id].present?
+      { conversations: visible_conversations.where(contact_id: params[:contact_id]), contact_ids: [params[:contact_id].to_i] }
+    else
+      conversation = visible_conversation(params[:conversation_id])
+      { conversations: visible_conversations.where(id: conversation.id), contact_ids: [conversation.contact_id] }
+    end
+  end
+
+  def case_running_scope(ticket)
+    { case_ticket: ticket, conversations: visible_conversations.where(id: ticket.conversation_id), contact_ids: [ticket.contact_id] }
+  end
 
   def index_scope
     scope = AiFollowUp.where(account_id: Current.account.id)
@@ -128,7 +154,7 @@ class Api::V1::Accounts::AiFollowUpsController < Api::V1::Accounts::BaseControll
 
   def create_params
     params.permit(:objective, :instructions, :starts_at, :max_attempts, :interval_value, :interval_unit, :on_finish,
-                  :template_name, :template_language)
+                  :template_name, :template_language, :replace)
           .to_h.merge('time_zone' => (params[:tz] if ActiveSupport::TimeZone[params[:tz].to_s]))
   end
 

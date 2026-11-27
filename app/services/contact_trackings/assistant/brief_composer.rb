@@ -72,6 +72,8 @@ class ContactTrackings::Assistant::BriefComposer
     @brief = brief
     @inventory = inventory
     @ficha = brief.digest['ficha'] || {}
+    # F3 (crear_agente_conversando): lo que la conversación ya decidió.
+    @chat = ContactTrackings::Assistant::BriefFromChat.new(brief)
     @answers = (answers.respond_to?(:to_unsafe_h) ? answers.to_unsafe_h : answers.to_h).deep_stringify_keys
   end
 
@@ -83,8 +85,8 @@ class ContactTrackings::Assistant::BriefComposer
   private
 
   def message
-    [header, identity, topics, tools, source_decision, *lists, knowledge_block, moved_note, decisions,
-     closing].compact.join("\n\n")
+    [header, identity, @chat.message_block, topics, tools, source_decision, *lists, knowledge_block, moved_note,
+     decisions, closing].compact.join("\n\n")
   end
 
   def canned_group
@@ -225,7 +227,7 @@ class ContactTrackings::Assistant::BriefComposer
 
   # Los datos del negocio y lo consultable. Si ya van como Contexto, no se repiten.
   def knowledge_block
-    return nil if knowledge.empty? || context_fits? || knowledge_moved? || knowledge_source.present?
+    return nil if knowledge.empty? || context_holds_knowledge? || knowledge_moved? || knowledge_source.present?
 
     (['DATOS DEL NEGOCIO Y CONOCIMIENTO (ponlos como una sección del Entrenamiento):'] +
       knowledge.map { |k| "- #{k}" }).join("\n")
@@ -238,6 +240,9 @@ class ContactTrackings::Assistant::BriefComposer
   def context_fits?
     knowledge.any? && knowledge.join("\n").length <= CONTEXT_MAX_CHARS
   end
+
+  # Con un Contexto escrito en la conversación, el conocimiento de la ficha no va ahí.
+  def context_holds_knowledge? = context_fits? && @chat.ai_context.nil?
 
   # Lo que la persona decidió en las contradicciones: la que vale entra, la otra no
   # (y se saca de las listas, ver #discarded). Sin elegir, queda <PENDIENTE:> con las
@@ -274,8 +279,9 @@ class ContactTrackings::Assistant::BriefComposer
     texto.present? ? "#{titulo}: #{texto}" : nil
   end
 
+  # La Definición escrita en la conversación manda sobre la que se deduce de la ficha.
   def proposal
     contexto = context_fits? && !knowledge_moved? ? knowledge.join("\n") : ''
-    { objective: @ficha.dig('objetivo', 'texto').to_s, ai_context: contexto }
+    { objective: @chat.objective || @ficha.dig('objetivo', 'texto').to_s, ai_context: @chat.ai_context || contexto }
   end
 end

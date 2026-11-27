@@ -15,6 +15,7 @@
 #   erp_query:sae/saldo      {{consulta:sae/saldo(rfc=?)}} → {{consulta:sae/saldo_cliente(rfc=?)}}
 #   attachment:catalogo      {{catalogo}}                  → {{catalogo_2026}}
 #   case_type:ventas         @crear_ticket(tipo=Ventas)    → @crear_ticket(tipo=Comercial)
+#   const:empresa            EMPRESA = Kontrolya           → EMPRESA = Grúas del Sur  ([DATOS FIJOS])
 #
 # El motor no cambia: lee el mismo texto de siempre, con los nombres de esta cuenta.
 #
@@ -63,7 +64,8 @@ class ContactTrackings::Assistant::AdaptationApplier
     'sheet_lookup' => :replace_sheet_lookup,
     'erp_query' => :replace_erp_query,
     'attachment' => :replace_attachment,
-    'case_type' => :replace_case_type
+    'case_type' => :replace_case_type,
+    'const' => :replace_constant
   }.freeze
 
   # previous: lo aplicado antes ({ "var:nombre del negocio" => "Grúas del Sur" }), para
@@ -182,6 +184,10 @@ class ContactTrackings::Assistant::AdaptationApplier
     @text.gsub(ContactTrackings::AgentAttachments::DIRECTIVE) do |directiva|
       Regexp.last_match(1).casecmp?(name) ? "{{#{value}}}" : directiva
     end
+  end
+
+  def replace_constant(name, value)
+    ContactTrackings::Assistant::ConstantAdaptation.replace(@text, name, value)
   end
 
   # Sin cruzar de línea, como check_ticket_types del comprobador.

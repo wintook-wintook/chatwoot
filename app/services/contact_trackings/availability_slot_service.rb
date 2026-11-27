@@ -52,6 +52,8 @@ module ContactTrackings
       integrations = UserCalendarIntegration.where(id: @calendar_integration_ids)
       return [] if integrations.empty?
 
+      @unreadable = []
+      @readable = []
       start_at = [Time.current + 1.hour, from].compact.max
       time_min = align_to_slot(start_at)
       time_max = business_days_from_now(start_at, DAYS_AHEAD)
@@ -65,7 +67,9 @@ module ContactTrackings
           # nil = no se pudo leer la disponibilidad (token revocado/expirado, API caída):
           # NO ofrecemos horarios de esta agenda, porque tampoco podríamos crear la cita
           # después (ofrecer un hueco que luego falla obliga a escalar a un humano).
-          next if busy.nil?
+          next unreadable!(integration) if busy.nil?
+
+          readable!(integration)
 
           key = [integration.id, res[:gcal]]
           slots_by_resource[key] = free_slots_for(integration, res[:gcal], busy, time_min, time_max)
@@ -99,6 +103,8 @@ module ContactTrackings
     def slot_for(requested_start)
       return nil if requested_start.blank? || @calendar_integration_ids.empty?
 
+      @unreadable = []
+      @readable = []
       aligned  = align_to_slot(requested_start)
       slot_end = aligned + @slot_duration.minutes
       return nil if aligned < Time.current
@@ -109,7 +115,9 @@ module ContactTrackings
           busy = fetch_busy_periods(integration, res[:read], aligned - 1.hour, slot_end + 1.hour)
           # nil = disponibilidad no legible (token muerto/API): no confirmamos aquí, para no
           # prometer una cita que luego no podríamos crear.
-          next if busy.nil?
+          next unreadable!(integration) if busy.nil?
+
+          readable!(integration)
           next if overlaps_busy?(aligned, slot_end, busy)
 
           agent_name = integration.user&.name || 'Agente'
@@ -127,6 +135,17 @@ module ContactTrackings
     rescue StandardError => e
       Rails.logger.warn "[AvailabilitySlotService] ⚠️ slot_for falló: #{e.message}"
       nil
+    end
+
+    # ¿No se pudo leer NINGUNA agenda en la última consulta (call o slot_for)? Sirve para
+    # distinguir «no hay espacio» de «no pude entrar al calendario» (Google desconectado, sin
+    # permiso, API caída). `unreadable_users` = de quién no se pudo leer.
+    def calendars_unreadable?
+      @unreadable.present? && @readable.blank?
+    end
+
+    def unreadable_users
+      UserCalendarIntegration.where(id: Array(@unreadable).uniq).includes(:user).filter_map { |i| i.user&.name }
     end
 
     # ¿Ese día se trabaja? Con el horario del canal si está activo; si no, lun–vie. Lo usa
@@ -306,15 +325,32 @@ module ContactTrackings
       end
     end
 
+    def unreadable!(integration)
+      (@unreadable ||= []) << integration.id
+      nil
+    end
+
+    def readable!(integration)
+      (@readable ||= []) << integration.id
+    end
+
     def overlaps_busy?(slot_start, slot_end, busy_periods)
       busy_periods.any? { |b| slot_start < b[:end] && slot_end > b[:start] }
     end
 
+    # La rejilla de minutos donde caen los horarios: el máximo común divisor del paso y la hora.
+    # Con el paso entero (antes) una cita de 45 min ofrecía 10:15 (el paso cuenta desde la
+    # primera, 9:30) y al confirmarla slot_for la «alineaba» a 10:30: el horario ofrecido salía
+    # «ya no está libre». Con 15, 30 y 60 min la rejilla es la misma que antes.
+    def grid
+      step.gcd(60)
+    end
+
     def align_to_slot(time)
-      remainder = time.min % step
+      remainder = time.min % grid
       return time.change(sec: 0) if remainder.zero?
 
-      (time + (step - remainder).minutes).change(sec: 0)
+      (time + (grid - remainder).minutes).change(sec: 0)
     end
 
     # Avanza el horizonte de búsqueda contando solo días ABIERTOS (según working_hours del

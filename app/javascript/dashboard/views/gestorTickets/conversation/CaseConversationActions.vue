@@ -16,6 +16,7 @@ import ContactTrackingModal from 'dashboard/components/contacts/ContactTracking/
 import LinkConversationModal from './LinkConversationModal.vue';
 import AiFollowUpModal from './AiFollowUpModal.vue';
 import AiFollowUpStatus from './AiFollowUpStatus.vue';
+import { whoFollows } from 'dashboard/helper/followUpEntry';
 
 const T = 'CASE_TICKETS.CONVERSATION_ACTIONS';
 const F = 'ASSISTANT.AI_FOLLOW_UP';
@@ -41,6 +42,7 @@ export default {
       showTracking: false,
       showFollowUp: false,
       followUpLive: false, // hay un Seguimiento IA corriendo → botón verde
+      customAgents: false, // la empresa tiene agentes a medida → se elige quién da el seguimiento
       pendingAction: null, // 'schedule' | 'delegate': se abre al quedar ligada
     };
   },
@@ -138,7 +140,7 @@ export default {
       this.showLink = false;
       this.pendingAction = null;
     },
-    run(action) {
+    async run(action) {
       if (!this.displayId) {
         this.openLink(action);
         return;
@@ -155,8 +157,18 @@ export default {
         useAlert(this.t('DELEGATE_MISSING', { missing: missing.join(', ') }));
         return;
       }
-      if (action === 'legacy') this.showTracking = true;
-      else this.showFollowUp = true;
+      if (action === 'legacy') {
+        this.showTracking = true;
+        return;
+      }
+      // Ya corre un agente a medida para este cliente: se abre ese.
+      const who = await whoFollows({ case_id: this.ticket.id });
+      if (who.custom && !this.missingIntegrations.length) {
+        this.showTracking = true;
+        return;
+      }
+      this.customAgents = !!who.custom_agents;
+      this.showFollowUp = true;
     },
   },
 };
@@ -218,6 +230,7 @@ export default {
       :show="showFollowUp"
       :ticket="ticket"
       :conversation-id="displayId"
+      :custom-agents="customAgents"
       @close="showFollowUp = false"
       @created="onFollowUpCreated"
       @legacy="openLegacy"

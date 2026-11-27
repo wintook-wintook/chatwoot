@@ -49,6 +49,16 @@ RSpec.describe ContactTrackings::AttachmentText do
     expect(described_class.for(adjunto('requisicion.pdf', 'application/pdf'))).to be_nil
   end
 
+  it 'si no se pudo leer, no lo vuelve a mandar a OpenAI en cada mensaje (espera FAILURE_TTL)' do
+    create(:integrations_hook, :openai, account: account)
+    pedido = stub_request(:post, 'https://api.openai.com/v1/chat/completions').to_return(status: 500, body: 'error')
+    pdf = adjunto('requisicion.pdf', 'application/pdf')
+    allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+
+    3.times { expect(described_class.for(pdf)).to be_nil }
+    expect(pedido).to have_been_made.once
+  end
+
   it 'el mensaje con el texto de sus adjuntos' do
     adjunto('requisicion.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 

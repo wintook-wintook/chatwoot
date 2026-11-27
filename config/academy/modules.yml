@@ -1,0 +1,320 @@
+# Academia Kontrolya — los módulos de «Mi capacitación» (Inicio › Mi capacitación).
+#
+# Cada módulo:
+#   key, title, summary
+#   areas:  las áreas del rol que lo ven (AccessRole::AREAS); vacío = todos
+#   steps:  en orden
+#     kind: lesson   → guide: la guía de Dali que se lee (config/assistant/guides/<guide>.md)
+#     kind: exercise → check: el método de Academy::Checks que revisa si lo hizo
+#                      page:  a dónde lleva «Hazlo» (clave de config/assistant/pages.json,
+#                             o practice_contact / practice_case: su Cliente de práctica y su caso)
+#                      needs: practice_contact | practice_case (no se puede sin eso)
+#                      hint:  lo que le dice «Revisar» si todavía no lo encuentra
+#     kind: setup    → configuración, no ejercicio: se revisa en vivo con cómo está la cuenta o el
+#                      usuario (Academy::Setup), aunque lo haya hecho otro o antes de entrar.
+#                      check: el método de Academy::Setup
+#                      level: required | recommended | later
+#                      page:  a dónde lleva «Hazlo»; ask: o lo que se le pregunta a Dali
+#                      confirm: si se puede dar por hecho a mano, el texto del botón
+#                               (p. ej. «Así me sirve» para lo que ya trae valores de fábrica)
+#   audience: admin → solo lo ven los administradores
+#   shared: true    → el avance es de la cuenta: lo que hace o confirma un administrador vale para todos
+#
+# Los ejercicios se revisan con los datos de verdad, no se palomean a mano. Lo que no guarda
+# quién lo hizo (contactos, organizaciones) se hace sobre el Cliente de práctica de cada
+# usuario: así se sabe que fue él. rake academy:check y spec/services/academy revisan este archivo.
+modules:
+  - key: cuenta
+    title: Configura tu cuenta
+    summary: Lo que hay que dejar listo para que tu equipo trabaje. Se marca solo cuando ya está, aunque lo haya hecho otro administrador.
+    audience: admin
+    shared: true
+    steps:
+      - key: empresa
+        kind: setup
+        level: required
+        title: Pon el nombre y el logo de tu empresa
+        text: En Ajustes › Configuración de cuenta revisa el nombre de la empresa y sube su logo; sale en el menú.
+        page: account_settings
+        check: company
+        confirm: Así está bien
+        hint: Todavía no hay logo de la empresa.
+      - key: whatsapp
+        kind: setup
+        level: required
+        title: Conecta tu WhatsApp
+        text: Agrega una bandeja de WhatsApp para recibir y contestar a tus clientes desde Kontrolya.
+        page: inboxes
+        check: whatsapp
+        confirm: No uso WhatsApp
+        hint: Todavía no hay una bandeja de WhatsApp.
+      - key: equipo
+        kind: setup
+        level: required
+        title: Invita a tu equipo
+        text: En Ajustes › Usuarios da de alta a tus compañeros; a cada uno le llega un correo para entrar.
+        page: users
+        check: team
+        confirm: Trabajo solo
+        hint: En la cuenta todavía solo estás tú.
+      - key: roles
+        kind: setup
+        level: required
+        title: Dale a cada quien su rol
+        text: En Ajustes › Usuarios elige el rol de cada compañero (Vendedor, Técnico, Supervisor…). El rol decide qué ve y qué puede hacer.
+        page: users
+        check: roles
+        confirm: Así me sirve
+        hint: Hay compañeros con el rol de por omisión. Revisa en Ajustes › Usuarios que cada uno tenga el suyo.
+      - key: bandejas
+        kind: setup
+        level: required
+        title: Elige quién atiende cada bandeja
+        text: En Ajustes › Bandejas de entrada, en cada bandeja, pestaña de agentes, agrega a quienes contestan ahí.
+        page: inboxes
+        check: inbox_members
+        hint: Hay bandejas sin nadie que las atienda.
+      - key: etapas
+        kind: setup
+        level: required
+        title: Revisa tus tipos de caso y sus etapas
+        text: Kontrolya trae unos tipos de caso (ventas, servicio) con sus etapas. Cámbialos a como trabaja tu negocio, pídeselo a Dali («Hazlo con Dali», que te pregunta a qué te dedicas y te los propone) o, si así te sirven, acéptalos.
+        page: case_types
+        ask: Ayúdame a armar mis tipos de caso y sus etapas para mi negocio.
+        check: case_stages
+        confirm: Así me sirven
+        hint: Los tipos de caso y sus etapas siguen como vienen de fábrica.
+      - key: motivos
+        kind: setup
+        level: recommended
+        title: Ajusta los motivos de cierre
+        text: Por qué se gana o se pierde una venta (precio, tiempo, competencia…). Sirven para los informes.
+        page: close_reasons
+        check: close_reasons
+        confirm: Así me sirven
+        hint: Los motivos de cierre siguen como vienen de fábrica.
+      - key: resultados
+        kind: setup
+        level: recommended
+        title: Ajusta los resultados de las tareas
+        text: Lo que se elige al reportar una tarea (Logrado, No contestó, Reprogramar…).
+        page: task_outcomes
+        check: task_outcomes
+        confirm: Así me sirven
+        hint: Los resultados de tareas siguen como vienen de fábrica.
+      - key: respuestas
+        kind: setup
+        level: recommended
+        title: Crea tus respuestas predefinidas
+        text: Los textos que tu equipo manda seguido (precios, horarios, ubicación). Se usan escribiendo / en la conversación.
+        page: canned_responses
+        check: canned_responses
+        confirm: No las necesito
+        hint: Todavía no hay respuestas predefinidas.
+      - key: plantillas
+        kind: setup
+        level: recommended
+        title: Ten tus plantillas de WhatsApp
+        text: Para escribirle a un cliente después de 24 horas sin respuesta necesitas una plantilla aprobada por WhatsApp. Puedes crearla con Dali.
+        page: whatsapp_templates
+        check: whatsapp_templates
+        confirm: No uso WhatsApp
+        hint: Todavía no hay plantillas de WhatsApp sincronizadas.
+      - key: horario
+        kind: setup
+        level: recommended
+        title: Pon tu horario de atención
+        text: En la bandeja, en «Horario de atención», marca los días y horas en que contestan. Fuera de horario el cliente recibe un aviso.
+        page: inboxes
+        check: working_hours
+        confirm: Atendemos todo el día
+        hint: Ninguna bandeja tiene horario de atención.
+      - key: productos
+        kind: setup
+        level: recommended
+        title: Da de alta tus productos y precios
+        text: En Catálogos › Productos y servicios; se usan en cotizaciones, casos y el presupuesto.
+        page: catalog
+        check: catalog
+        confirm: No vendo productos
+        hint: Todavía no hay productos en el catálogo.
+      - key: presupuesto
+        kind: setup
+        level: later
+        title: Captura tu presupuesto de ventas
+        text: Cuánto esperas vender por mes y por vendedor, para comparar contra lo real.
+        page: budget
+        check: budget
+        confirm: No lo uso
+        hint: Todavía no hay presupuesto capturado.
+      - key: importar
+        kind: setup
+        level: later
+        title: Sube tus contactos
+        text: Si ya tienes una lista de clientes, impórtala desde Clientes › Contactos en lugar de capturarlos uno por uno.
+        page: contacts
+        check: contacts_import
+        confirm: Ya los tengo
+        hint: Todavía no veo una importación de contactos.
+      - key: seguimiento_ia
+        kind: lesson
+        title: Delega seguimientos a la IA
+        guide: seguimiento_ia
+      - key: agentes_listos
+        kind: lesson
+        title: Agentes listos para tus bandejas
+        guide: agentes_listos
+
+  - key: perfil
+    title: Tu perfil
+    summary: Lo que cada quien deja listo una vez para trabajar a gusto.
+    steps:
+      - key: foto
+        kind: setup
+        level: required
+        title: Pon tu foto
+        text: En tu perfil (Configuración de Perfil). Así tus compañeros saben quién eres.
+        page: profile
+        check: avatar
+        hint: Todavía no tienes foto.
+      - key: firma
+        kind: setup
+        level: recommended
+        title: Pon tu firma
+        text: En tu perfil, «Firma de mensajes»; puedes agregarla a tus respuestas.
+        page: profile
+        check: signature
+        confirm: No la necesito
+        hint: Todavía no tienes firma.
+      - key: google
+        kind: setup
+        level: recommended
+        title: Conecta tu Google Calendar
+        text: En Agenda › Calendario, «Conectar cuenta de Google». Tus tareas agendadas salen también en tu Google Calendar.
+        page: calendar
+        check: google
+        confirm: No uso Google
+        hint: Todavía no conectas tu Google Calendar.
+      - key: celular
+        kind: setup
+        level: recommended
+        title: Instala Dali en tu celular
+        text: En tu perfil, «Usar Dali en mi teléfono», escanea el código QR e instálalo; activa los avisos para que te lleguen.
+        page: profile
+        check: phone
+        confirm: No lo necesito
+        hint: Todavía no veo que uses Dali desde el celular (ni sus avisos activados).
+      - key: dali
+        kind: setup
+        level: required
+        title: Pregúntale algo a Dali
+        text: Dali te contesta cómo se usa Kontrolya y hace cosas por ti (agendar, buscar un cliente, cotizar).
+        ask: ¿Qué puedes hacer por mí?
+        check: dali
+        hint: Todavía no le has escrito a Dali.
+
+  - key: conversaciones
+    title: Conversaciones
+    summary: Contestar a tus clientes, avisarle a un compañero y no dejar a nadie sin respuesta.
+    areas: [conversations]
+    steps:
+      - key: leer
+        kind: lesson
+        title: Cómo se atiende una conversación
+        guide: conversaciones
+      - key: responder
+        kind: exercise
+        title: Contesta a un cliente
+        text: Abre una conversación de un cliente y mándale una respuesta en «Responder» (no en nota privada).
+        page: conversations
+        check: reply_sent
+        hint: Todavía no veo una respuesta tuya a un cliente desde que empezaste. Debe ir en «Responder», no en «Nota privada».
+      - key: mencion
+        kind: exercise
+        title: Avísale a un compañero con una mención
+        text: En una conversación, cambia a «Nota privada», escribe @ y elige a un compañero. El cliente no la ve; a tu compañero le llega un aviso.
+        page: conversations
+        check: mention_note
+        hint: Todavía no veo una nota privada tuya con una mención (@nombre) desde que empezaste.
+
+  - key: contactos
+    title: Contactos y organizaciones
+    summary: Dar de alta a tus clientes, ligarlos a su empresa y dejar notas de lo que platicaron.
+    areas: [clients]
+    steps:
+      - key: leer
+        kind: lesson
+        title: Contactos y su ficha
+        guide: contactos
+      - key: practica
+        kind: exercise
+        title: Crea tu Cliente de práctica
+        text: Es un contacto solo para practicar, a tu nombre. No tiene teléfono ni correo, así que no se le manda nada. Lo borras cuando termines.
+        check: practice_contact
+        hint: Pulsa «Crear mi Cliente de práctica».
+      - key: organizacion
+        kind: exercise
+        title: Liga tu Cliente de práctica a una organización
+        text: En la ficha de tu Cliente de práctica, ponle una organización (puedes crear una nueva, por ejemplo «Empresa de práctica»).
+        page: practice_contact
+        needs: practice_contact
+        check: practice_organization
+        hint: Tu Cliente de práctica todavía no tiene organización.
+      - key: nota
+        kind: exercise
+        title: Déjale una nota
+        text: En la ficha de tu Cliente de práctica, agrega una nota con lo que platicaron (por ejemplo «Le interesa el plan anual»).
+        page: practice_contact
+        needs: practice_contact
+        check: practice_note
+        hint: Todavía no veo una nota tuya en tu Cliente de práctica.
+      - key: leer_organizaciones
+        kind: lesson
+        title: Organizaciones (las empresas de tus clientes)
+        guide: organizaciones
+
+  - key: casos
+    title: Casos y seguimiento
+    summary: Convertir lo que pide un cliente en un caso, con sus tareas, su etapa y su próxima llamada.
+    areas: [sales, service]
+    steps:
+      - key: leer
+        kind: lesson
+        title: Qué es un caso y cómo avanza
+        guide: casos
+      - key: caso
+        kind: exercise
+        title: Crea un caso para tu Cliente de práctica
+        text: Desde la ficha de tu Cliente de práctica, crea un caso (una oportunidad de venta o una solicitud de servicio).
+        page: practice_contact
+        needs: practice_contact
+        check: practice_case
+        hint: Tu Cliente de práctica todavía no tiene un caso creado por ti.
+      - key: tarea
+        kind: exercise
+        title: Agrégale una tarea
+        text: Dentro del caso, en «Tareas», agrega lo que sigue (por ejemplo «Mandar la propuesta»).
+        page: practice_case
+        needs: practice_case
+        check: practice_task
+        hint: Todavía no veo una tarea que hayas creado en el caso de práctica.
+      - key: etapa
+        kind: exercise
+        title: Pásalo a otra etapa
+        text: Mueve el caso de práctica a la siguiente etapa (en el caso o arrastrándolo en el tablero).
+        page: practice_case
+        needs: practice_case
+        check: practice_stage
+        hint: El caso de práctica sigue en la misma etapa.
+      - key: agendar
+        kind: exercise
+        title: Agéndale una llamada
+        text: En el caso, agenda una llamada para mañana. Si tienes Google conectado, también sale en tu Google Calendar.
+        page: practice_case
+        needs: practice_case
+        check: practice_meeting
+        hint: Todavía no veo una llamada agendada por ti en el caso de práctica.
+      - key: leer_agenda
+        kind: lesson
+        title: Tu día y tus tareas
+        guide: agenda

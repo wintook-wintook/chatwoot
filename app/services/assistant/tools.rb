@@ -22,23 +22,30 @@ class Assistant::Tools
   include Assistant::FieldTools # trabajo en campo
   include Assistant::EventTools # NFC en la expo
   include Assistant::ClientTaskTools # tareas con el cliente
-  include Assistant::AgendaTools # my_agenda
+  include Assistant::AgendaTools # my_agenda y team_members
   include Assistant::CancelTools # cancelar con motivo
   include Assistant::ConvertTools # tarea ↔ tarea agendada
+  include Assistant::FollowUpPresetTools # plantillas de seguimiento
+  include Assistant::ProgressTools # reportar avance de una tarea
+  include Assistant::PendingTools # menciones, chat interno y sin asignar
+  include Assistant::SetupTools # «Arma tu cuenta con Dali»
+  include Assistant::CallTools # llamar por WhatsApp
 
   LIST_LIMIT = 6
   ACTIVITY_LINES = 15
 
-  READ_TOOLS = %w[search get_case get_contact my_agenda open_page list_agents tracking_status
+  READ_TOOLS = %w[search get_case get_contact my_agenda team_members open_page list_agents tracking_status
                   list_case_types case_options search_guides read_guide report_gap].freeze +
                QUOTE_READ_TOOLS + CONVERSATION_READ_TOOLS + FIELD_READ_TOOLS + EVENT_READ_TOOLS +
-               CLIENT_TASK_READ_TOOLS
+               CLIENT_TASK_READ_TOOLS + FOLLOW_UP_PRESET_READ_TOOLS + PROGRESS_READ_TOOLS
   PROPOSAL_TOOLS = %w[propose_note propose_task propose_meeting propose_scheduled_message propose_draft
                       propose_delegate propose_tracking_action propose_create_case propose_move_stage
                       propose_outcome propose_postpone propose_resume_case propose_update_opportunity
                       propose_create_contact propose_follow_up propose_follow_up_action].freeze +
                    QUOTE_PROPOSAL_TOOLS + CONVERSATION_PROPOSAL_TOOLS + FIELD_PROPOSAL_TOOLS + EVENT_PROPOSAL_TOOLS +
-                   CLIENT_TASK_PROPOSAL_TOOLS + CANCEL_PROPOSAL_TOOLS + CONVERT_PROPOSAL_TOOLS
+                   CLIENT_TASK_PROPOSAL_TOOLS + CANCEL_PROPOSAL_TOOLS + CONVERT_PROPOSAL_TOOLS + FOLLOW_UP_PRESET_PROPOSAL_TOOLS +
+                   PROGRESS_PROPOSAL_TOOLS + PENDING_PROPOSAL_TOOLS + SETUP_PROPOSAL_TOOLS +
+                   CALL_PROPOSAL_TOOLS
 
   def self.definitions = Assistant::ToolDefinitions.all
 
@@ -73,14 +80,6 @@ class Assistant::Tools
       organizations: found[:organizations][:items].map { |o| o.slice(:id, :name, :match).compact },
       cases: with_match(found[:cases], cases) { |t| case_ref(t) },
       totals: found.transform_values { |group| group[:count] } }
-  end
-
-  def with_match(group, scope)
-    records = scope.where(id: group[:items].pluck(:id)).index_by(&:id)
-    group[:items].filter_map do |item|
-      record = records[item[:id]]
-      record && yield(record).merge(match: item[:match]).compact
-    end
   end
 
   def short_search(args)
@@ -118,8 +117,12 @@ class Assistant::Tools
   end
 
   # --- propuestas -----------------------------------------------------------------
+  # La misma propuesta dos veces en un turno deja una sola tarjeta.
   def proposal(type, args)
     payload, labels = public_send("prepare_#{type}", args)
+    return { result: { ok: true, proposal: type, already_proposed: true } } if (@proposed ||= []).include?([type, payload])
+
+    @proposed << [type, payload]
     { result: { ok: true, proposal: type, waiting_confirmation: true, summary: labels },
       proposal: { 'id' => SecureRandom.hex(6), 'type' => type, 'payload' => payload, 'labels' => labels,
                   'status' => 'pending' } }
@@ -141,7 +144,7 @@ class Assistant::Tools
 
     assignee = @account.users.find_by(id: args['assignee_id']) || @user
     payload = (target ? target[:ids] : {}).merge('title' => args['title'].to_s.first(255), 'description' => args['description'].to_s,
-                                                 'due_at' => parse_local(args['due_at'])&.iso8601, 'assignee_id' => assignee.id)
+                                                 'due_at' => due_day(args['due_at']), 'assignee_id' => assignee.id)
     [payload, { 'target' => target&.dig(:label), 'assignee' => assignee.name }]
   end
 
@@ -150,12 +153,13 @@ class Assistant::Tools
     starts = parse_local(args['starts_at'])
     raise ArgumentError, 'Falta la fecha y hora de inicio (YYYY-MM-DDTHH:MM).' unless starts
 
-    minutes = args['duration_minutes'].to_i.positive? ? args['duration_minutes'].to_i : 30
+    minutes = [args['duration_minutes'].to_i, 0].max.nonzero? || 30
     payload = (target ? target[:ids] : {}).merge(
       'title' => args['title'].to_s.first(255), 'description' => args['description'].to_s, 'location' => args['location'].to_s,
       'is_visit' => args['is_visit'] == true, 'starts_at' => starts.iso8601, 'ends_at' => (starts + minutes.minutes).iso8601
     )
-    [payload, { 'target' => target&.dig(:label), 'google' => google_connected? }]
+    labels = { 'target' => target&.dig(:label), 'google' => google_connected? }
+    Assistant::MeetingParticipants.add(@account, @user, args, payload, labels)
   end
 
   def prepare_scheduled_message(args)
@@ -201,7 +205,18 @@ class Assistant::Tools
     { ids: { 'organization_id' => org.id }, label: org.name }
   end
 
+  # La ruta completa de una pantalla de Assistant::Pages (también la usa Assistant::PageLinks).
+  def page_path(target, id = nil)
+    path = Assistant::Pages::MAP[target.to_s]&.call(self, id)
+    path && "/app/accounts/#{@account.id}/#{path}"
+  end
+
   private
+
+  # Vence de una tarea: solo el día; vence al final de ese día (la hora es de las agendadas).
+  def due_day(value)
+    parse_local(value)&.end_of_day&.iso8601
+  end
 
   def parse_local(value)
     return nil if value.blank?
@@ -215,10 +230,5 @@ class Assistant::Tools
 
   def google_connected?
     UserCalendarIntegration.exists?(account_id: @account.id, user_id: @user.id)
-  end
-
-  def page_path(target, id)
-    path = Assistant::Pages::MAP[target.to_s]&.call(self, id)
-    path && "/app/accounts/#{@account.id}/#{path}"
   end
 end

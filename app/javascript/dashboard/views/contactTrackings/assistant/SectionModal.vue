@@ -10,9 +10,11 @@
 // una sección.
 // ============================================================================
 import ProofreadBar from './ProofreadBar.vue';
+import ConstantPicker from './ConstantPicker.vue';
+import { insertConstant, percentTriggerAt } from './constantPicker';
 
 export default {
-  components: { ProofreadBar },
+  components: { ProofreadBar, ConstantPicker },
   props: {
     show: { type: Boolean, default: false },
     // El bloque que se edita, o null para una sección nueva.
@@ -28,12 +30,16 @@ export default {
     // administradores).
     canExplain: { type: Boolean, default: false },
     inboxId: { type: Number, default: null },
+    // F2: los nombres de los datos fijos, para ofrecerlos al escribir «%».
+    constantNames: { type: Array, default: () => [] },
   },
   emits: ['close', 'save', 'delete', 'explain'],
   data() {
     return {
       title: '',
       body: '',
+      // La posición del «%» que abrió la lista de datos fijos (null = cerrada).
+      pickerCaret: null,
       confirmDelete: false,
     };
   },
@@ -83,6 +89,30 @@ export default {
     },
   },
   methods: {
+    // F2: «%» al empezar una palabra abre la lista de datos fijos.
+    onBodyInput(event) {
+      const caret = event.target.selectionStart;
+      this.pickerCaret = percentTriggerAt(event.target.value, caret)
+        ? caret
+        : null;
+    },
+    // Esc cierra la lista si está abierta; si no, sigue al modal (que se cierra).
+    closePicker(event) {
+      if (this.pickerCaret === null) return;
+      event.stopPropagation();
+      this.pickerCaret = null;
+    },
+    pickConstant(name) {
+      const { text, caret } = insertConstant(this.body, this.pickerCaret, name);
+      this.body = text;
+      this.pickerCaret = null;
+      this.$nextTick(() => {
+        const campo = this.$refs.body;
+        if (!campo) return;
+        campo.focus();
+        campo.setSelectionRange(caret, caret);
+      });
+    },
     save() {
       if (!this.canSave) return;
       this.$emit('save', { title: this.cleanTitle, body: this.body });
@@ -170,10 +200,19 @@ export default {
         </label>
         <textarea
           id="section-modal-body"
+          ref="body"
           v-model="body"
           rows="18"
           class="w-full !mb-0 min-h-[24rem] text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-md px-3 py-2"
           :placeholder="$t('TRACKING_TEMPLATES.FORM.TRAINING.BODY_PLACEHOLDER')"
+          @input="onBodyInput"
+          @keydown.esc="closePicker"
+        />
+        <ConstantPicker
+          v-if="pickerCaret !== null && constantNames.length"
+          :names="constantNames"
+          @pick="pickConstant"
+          @close="pickerCaret = null"
         />
         <!-- Las directivas, las etiquetas y las marcas de la sección no pueden
              cambiar: si la corrección las toca, el backend la descarta. -->

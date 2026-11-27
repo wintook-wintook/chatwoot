@@ -17,17 +17,20 @@
 class TrackingCampaigns::EmailSubject
   MAX_LENGTH = 150
 
-  def self.render(template, contact)
-    new(template, contact).render
+  def self.render(template, contact, campaign = nil)
+    new(template, contact, campaign).render
   end
 
-  def initialize(template, contact)
+  def initialize(template, contact, campaign = nil)
     @template = template.to_s
     @contact = contact
+    @campaign = campaign
   end
 
+  # Campaña con IA: también {{oferta}} y lo de cada contacto ({{ultima_compra}}, {{que_vence}}, {{vence}}, {{monto}}).
   def render
-    text = @template.gsub(/\{\{\s*contacto\s*\}\}/i, first_name).gsub(/\{\{\s*empresa\s*\}\}/i, company)
+    template = @campaign&.motor2? ? Motor2::CampaignTouch.fill(@template, @contact, @campaign) : @template
+    text = template.gsub(/\{\{\s*contacto\s*\}\}/i, first_name).gsub(/\{\{\s*empresa\s*\}\}/i, company)
     tidy(text).presence
   end
 

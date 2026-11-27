@@ -13,29 +13,39 @@ module Assistant::ToolDefinitions
   def self.int(description) = { type: 'integer', description: description }
 
   BASE = [
-    fn('search', 'Busca una palabra en todos los datos de contactos, organizaciones y casos; dice dónde apareció (match).',
+    fn('search', 'Busca una palabra en todos los datos de contactos, organizaciones y casos (clientes, NO personas del ' \
+                 'equipo); dice dónde apareció (match).',
        { query: str('Texto a buscar') }, %w[query]),
     fn('get_case', 'Detalle de un caso: datos, qué sigue, último contacto y su actividad reciente.',
        { case_id: int('Id del caso'), folio: str('Folio del caso, p. ej. OPB-00003') }),
     fn('get_contact', 'Detalle de un contacto: datos, organización, casos abiertos, tareas, agenda y conversaciones.',
        { contact_id: int('Id del contacto') }, %w[contact_id]),
-    fn('my_agenda', 'Agenda del usuario: tareas agendadas y tareas pendientes entre dos fechas (incluye atrasadas).',
-       { from: str('Fecha inicial YYYY-MM-DD'), to: str('Fecha final YYYY-MM-DD') }, %w[from to]),
-    fn('open_page', 'Abre una pantalla para el usuario.',
+    fn('my_agenda', 'Agenda (su día): tareas agendadas y tareas pendientes entre dos fechas (incluye atrasadas). Un solo ' \
+                    'día = lo mismo que la página Mi día. Del usuario o, con user_id, de una persona del equipo ' \
+                    '(búscala con team_members).',
+       { from: str('Fecha inicial YYYY-MM-DD'), to: str('Fecha final YYYY-MM-DD'),
+         user_id: int('Id de la persona del equipo (de team_members); omitir = el usuario') }, %w[from to]),
+    fn('team_members', 'Personas del equipo (usuarios de la empresa, no clientes) por nombre o correo: compañeros, vendedores, ' \
+                       'técnicos, supervisores. Para asignarles una tarea o ver su día.',
+       { query: str('Nombre o correo (vacío = todo el equipo)') }),
+    fn('open_page', 'Abre una pantalla para el usuario. profile = su perfil (su usuario); account_settings = la ' \
+                    'configuración de la cuenta (la empresa).',
        { target: { type: 'string', enum: Assistant::Pages::MAP.keys },
          id: int('Id del caso/contacto/organización o número de la conversación') }, %w[target]),
     fn('propose_note', 'Propone dejar una nota interna en un caso o en un contacto. Requiere confirmación.',
        { case_id: int('Id del caso'), contact_id: int('Id del contacto (si no hay caso)'), content: str('Texto') },
        %w[content]),
     fn('propose_task', 'Propone crear una tarea (con caso, o con contacto/organización). Requiere confirmación.',
-       { title: str('Título corto'), description: str('Detalle'), due_at: str('Vence, hora local YYYY-MM-DDTHH:MM'),
+       { title: str('Título corto'), description: str('Detalle'), due_at: str('Día en que vence, YYYY-MM-DD (sin hora: vence al final del día)'),
          case_id: int('Id del caso'), contact_id: int('Id del contacto'), organization_id: int('Id de la organización'),
-         assignee_id: int('Id del usuario responsable (omitir = el usuario)') }, %w[title]),
+         assignee_id: int('Id de la persona del equipo responsable (de team_members; omitir = el usuario)') }, %w[title]),
     fn('propose_meeting', 'Propone agendar una tarea con hora (llamada, reunión, visita) en el calendario. Requiere confirmación.',
        { title: str('Título'), starts_at: str('Inicio, hora local YYYY-MM-DDTHH:MM'),
          duration_minutes: int('Duración en minutos (default 30)'), description: str('Detalle'),
          location: str('Lugar'), is_visit: { type: 'boolean', description: 'Es una visita en sitio' },
-         case_id: int('Id del caso'), contact_id: int('Id del contacto'), organization_id: int('Id de la organización') },
+         case_id: int('Id del caso'), contact_id: int('Id del contacto'), organization_id: int('Id de la organización'),
+         participant_ids: { type: 'array', items: { type: 'integer' },
+                            description: 'Otros del equipo que van además del usuario (ids de team_members); la ven en su agenda' } },
        %w[title starts_at]),
     fn('propose_scheduled_message', 'Propone programar un mensaje al cliente en una conversación. Requiere confirmación.',
        { conversation_id: int('Número (display id) de la conversación'), content: str('Texto del mensaje'),
@@ -53,18 +63,6 @@ module Assistant::ToolDefinitions
          starts_at: str('Primer intento, hora local YYYY-MM-DDTHH:MM (omitir = en unos minutos)'),
          max_attempts: int('Intentos (1 a 10)'), interval_value: int('Cada cuánto (número)'),
          interval_unit: { type: 'string', enum: %w[minutes hours days] } }, %w[agent_id]),
-    # Seguimiento IA — el agente nuevo con herramientas (por omisión al «dale seguimiento»)
-    fn('propose_follow_up', "Propone delegar el seguimiento del cliente al #{AiFollowUp::DISPLAY_NAME} (el agente nuevo, sin " \
-                            'elegir agente). Requiere confirmación.',
-       { case_id: int('Id del caso'), contact_id: int('Id del contacto'),
-         conversation_id: int('Número de la conversación (omitir = la del caso o la más reciente)'),
-         objective: str('Qué debe lograr, concreto: «que confirme la cotización 1520 o saber por qué no»'),
-         instruction: str('Indicaciones para este cliente (tono, qué ofrecer, qué no decir)'),
-         starts_at: str('Primer mensaje, hora local YYYY-MM-DDTHH:MM (omitir = ahora)'),
-         max_attempts: int('Cuántas veces insistir sin respuesta (1 a 10, default 3)'), interval_value: int('Cada cuánto (número)'),
-         interval_unit: { type: 'string', enum: %w[minutes hours days] },
-         template_name: str('Solo si el usuario nombra una plantilla de WhatsApp para reabrir la ventana de 24 h ' \
-                            '(omitir = el agente elige la más conveniente)') }, %w[objective]),
     fn('propose_follow_up_action', "Propone pausar, reanudar o cancelar un #{AiFollowUp::DISPLAY_NAME}. Requiere confirmación.",
        { follow_up_id: int('Id del Seguimiento IA (de tracking_status, ai_follow_ups)'),
          action: { type: 'string', enum: %w[pause resume cancel] } }, %w[follow_up_id action]),
@@ -105,7 +103,8 @@ module Assistant::ToolDefinitions
        { conversation_id: int('Número de la conversación, si aplica'), content: str('Texto del borrador') }, %w[content])
   ].freeze
 
-  EXTRA = %w[Sales Guide Quote Conversation Field Event ClientTask Cancel Convert].freeze # Assistant::<X>ToolDefinitions::ALL
+  # Assistant::<X>ToolDefinitions::ALL
+  EXTRA = %w[Sales Guide Quote Conversation Field Event ClientTask Cancel Convert FollowUp Progress Setup Call].freeze
 
   # Al primer uso, no al cargar: los <X>ToolDefinitions usan D.fn de aquí (carga circular en eager load).
   def self.all = @all ||= (BASE + EXTRA.flat_map { |x| "Assistant::#{x}ToolDefinitions".constantize::ALL }).freeze

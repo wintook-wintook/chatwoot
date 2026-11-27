@@ -583,5 +583,36 @@ RSpec.describe Message do
         create(:message, account: account, inbox: inbox, conversation: conversation, message_type: 'incoming')
       end
     end
+
+    # fix/campanas (punto 2): la campaña pausada a mano calla a la IA en sus conversaciones.
+    context 'when the conversation belongs to a campaign paused by hand' do
+      let(:campaign) { create(:tracking_campaign, account: account, status: 'paused') }
+
+      before do
+        create(:contact_tracking, account: account, inbox: inbox, contact: conversation.contact,
+                                  conversation: conversation, tracking_campaign: campaign, status: 'active')
+      end
+
+      it 'does not hand the message to any AI' do
+        expect(ContactTrackingResponseAnalyzerJob).not_to receive(:set)
+        expect(Motor2::ReplyJob).not_to receive(:set)
+
+        create(:message, account: account, inbox: inbox, conversation: conversation, message_type: 'incoming')
+      end
+
+      it 'answers again once the campaign is resumed' do
+        campaign.update_columns(status: 'running') # rubocop:disable Rails/SkipsModelValidations
+        expect(ContactTrackingResponseAnalyzerJob).to receive(:set).and_call_original
+
+        create(:message, account: account, inbox: inbox, conversation: conversation, message_type: 'incoming')
+      end
+
+      it 'keeps answering when Meta paused it (only the sends stop)' do
+        campaign.update_columns(paused_reason: 'Plantilla inexistente') # rubocop:disable Rails/SkipsModelValidations
+        expect(ContactTrackingResponseAnalyzerJob).to receive(:set).and_call_original
+
+        create(:message, account: account, inbox: inbox, conversation: conversation, message_type: 'incoming')
+      end
+    end
   end
 end

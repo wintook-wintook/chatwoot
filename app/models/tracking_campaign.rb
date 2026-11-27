@@ -6,10 +6,12 @@
 #
 #  id                       :bigint           not null, primary key
 #  audience                 :jsonb            not null
+#  brief                    :jsonb            not null
 #  daily_cap                :integer
 #  email_subject            :string
 #  email_subject_b          :string
 #  ends_at                  :datetime
+#  engine                   :string           default("1"), not null
 #  entry_delay_minutes      :integer          default(0), not null
 #  event_status             :string
 #  handoff_due_hours        :integer
@@ -28,6 +30,7 @@
 #  stop_when_not_interested :boolean          default(TRUE), not null
 #  stop_when_wrong_person   :boolean          default(TRUE), not null
 #  subject_ab_winner        :string
+#  touches                  :jsonb            not null
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
 #  account_id               :bigint           not null
@@ -71,6 +74,10 @@
 # `scheduled_for` es el INICIO de la ventana y `ends_at` su fin (opcional). Cada contacto
 # que entra, o que se intentó meter, es una TrackingCampaignEntry.
 #
+# Motor (engine): '1' la de siempre (CampaignForm, Agentes a medida); '2' «Campaña con Vendedor IA»
+# (Motor2CampaignWizard): la campaña trae su oferta (brief) y sus toques por canal (touches) y la atiende un
+# «Vendedor de campaña» (TrackingCampaigns::Motor2Brief).
+#
 # Guardada (saved): la campaña existe pero no corre — no inscribe a nadie (ni por lote ni
 # por automatización) hasta que alguien la pone en curso (TrackingCampaigns::Launch).
 # ================================================================================
@@ -80,6 +87,7 @@ class TrackingCampaign < ApplicationRecord
   MODES = %w[batch continuous].freeze
   # prospeccion V0: seguimiento (ya te conocen) o prospección (clientes nuevos).
   PURPOSES = %w[follow_up prospecting].freeze
+  ENGINES = %w[1 2].freeze
 
   # §10.12 (D20, D25): qué hace la campaña con lo que la IA leyó en la respuesta del cliente.
   REPLY_OPTIONS = %i[stop_when_not_interested stop_when_wrong_person retry_not_now].freeze
@@ -95,6 +103,12 @@ class TrackingCampaign < ApplicationRecord
   belongs_to :event, optional: true # Plan-Eventos E3 — la campaña de un evento
   has_many :contact_trackings, dependent: :nullify
   has_many :entries, class_name: 'TrackingCampaignEntry', dependent: :delete_all
+  has_many :clicks, class_name: 'TrackingCampaignClick', dependent: :delete_all # Campaña con Vendedor IA
+  # Campaña con Vendedor IA — «Imágenes y archivos de esta oferta» (con su regla en rules).
+  has_many :files, class_name: 'AiAgentAttachment', dependent: :destroy
+  # Campaña con Vendedor IA — «Prueba real»: la copia que va solo a los contactos de prueba (TrackingCampaigns::Motor2TestRun).
+  belongs_to :test_of, class_name: 'TrackingCampaign', optional: true
+  has_many :test_runs, class_name: 'TrackingCampaign', foreign_key: :test_of_id, dependent: :destroy, inverse_of: :test_of
 
   validates :name, presence: true, length: { minimum: 2, maximum: 120 }
   validates :status, inclusion: { in: STATUSES }
@@ -109,6 +123,7 @@ class TrackingCampaign < ApplicationRecord
   validates :email_subject_b, length: { maximum: TrackingCampaigns::EmailSubject::MAX_LENGTH }, allow_nil: true
   validates :subject_ab_winner, inclusion: { in: TrackingCampaigns::SubjectTest::VARIANTS }, allow_nil: true
   validates :mode, inclusion: { in: MODES }
+  validates :engine, inclusion: { in: ENGINES }
   validates :purpose, inclusion: { in: PURPOSES }
   validates :entry_delay_minutes, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :daily_cap, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
@@ -118,14 +133,60 @@ class TrackingCampaign < ApplicationRecord
   validate :window_order
 
   scope :active, -> { where(status: %w[saved draft running paused]) }
+  # Las de verdad: sin las copias de «Prueba real».
+  scope :real, -> { where(test_of_id: nil) }
 
   # Estado al ponerla en curso: inicio futuro → Programada (la abre WindowJob); si no, En curso.
   def self.status_for(starts, now = Time.current)
     starts > now ? 'draft' : 'running'
   end
 
+  # fix/campanas (punto 2): pausada A MANO = el Agente IA tampoco contesta a quien ya respondió.
+  # La pausa por un error de Meta (paused_reason) solo frena los envíos: la plática sigue.
+  LIVE_TRACKING_STATUSES = %w[active scheduled pending paused].freeze
+
+  def silenced?
+    status == 'paused' && paused_reason.blank?
+  end
+
+  # ¿La conversación tiene un seguimiento vivo de una campaña pausada a mano? Lo pregunta
+  # Message#analyze_for_active_trackings antes de pasarle el mensaje a cualquier IA.
+  def self.silences_conversation?(conversation_id)
+    return false if conversation_id.blank?
+
+    ContactTracking.where(conversation_id: conversation_id, status: LIVE_TRACKING_STATUSES)
+                   .joins(:tracking_campaign)
+                   .exists?(tracking_campaigns: { status: 'paused', paused_reason: [nil, ''] })
+  end
+
   def continuous?
     mode == 'continuous'
+  end
+
+  # Campaña con Vendedor IA (Motor 2.0): su oferta y sus toques viven aquí, no en el agente.
+  def motor2?
+    engine == '2'
+  end
+
+  # Campaña con Vendedor IA: cuántos toques pueden salir ese día (nil = sin tope). Calentando el dominio, el tope
+  # arranca en Motor2Brief::WARMUP_START y se duplica cada día desde que empezó.
+  # Sus archivos con la regla de cada uno: { nombre => rules } (como TrackingTemplate#file_rules).
+  def file_rules = offer_files.to_h { |f| [f.name, f.rules.to_h] }
+
+  # Los archivos de la oferta (la copia de «Prueba real» usa los de su campaña).
+  def offer_files = AiAgentAttachment.of_campaign(self).order(:id)
+
+  def daily_send_cap(day)
+    return nil if daily_cap.blank?
+    return daily_cap unless motor2? && brief.to_h['warmup'] == true
+
+    started = (scheduled_for || created_at).in_time_zone(day.time_zone).to_date
+    TrackingCampaigns::Motor2Brief.warmup_cap(daily_cap, (day.to_date - started).to_i)
+  end
+
+  # La copia de «Prueba real»: sus toques salen cada pocos minutos y no aparece en listados.
+  def test_run?
+    test_of_id.present?
   end
 
   def prospecting?

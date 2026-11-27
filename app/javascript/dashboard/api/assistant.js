@@ -150,15 +150,85 @@ class AssistantAPI extends ApiClient {
   // «Probar el agente»: la pila de pruebas en vivo del agente guardado (M5 de
   // docs/importar_prompt_extenso_plan.md). Devuelve { id }; el avance se lee con
   // testBattery(id) y el informe .md con downloadTestBatteryReport(id).
-  startTestBattery(templateId, { briefId = null } = {}) {
+  // `messages`: pruebas escritas a mano (proyecto@diagrama_agente_ia F2); con ellas
+  // se corren solo esas.
+  startTestBattery(templateId, { briefId = null, messages = null } = {}) {
     return axios.post(`${this.url}/test_battery`, {
       template_id: templateId,
       brief_id: briefId,
+      messages,
     });
   }
 
   testBattery(id) {
     return axios.get(`${this.url}/test_battery/${id}`);
+  }
+
+  // proyecto@diagrama_agente_ia F3: la pila guardada de cada agente. testCases trae
+  // { cases, dry_run, live_offer }; la corrida en vivo se sigue con testBattery(id).
+  testCases(templateId) {
+    return axios.get(`${this.url}/test_cases`, {
+      params: { template_id: templateId },
+    });
+  }
+
+  // expectedRoute: la de una prueba sugerida; con ella el juez califica la ruta.
+  // turns (F5): los mensajes de un diálogo (2–4); message es el primero.
+  addTestCase(templateId, message, expectedRoute = null, turns = null) {
+    return axios.post(`${this.url}/test_cases`, {
+      template_id: templateId,
+      message,
+      expected_route: expectedRoute,
+      turns,
+    });
+  }
+
+  // F5: toda la pila en seco contra una versión guardada y contra el borrador.
+  compareTestCases(templateId, versionId, draft, inboxId) {
+    return axios.post(`${this.url}/test_cases/compare`, {
+      template_id: templateId,
+      version_id: versionId,
+      draft,
+      inbox_id: inboxId,
+    });
+  }
+
+  generateTestCases(templateId, { briefId = null } = {}) {
+    return axios.post(`${this.url}/test_cases/generate`, {
+      template_id: templateId,
+      brief_id: briefId,
+    });
+  }
+
+  pinTestCase(id, pinned) {
+    return axios.patch(`${this.url}/test_cases/${id}`, { pinned });
+  }
+
+  deleteTestCase(id) {
+    return axios.delete(`${this.url}/test_cases/${id}`);
+  }
+
+  // Una sola prueba en seco, al momento: devuelve la prueba con su camino.
+  dryTestCase(id, draft, inboxId) {
+    return axios.post(`${this.url}/test_cases/${id}/dry`, {
+      draft,
+      inbox_id: inboxId,
+    });
+  }
+
+  runTestCasesDry(templateId, draft, inboxId) {
+    return axios.post(`${this.url}/test_cases/run_dry`, {
+      template_id: templateId,
+      draft,
+      inbox_id: inboxId,
+    });
+  }
+
+  runTestCasesLive(templateId, caseIds) {
+    return axios.post(`${this.url}/test_cases/run_live`, {
+      template_id: templateId,
+      case_ids: caseIds,
+    });
   }
 
   downloadTestBatteryReport(id) {
@@ -178,11 +248,51 @@ class AssistantAPI extends ApiClient {
 
   // Un turno de la conversación que arma un agente desde cero: devuelve la
   // respuesta y las instrucciones iniciales actualizadas (DraftingChat).
-  draftingChat(messages, instructions, { sessionId = null } = {}) {
+  // routes (proyecto@crear_agente_conversando FR): el boceto de rutas ya probadas.
+  // fields (crear_agente_conversando F3): objective, ai_context, variables, datos_fijos.
+  draftingChat(
+    messages,
+    instructions,
+    { sessionId = null, routes = '', fields = {} } = {}
+  ) {
     return axios.post(`${this.url}/drafting_chat`, {
       messages,
       instructions,
+      routes,
+      fields,
       session_id: sessionId,
+    });
+  }
+
+  // §15 «Probar fuentes»: las directivas del borrador y una búsqueda como el agente.
+  sourceProbe(draft) {
+    return axios.post(`${this.url}/source_probe`, { draft });
+  }
+
+  sourceProbeRun(directive, phrase, { inboxId = null, rfc = '' } = {}) {
+    return axios.post(`${this.url}/source_probe/run`, {
+      directive,
+      phrase,
+      inbox_id: inboxId,
+      rfc,
+    });
+  }
+
+  // F4: el .md de las instrucciones del agente, para pegarlo en otra IA.
+  exportInstructions({ name, draft, instructions, fields }) {
+    return axios.post(`${this.url}/export`, {
+      name,
+      draft,
+      instructions,
+      fields,
+    });
+  }
+
+  // F3: lo corregido a mano en Definición, Variables o Datos fijos, sin gastar un turno.
+  saveDraftingFields(sessionId, fields) {
+    return axios.patch(`${this.url}/drafting_chat/fields`, {
+      session_id: sessionId,
+      fields,
     });
   }
 
@@ -296,6 +406,18 @@ class AssistantAPI extends ApiClient {
     return axios.get(`${this.url}/sessions/${id}`);
   }
 
+  // feat/ficha_agente_ia — la última conversación ya publicada de un agente (o null) y
+  // seguirla como una nueva con su historial.
+  previousSession(templateId) {
+    return axios.get(`${this.url}/sessions/previous`, {
+      params: { template_id: templateId },
+    });
+  }
+
+  continueSession(id) {
+    return axios.post(`${this.url}/sessions/${id}/continue`);
+  }
+
   discardSession(id) {
     return axios.delete(`${this.url}/sessions/${id}`);
   }
@@ -313,11 +435,13 @@ class AssistantAPI extends ApiClient {
   // Probar sin enviar nada: qué haría el motor con UNA pregunta. No escribe nada,
   // pero sí gasta (clasifica la rama y vectoriza la pregunta), así que va con
   // botón — a diferencia de validate, que corre al teclear.
-  dryRun(draft, question, inboxId) {
+  // recentContext (F5): los mensajes anteriores de un diálogo («Cliente: …»).
+  dryRun(draft, question, inboxId, recentContext = null) {
     return axios.post(`${this.url}/dry_run`, {
       draft,
       question,
       inbox_id: inboxId,
+      recent_context: recentContext,
     });
   }
 

@@ -10,7 +10,11 @@
       "404": "There are no canned responses available in this account.",
       "TITLE": "Manage canned responses",
       "DESC": "Canned Responses are predefined reply templates which can be used to quickly send out replies to conversations.",
-      "TABLE_HEADER": ["Short code", "Content", "Actions"]
+      "TABLE_HEADER": [
+        "Short code",
+        "Content",
+        "Actions"
+      ]
     },
     "ADD": {
       "TITLE": "Add canned response",
@@ -171,6 +175,251 @@
       "URL_CONTENT": "Add an alternative web link",
       "URL": "Alternative web link",
       "URL_PLACEHOLDER": "Please enter a web address"
+    },
+    "AUDIT": {
+      "TAB": "Audit",
+      "LOADING": "Loading audit…",
+      "LOAD_ERROR": "Could not load the audit",
+      "RUN": "Audit now",
+      "RUN_ERROR": "Could not start the audit",
+      "SAVE_ERROR": "Could not save the change",
+      "RUNNING": "Auditing… comparing similar pairs and reviewing each response's writing. It takes a couple of minutes.",
+      "NEVER_RUN": "This account has not been audited yet.",
+      "LAST_RUN": "Last audit: {date} · {responses} responses reviewed · {pairs} pairs compared",
+      "HOW_IT_WORKS": "Size is measured live (agent limit: {max} characters including the name). Duplicates, contradictions and writing are reviewed by AI; each response is re-reviewed when saved.",
+      "FAILED_CALLS": "{count} reviews could not be done; earlier findings for those responses were kept.",
+      "ERRORS": {
+        "no_key": "The account has no OpenAI integration: the AI audit cannot run (size is still measured).",
+        "no_credits": "The account's OpenAI key ran out of credits: the audit did not finish.",
+        "rate_limit": "OpenAI rate-limited the calls; audit again in a few minutes.",
+        "other": "The audit did not finish: {error}"
+      },
+      "CARDS": {
+        "oversize": "Over the character limit",
+        "duplicate": "Duplicates",
+        "contradiction": "Contradictions",
+        "overlap": "Overlapping",
+        "writing": "Writing"
+      },
+      "KINDS": {
+        "duplicate": "Duplicates",
+        "contradiction": "Contradict each other",
+        "overlap": "Overlap",
+        "writing": "Writing"
+      },
+      "ISSUES": {
+        "ortografia": "Spelling",
+        "incompleta": "Incomplete",
+        "confusa": "Unclear",
+        "numeracion": "Numbering",
+        "tono": "Tú / usted"
+      },
+      "PENDING": "Pending",
+      "DISMISSED": "Dismissed ({count})",
+      "EMPTY": "Nothing pending. If you haven't audited yet, use “Audit now”.",
+      "EMPTY_DISMISSED": "No dismissed findings.",
+      "OVERSIZE_TITLE": "Over the {max} character limit",
+      "OVERSIZE_HELP": "The agent receives the name and only the sections most similar to the question. Each row is a block (paragraph) with its size: the largest are the ones worth moving to another response.",
+      "SEE_IN_TABLE": "See in table",
+      "SIMILARITY": "similarity {value}",
+      "SUGGESTION": "Suggestion: {text}",
+      "DISMISS": "Dismiss",
+      "REOPEN": "Reopen",
+      "KEEP_THIS": "Keep this one",
+      "KEEP_DONE": "The duplicate was deleted",
+      "KEEP_CONFIRM_TITLE": "Delete the duplicate?",
+      "KEEP_CONFIRM_MESSAGE": "“{keep}” is kept and “{drop}” is deleted. This cannot be undone.",
+      "KEEP_CONFIRM_YES": "Delete the other",
+      "METER": {
+        "LABEL": "Characters the agent receives",
+        "OK": "Fits: the agent receives all of it (name included).",
+        "NEAR": "Close to the limit.",
+        "OVER": "Over the limit: it can't be saved. Split it into several responses, one per topic.",
+        "SHOW_BLOCKS": "Show the {count} blocks",
+        "HIDE_BLOCKS": "Hide blocks",
+        "PROMPT_LABEL": "Prompt characters",
+        "PROMPT_OK": "The prompt fits.",
+        "PROMPT_NEAR": "Prompt close to the limit.",
+        "PROMPT_OVER": "The prompt is over the limit: it can't be saved. Keep only how to answer here; data goes in the message."
+      },
+      "TABLE": {
+        "COL_CHARS": "Characters",
+        "COL_CHARS_HELP": "What the agent receives: name + content. Limit: 3,500",
+        "FILTER_SIZE": "Size",
+        "ALL_SIZES": "Any size",
+        "SIZE_OVER": "Over the limit",
+        "SIZE_NEAR": "Close to the limit",
+        "FINDINGS_BADGE_HELP": "{count} pending finding(s) in Audit"
+      },
+      "ACTIONS": {
+        "merge": "Merge into one",
+        "separate": "Separate topics",
+        "resolve": "Resolve",
+        "writing": "Improve writing"
+      },
+      "NOT_CONTRADICTION": "Not a contradiction",
+      "BULK_WRITING": "Fix spelling and numbering ({count})",
+      "EMPTY_BY_TAB": {
+        "open": "Nothing pending. If you haven't audited yet, use “Audit now”.",
+        "dismissed": "No dismissed findings.",
+        "history": "No fixes applied in the last 30 days."
+      },
+      "HISTORY": {
+        "TAB": "History",
+        "UNDO": "Undo",
+        "UNDONE": "The fix was undone: the responses are back as they were.",
+        "UNDO_ERROR": "Could not undo.",
+        "WAS_UNDONE": "Undone",
+        "RESULT": "+{created} · ~{updated} · −{deleted}",
+        "CONFIRM_TITLE": "Undo this fix?",
+        "CONFIRM_MESSAGE": "{names} go back to how they were before the fix and what it created is deleted.",
+        "CONFIRM_EDITED": "Someone edited what the fix left afterwards ({names}). If you undo, those changes are lost."
+      }
+    },
+    "FIX": {
+      "OPEN": "Fix with AI",
+      "TITLE": "Fix with AI",
+      "SUBTITLE": "“{name}” is {chars} characters long; the agent receives up to {max} of each response.",
+      "LOADING": "Loading…",
+      "LOAD_ERROR": "Could not load the proposal",
+      "CHECK_ERROR": "Could not run the checks",
+      "INTRO": "First, what the agent can't use is cleaned up (embedded images, HTML, repeated paragraphs). If that's not enough, AI proposes splitting or condensing it according to its shape, without losing any data. Nothing is saved until you accept.",
+      "PROPOSE": "Propose a fix",
+      "PROPOSE_AGAIN": "Propose again",
+      "RUNNING": "AI is building the proposal and checking nothing is lost. It takes 10 to 60 seconds.",
+      "STALE": "The response changed since this proposal was made. Request a new one.",
+      "ORIGINAL": "Original",
+      "PARTS": "Proposal ({count})",
+      "REMOVE_PART": "Remove this part",
+      "DISCARD": "Discard",
+      "RECHECK": "Check again",
+      "APPLY": "Accept and apply",
+      "APPLIED": "Done: {count} response(s) saved. They are vectorized and audited automatically.",
+      "FORCE": "What these checks flag no longer applies: accept anyway",
+      "CLEANUP": "Cleanup without AI: −{chars} characters ({kinds}).",
+      "ACTIONS": {
+        "clean": "Clean up",
+        "split": "Split",
+        "condense": "Condense",
+        "mark_prompt": "Instructions for the agent",
+        "keep": "Keep as is",
+        "rewrite": "Fix writing",
+        "merge": "Merge into one",
+        "separate": "Separate topics",
+        "resolve": "Fix the data"
+      },
+      "SHAPES": {
+        "sections": "Sheet with sections",
+        "procedure": "Step-by-step procedure",
+        "list": "List of items",
+        "examples": "Example questions",
+        "instructions": "Instructions for the agent",
+        "single_topic": "Single topic"
+      },
+      "REMOVED": {
+        "image_data": "embedded images",
+        "html": "HTML",
+        "entities": "HTML entities",
+        "duplicates": "repeated paragraphs",
+        "spaces": "extra spaces"
+      },
+      "FALLBACK": {
+        "rebalanced": "A part was still over the limit: it was split by paragraphs, without rewriting it.",
+        "mechanical": "Condensing lost content: the original was split by paragraphs, without rewriting it."
+      },
+      "CHECKS": {
+        "TITLE": "Checks",
+        "OUTDATED": "You edited the parts: check again.",
+        "SIZE": "Every part fits the limit",
+        "DATA": "Data kept: {found} of {total}",
+        "MISSING": "Missing:",
+        "GROUPS": "Group prefixes used by agents: {prefixes}",
+        "NAMES": "Names unique in the account",
+        "TAKEN": "repeated or already used",
+        "COVERAGE": "Original sentences present: {kept} of {total}",
+        "NO_DUPLICATES": "No duplicate parts nor equal to another response",
+        "DUPLICATES": "Nearly identical: {names}",
+        "SEARCH": "Test questions that find their part: {found} of {total}",
+        "RESOLVED": "The wrong data no longer appears and the correct one does",
+        "STILL_WRONG": "Still appears:",
+        "MISSING_RIGHT": "Correct one missing:",
+        "TOO_MUCH_CHANGE": "AI changed more than needed: review the changes",
+        "SMALL_CHANGE": "Only what was needed changed",
+        "PAIR_OK": "They are now less similar ({before} → {after})",
+        "PAIR_BAD": "Still similar ({before} → {after}): merging may be better"
+      },
+      "ERRORS": {
+        "no_key": "The account has no OpenAI integration.",
+        "no_credits": "The account's OpenAI key has no credits.",
+        "rate_limit": "OpenAI rate-limited the calls; try again in a few minutes.",
+        "ai_failed": "AI did not return a valid proposal; try again.",
+        "too_long": "The response is too long to propose in one pass.",
+        "timeout": "The proposal took too long; try again.",
+        "blocked": "Some checks don't pass; fix them before accepting.",
+        "stale": "The response changed; request a new proposal.",
+        "invalid": "Could not save: {detail}",
+        "apply_failed": "Could not apply the proposal.",
+        "other": "Could not complete: {detail}",
+        "not_undoable": "That fix can no longer be undone.",
+        "choices": "Choose the correct data for each contradiction."
+      },
+      "TITLES": {
+        "oversize": "Fix with AI: over the limit",
+        "writing": "Improve writing",
+        "merge": "Merge into one",
+        "separate": "Separate topics",
+        "resolve": "Resolve contradiction"
+      },
+      "SUBTITLES": {
+        "oversize": "{names} is {chars} characters long; the agent receives up to {max} of each response.",
+        "writing": "{names}: only what the audit flagged is fixed, the rest stays as is.",
+        "merge": "{names}: become one with everything from both, without repeating.",
+        "separate": "{names}: each keeps its own topic and stops repeating the other.",
+        "resolve": "{names}: choose which data is correct and AI fixes only that."
+      },
+      "INTROS": {
+        "oversize": "First, what the agent can't use is cleaned up (embedded images, HTML, repeated paragraphs). If that's not enough, AI proposes splitting or condensing it by its shape, without losing data. Nothing is saved until you accept.",
+        "writing": "AI fixes the flagged problems and obvious typos; you'll see the changes marked word by word. Nothing is saved until you accept.",
+        "merge": "AI combines both with everything either has. The one with a category or group (or the oldest) is kept and the other is deleted on accept; you can undo it in History.",
+        "separate": "AI rewrites both so each covers only its topic. Neither is deleted; anything removed from one must remain in the other.",
+        "resolve": "AI can't know which data is correct: choose it for each contradiction. You can look for the wrong data in other responses and fix them too."
+      },
+      "RESOLVE": {
+        "A_RIGHT": "A is correct:",
+        "B_RIGHT": "B is correct:",
+        "CUSTOM": "Neither, the correct one is:",
+        "FIND_ELSEWHERE": "Look for the wrong data in other responses",
+        "NOWHERE_ELSE": "It doesn't appear in any other response.",
+        "ALSO_IN": "The wrong data also appears in these responses. Check the ones to fix too (it may be the same number with another meaning: review):"
+      },
+      "NOT_ADVISED": "AI recommends not separating them: {reason}. You can merge them or dismiss the finding.",
+      "MERGE_KEEPS": "“{keep}” is kept and “{drop}” is deleted.",
+      "LOST_GROUPS": "Note: the deleted one was in group {groups} used by an agent; the merged one doesn't keep it.",
+      "VIEW_DIFF": "Changes",
+      "VIEW_EDIT": "Edit",
+      "CHANGED": "{pct}% changed",
+      "APPLIED_UNDO": "Done. It's vectorized and audited automatically; you can undo it in Audit → History.",
+      "BULK": {
+        "TITLE": "Fix spelling and numbering",
+        "SUBTITLE": "Responses with spelling mistakes or broken numbering. Review the changes and apply the checked ones; the rest go one by one.",
+        "NONE": "There are no responses with only spelling or numbering issues.",
+        "RUNNING": "Preparing fixes: {done} of {total}…",
+        "WAITING": "Preparing…",
+        "FAILED": "Could not propose",
+        "REVIEW": "Review: changed too much or fails a check",
+        "APPLY": "Apply selected ({count})",
+        "DONE": "Applied: {ok}. With errors: {failed}.",
+        "UNCHANGED": "No changes"
+      }
+    },
+    "KIND": {
+      "LABEL": "Category",
+      "GENERAL": "General",
+      "FICHA": "Profile",
+      "OBJECION": "Objection",
+      "GENERAL_HELP": "General: the same for everyone (opening hours, company details, how to order, payment methods).",
+      "FICHA_HELP": "Profile: about a single subject (a product, service, plan, branch or program). Name the subject in the title; the agent never uses it for another subject.",
+      "OBJECION_HELP": "Objection: how to answer a customer's pushback (\"it's expensive\", \"let me think\"). The agent only uses it when the customer objects."
     }
   }
 }

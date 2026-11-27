@@ -10,11 +10,19 @@ import Vocabulary from '../wintook/canned/Vocabulary.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 // proyecto@respuestas_predefinidas R2: la tabla paginada (incluye el estado de R1).
 import CannedResponsesTable from './CannedResponsesTable.vue';
-// R3: administrar las categorías (y aceptar las sugeridas).
-import CannedCategoriesModal from './CannedCategoriesModal.vue';
-import { computed, ref } from 'vue';
+// proyecto@auditoria_predefinidas: la pestaña «Auditoría».
+import CannedAudit from './audit/CannedAudit.vue';
+// proyecto@arreglar_predefinidas: «Arreglar con IA» (pasa del tope y cada sección de la
+// auditoría) y «Corregir todas» de redacción.
+import FixModal from './audit/FixModal.vue';
+import BulkWritingModal from './audit/BulkWritingModal.vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import { useI18n } from 'dashboard/composables/useI18n';
 import { useStore } from 'dashboard/composables/store';
+import { useRoute } from 'dashboard/composables/route';
+// proyecto@predefinidas_que_contestan: el probador abre una respuesta con ?fix=<id>.
+import CannedResponseAPI from 'dashboard/api/cannedResponse';
+import { MAX_CHARS } from './audit/cannedSize';
 
 const store = useStore();
 const { t } = useI18n();
@@ -28,13 +36,27 @@ const activeResponse = ref({});
 const cannedResponseAPI = ref({ message: '' });
 
 const table = ref(null);
+const auditView = ref(null);
 const reloadTable = () => {
   if (table.value) table.value.reload();
+  if (auditView.value) auditView.value.refreshAfterEdit();
 };
-const showCategories = ref(false);
-const onCategoriesChanged = () => {
-  reloadTable();
-  if (table.value) table.value.loadCategories();
+// «Ver en la tabla» de la auditoría: la lista con el filtro de tamaño puesto.
+const showTableWithSize = async size => {
+  selectedTabIndex.value = 0;
+  await nextTick();
+  if (table.value) table.value.filterBySize(size);
+};
+const fixTarget = ref(null);
+// La tabla manda la predefinida; la auditoría, { kind, response | finding }.
+const openFix = payload => {
+  fixTarget.value = payload.kind
+    ? payload
+    : { kind: 'oversize', response: payload };
+};
+const showBulk = ref(false);
+const closeFix = () => {
+  fixTarget.value = null;
 };
 
 const deleteConfirmText = computed(
@@ -65,6 +87,24 @@ const hideAddPopup = () => {
   showAddPopup.value = false;
   reloadTable();
 };
+
+// ?fix=<id> (desde el 👎 del probador): si pasa del tope, «Arreglar con IA»; si no, editarla.
+const route = useRoute();
+const openFromLink = async () => {
+  const id = Number(route.query && route.query.fix);
+  if (!id) return;
+  try {
+    const { data } = await CannedResponseAPI.list({ page: 1, per_page: 1, id });
+    const record = (data.payload || [])[0];
+    if (!record) return;
+    if ((record.agent_chars || 0) > MAX_CHARS) openFix(record);
+    // eslint-disable-next-line no-use-before-define
+    else openEditPopup(record);
+  } catch (e) {
+    // sin la respuesta, la lista como siempre
+  }
+};
+onMounted(openFromLink);
 
 const openEditPopup = response => {
   showEditPopup.value = true;
@@ -111,16 +151,6 @@ const confirmDeletion = () => {
     >
       <template #actions>
         <woot-button
-          v-if="selectedTabIndex == 0"
-          class="rounded-md"
-          variant="smooth"
-          color-scheme="secondary"
-          icon="folder"
-          @click="showCategories = true"
-        >
-          {{ $t('CANNED_MGMT.CATEGORIES.OPEN') }}
-        </woot-button>
-        <woot-button
           class="button nice rounded-md"
           icon="add-circle"
           @click="openAddPopup"
@@ -142,18 +172,37 @@ const confirmDeletion = () => {
         ref="table"
         @edit="openEditPopup"
         @delete="openDeletePopup"
+        @fix="openFix"
       />
     </div>
 
-    <Vocabulary v-if="selectedTabIndex == 1" />
-    <Synonyms v-if="selectedTabIndex == 2" />
-    <ForumBots v-if="selectedTabIndex == 3" />
-    <SystemSettings v-if="selectedTabIndex == 4" />
+    <div v-if="selectedTabIndex == 1" class="mt-6">
+      <CannedAudit
+        ref="auditView"
+        @edit="openEditPopup"
+        @show-table="showTableWithSize"
+        @fix="openFix"
+        @bulk="showBulk = true"
+        @applied="reloadTable"
+      />
+    </div>
+    <Vocabulary v-if="selectedTabIndex == 2" />
+    <Synonyms v-if="selectedTabIndex == 3" />
+    <ForumBots v-if="selectedTabIndex == 4" />
+    <SystemSettings v-if="selectedTabIndex == 5" />
 
-    <CannedCategoriesModal
-      :show="showCategories"
-      @close="showCategories = false"
-      @changed="onCategoriesChanged"
+    <FixModal
+      v-if="fixTarget"
+      :show="!!fixTarget"
+      :target="fixTarget"
+      @close="closeFix"
+      @applied="reloadTable"
+    />
+    <BulkWritingModal
+      v-if="showBulk"
+      :show="showBulk"
+      @close="showBulk = false"
+      @applied="reloadTable"
     />
 
     <woot-modal :show.sync="showAddPopup" :on-close="hideAddPopup">

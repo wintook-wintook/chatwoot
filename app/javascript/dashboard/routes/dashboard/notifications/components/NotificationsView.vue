@@ -48,6 +48,20 @@ export default {
       });
 
       // @tickets_cases Fase A — los tickets no tienen conversación: van a su detalle.
+      // Agenda: participante de una tarea agendada → su «Mi día».
+      // Tareas que se repiten: «No se hizo…» → su pantalla.
+      if (primaryActorType === 'TaskRecurrence') {
+        this.$router.push(
+          `/app/accounts/${this.accountId}/tickets/recurring-tasks`
+        );
+        return;
+      }
+      if (primaryActorType === 'CaseMeeting') {
+        this.$router.push(
+          `/app/accounts/${this.accountId}/tickets/tasks?tab=my_day`
+        );
+        return;
+      }
       if (primaryActorType === 'CaseTicket') {
         this.$router.push(
           `/app/accounts/${this.accountId}/tickets/${primaryActorId}`

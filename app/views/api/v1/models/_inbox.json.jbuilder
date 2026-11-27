@@ -52,6 +52,9 @@ if resource.web_widget?
   json.continuity_via_email resource.channel.try(:continuity_via_email)
 end
 
+## diag/waba F3 — WhatsApp también avisa «requiere reconexión»
+json.reauthorization_required resource.channel.try(:reauthorization_required?) if resource.whatsapp?
+
 ## Facebook Attributes
 if resource.facebook?
   json.page_id resource.channel.try(:page_id)

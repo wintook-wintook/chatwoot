@@ -49,6 +49,8 @@ module CaseMeetingSerializer
       notify_client: meeting.notify_client,
       attendee_emails: meeting.attendee_emails,
       organizer: ref_user(meeting.organizer),
+      # Agenda: los participantes (además del responsable), con «No puedo ir» y su nota.
+      participants: Cases::Meetings::Participants.json(meeting),
       case_task: ref_task(meeting.case_task),
       series: ref_series(meeting.case_meeting_series)
     }
@@ -74,9 +76,16 @@ module CaseMeetingSerializer
     { id: series.id, sequence: series.sequence, folio: series.folio, title: series.title }
   end
 
+  # Borrar la tarea agendada (la regla de CancelAndDeleteGuard#delete_restricted?): el
+  # organizador en las primeras 24 h, o un administrador.
+  def meeting_deletable?(meeting)
+    access_grant.admin? ||
+      (meeting.organizer_id == current_user&.id && meeting.created_at > CancelAndDeleteGuard::DELETE_WINDOW.ago)
+  end
+
   # Cancelar con motivo: por qué, si ya se trabajó (entonces pide el tiempo) y si es de una serie.
   def meeting_cancel_json(meeting)
     { cancel_reason: meeting.cancel_reason, work_started: Cases::Cancellation.work_started?(meeting),
-      series: meeting.case_meeting_series_id.present? }
+      series: meeting.case_meeting_series_id.present?, deletable: meeting_deletable?(meeting) }
   end
 end

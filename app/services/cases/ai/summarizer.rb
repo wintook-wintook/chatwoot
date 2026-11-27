@@ -53,7 +53,7 @@ class Cases::Ai::Summarizer < Cases::Ai::BaseService
     PROMPT
   end
 
-  # Transiciones con su nota (reason) + notas internas, en orden cronológico.
+  # Transiciones con su nota (reason) + notas internas y reportes, en orden cronológico.
   def timeline(ticket)
     lines = ticket.case_events.order(:created_at).filter_map do |e|
       p = e.payload || {}
@@ -62,6 +62,8 @@ class Cases::Ai::Summarizer < Cases::Ai::BaseService
         "#{p['from']} → #{p['to']}#{note}"
       elsif e.event_type == 'internal_note' && p['content'].present?
         "Nota interna: #{p['content']}"
+      elsif e.event_type == 'task_reported' && p['content'].present?
+        "Reporte: #{p['content']}"
       end
     end
     lines.presence&.join("\n") || '(sin eventos)'

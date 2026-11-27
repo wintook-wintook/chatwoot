@@ -83,7 +83,7 @@ class Api::V2::Accounts::CaseReportsController < Api::V1::Accounts::BaseControll
 
     since, till = params.values_at(:since, :until)
     range = since.present? && till.present? ? Time.zone.at(since.to_i)..Time.zone.at(till.to_i) : nil
-    analysis = analyst.analyze(range: range)
+    analysis = analyst.analyze(range: range, limit: params[:sample_size])
     analysis ? render(json: { analysis: analysis }) : render_ai_error('No se pudo analizar. Intenta de nuevo.')
   end
 

@@ -16,6 +16,11 @@
 #
 # Solo toca seguimientos que esperan su siguiente toque (pending / scheduled): uno en
 # ejecución (active), pausado o terminado se queda como está.
+#
+# Solo en CAMPAÑAS (tracking_campaign_id). Un Agente IA asignado fuera de campaña (cobranza,
+# cotizaciones, vencimientos…) sigue con todos sus intentos y su intervalo: ahí que el
+# cliente conteste («el pago sale la próxima semana») es justo cuando hay que seguir.
+# Antes aplicaba a todos y les recortaba los intentos a «los enviados + 1» (2026-11-12).
 # ================================================================================
 module ContactTrackings::ProspectReply
   RECOVERY_BUSINESS_DAYS = 3
@@ -24,10 +29,13 @@ module ContactTrackings::ProspectReply
   module_function
 
   def call(tracking, at: Time.current)
+    return false if tracking.tracking_campaign_id.nil?
     return false unless WAITING_STATUSES.include?(tracking.status)
 
     remaining = [tracking.max_attempts, tracking.attempt_count + 1].min
-    ok = tracking.update(scheduled_for: recovery_at(at, tracking.inbox), max_attempts: remaining)
+    # «Prueba real» de una Campaña con Vendedor IA: en minutos, para verlo en un rato.
+    when_at = tracking.tracking_campaign&.test_run? ? at + RECOVERY_BUSINESS_DAYS.minutes : recovery_at(at, tracking.inbox)
+    ok = tracking.update(scheduled_for: when_at, max_attempts: remaining)
     Rails.logger.warn "[ProspectReply] Tracking ##{tracking.id}: #{tracking.errors.full_messages.join(', ')}" unless ok
     ok
   end

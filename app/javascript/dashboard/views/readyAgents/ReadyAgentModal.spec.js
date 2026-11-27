@@ -1,0 +1,235 @@
+// Agentes listos — la configuración: preguntas armadas, objeciones y datos antes de pasarlo.
+import { shallowMount } from '@vue/test-utils';
+import ReadyAgentModal from './ReadyAgentModal.vue';
+
+const mountModal = props =>
+  shallowMount(ReadyAgentModal, {
+    propsData: { show: true, ...props },
+    mocks: {
+      $t: x => x,
+      $te: () => false,
+      $store: {
+        getters: { 'agents/getAgents': [], 'teams/getTeams': [] },
+        dispatch: vi.fn(),
+      },
+    },
+    stubs: { WootModal: true, WootModalHeader: true, WootButton: true },
+  });
+
+describe('ReadyAgentModal', () => {
+  it('nuevo: trae unas preguntas de ejemplo que se pueden quitar, cambiar y agregar', () => {
+    const { vm } = mountModal();
+    expect(vm.form.settings.question_list.map(q => q.text)).toEqual([
+      'READY_AGENTS.QUALIFY.need.ASK',
+      'READY_AGENTS.QUALIFY.when.ASK',
+      'READY_AGENTS.QUALIFY.budget.ASK',
+    ]);
+    vm.removeQuestion(1);
+    vm.form.settings.question_list[0].text = '¿Qué auto buscas?';
+    vm.addQuestion();
+    vm.form.settings.question_list[2].text = '¿Es para tu familia?';
+    vm.addQuestion(); // vacía: no se manda
+    expect(vm.payload().settings.question_list).toEqual([
+      '¿Qué auto buscas?',
+      'READY_AGENTS.QUALIFY.budget.ASK',
+      '¿Es para tu familia?',
+    ]);
+  });
+
+  it('un agente de antes: sus armadas prendidas y sus preguntas propias pasan a la lista', () => {
+    const { vm } = mountModal({
+      agent: {
+        id: 1,
+        name: 'Sofi',
+        inbox_ids: [1],
+        settings: {
+          qualify: [
+            { key: 'need', on: false, text: '' },
+            { key: 'budget', on: true, text: '¿Cuánto pagas?' },
+            { key: 'location', on: true, text: '' },
+          ],
+          questions: 'qué busca',
+        },
+      },
+    });
+    expect(vm.form.settings.question_list.map(q => q.text)).toEqual([
+      '¿Cuánto pagas?',
+      'READY_AGENTS.QUALIFY.location.ASK',
+      'qué busca',
+    ]);
+    const { settings } = vm.payload();
+    expect(settings.qualify).toEqual([]);
+    expect(settings.questions).toBe('');
+  });
+
+  it('respeta lo guardado y no manda objeciones a medias', () => {
+    const wrapper = mountModal({
+      agent: {
+        id: 1,
+        name: 'Sofi',
+        inbox_ids: [1],
+        settings: {
+          question_list: ['¿Qué buscas?'],
+          objections: [{ objection: 'Está caro', answer: 'Se paga solo' }],
+          required_contact: ['email'],
+        },
+      },
+    });
+    wrapper.vm.addObjection();
+    const { settings } = wrapper.vm.payload();
+    expect(settings.question_list).toEqual(['¿Qué buscas?']);
+    expect(settings.objections).toEqual([
+      { objection: 'Está caro', answer: 'Se paga solo' },
+    ]);
+    expect(settings.required_contact).toEqual(['email']);
+  });
+});
+
+describe('ReadyAgentModal · asistente paso a paso', () => {
+  it('nuevo: no avanza sin nombre y bandeja; después va paso por paso', () => {
+    const wrapper = mountModal({ inboxes: [{ id: 3, name: 'WhatsApp' }] });
+    const { vm } = wrapper;
+    expect(vm.step).toBe('agent');
+    vm.next();
+    expect(vm.step).toBe('agent');
+
+    vm.form.name = 'Ana – Facebook';
+    vm.toggleInbox(3);
+    vm.next();
+    expect(vm.step).toBe('business');
+    vm.back();
+    expect(vm.step).toBe('agent');
+    vm.go('files'); // el último: probar y guardar ya no es un paso (el chat siempre está a la derecha)
+    expect(vm.isLast).toBe(true);
+  });
+
+  it('al editar se puede saltar a cualquier paso', () => {
+    const wrapper = mountModal({
+      agent: { id: 1, name: 'Sofi', inbox_ids: [1], settings: {} },
+    });
+    wrapper.vm.go('qualify'); // objeciones y «qué hace» van en «Al calificar»
+    expect(wrapper.vm.step).toBe('qualify');
+  });
+
+  it('manda el nombre que ve el cliente y las indicaciones', () => {
+    const wrapper = mountModal({
+      agent: {
+        id: 1,
+        name: 'Prospectos FB',
+        display_name: 'Sofi',
+        inbox_ids: [1],
+        settings: { instructions: 'Sé breve' },
+      },
+    });
+    const payload = wrapper.vm.payload();
+    expect(payload.display_name).toBe('Sofi');
+    expect(payload.settings.instructions).toBe('Sé breve');
+  });
+});
+
+describe('ReadyAgentModal · cómo platica', () => {
+  it('nuevo: vienen las recomendadas y se mandan con las respuestas', () => {
+    const { vm } = mountModal();
+    expect(vm.steps).toContain('talk');
+    const { settings } = vm.payload();
+    expect(settings).toMatchObject({
+      doubts: 'answer',
+      not_found: 'advisor',
+      off_topic: 'redirect',
+      human: 'finish_first',
+    });
+  });
+
+  it('si no contesta dudas, «Qué sabe», «no encontró» y «fuera de tema» no aplican', () => {
+    const { vm } = mountModal();
+    vm.form.settings.doubts = 'defer';
+    expect(vm.answersDoubts).toBe(false);
+    expect(vm.ruleOff('not_found')).toBe(true);
+    expect(vm.ruleOff('off_topic')).toBe(true);
+    expect(vm.ruleOff('human')).toBe(false);
+  });
+
+  it('un agente con opciones de antes pasa a las recomendadas', () => {
+    const { vm } = mountModal({
+      agent: {
+        id: 1,
+        name: 'Sofi',
+        inbox_ids: [1],
+        settings: { not_found: 'handoff', off_topic: 'discard' },
+      },
+    });
+    expect(vm.form.settings).toMatchObject({
+      not_found: 'advisor',
+      off_topic: 'redirect',
+      human: 'finish_first',
+    });
+  });
+});
+
+describe('ReadyAgentModal · bienvenida y orden de preguntas', () => {
+  it('sube y baja preguntas; el orden se manda tal cual', () => {
+    const { vm } = mountModal();
+    vm.moveQuestion(2, -1);
+    vm.moveQuestion(0, -1); // la primera no sube más
+    expect(vm.payload().settings.question_list).toEqual([
+      'READY_AGENTS.QUALIFY.need.ASK',
+      'READY_AGENTS.QUALIFY.budget.ASK',
+      'READY_AGENTS.QUALIFY.when.ASK',
+    ]);
+  });
+
+  it('manda la bienvenida con las respuestas', () => {
+    const { vm } = mountModal();
+    vm.form.settings.welcome = '¡Hola! Soy Ana';
+    expect(vm.payload().settings.welcome).toBe('¡Hola! Soy Ana');
+  });
+});
+
+describe('ReadyAgentModal · productos y precios', () => {
+  const sources = [
+    { key: 'canned_response', kind: 'canned', name: 'Respuestas predefinidas' },
+    {
+      key: 'catalog',
+      kind: 'catalog',
+      name: 'Catálogo de productos',
+      about: '3 productos',
+    },
+    {
+      key: 'google_sheet:7',
+      kind: 'google_sheet',
+      name: 'Precios',
+      sheet_mode: 'faq',
+    },
+  ];
+
+  it('nuevo con catálogo: los precios están en el catálogo; ofrece catálogo, hojas, predefinidas o no dar precios', () => {
+    const { vm } = mountModal({ sources });
+    expect(vm.form.settings.price_source).toBe('catalog');
+    expect(vm.priceOptions.map(o => o.value)).toEqual([
+      'catalog',
+      'google_sheet:7',
+      'canned',
+      'none',
+    ]);
+    expect(vm.otherSources.map(s => s.key)).toEqual(['google_sheet:7']);
+  });
+
+  it('una hoja en modo preguntas frecuentes avisa que la pase a «Datos»', () => {
+    const { vm } = mountModal({ sources });
+    vm.form.settings.price_source = 'google_sheet:7';
+    expect(vm.priceSheetFaq).toBe(true);
+  });
+
+  it('un agente de antes con la casilla del catálogo queda en el catálogo', () => {
+    const { vm } = mountModal({
+      sources,
+      agent: {
+        id: 1,
+        name: 'Sofi',
+        inbox_ids: [1],
+        settings: { business_use_catalog: true },
+      },
+    });
+    expect(vm.form.settings.price_source).toBe('catalog');
+  });
+});

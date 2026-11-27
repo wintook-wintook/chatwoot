@@ -25,14 +25,32 @@ class ContactTrackings::AttachmentText
   # «Lo siento, pero no puedo transcribir…»: la IA se negó. No es el texto del documento.
   REFUSAL_RE = /\A\W*(lo siento|no puedo|no me es posible|i'?m sorry|i can'?t|i cannot)/i
 
+  # Un adjunto que no se pudo leer (la IA se negó, falló OpenAI, no hay llave) no se vuelve a
+  # intentar en FAILURE_TTL. Antes cada lectura del mensaje (varias por turno, y en cada turno
+  # siguiente) volvía a mandar el PDF completo a OpenAI.
+  FAILURE_TTL = 6.hours
+
   def self.for(attachment)
     return nil unless attachment&.file_type.to_s == 'file' && attachment.file.attached?
 
-    Rails.cache.fetch("attachment_text/#{CACHE_VERSION}/#{attachment.id}", expires_in: 30.days, skip_nil: true) do
-      new(attachment).extract
-    end
+    cached_text(attachment, "attachment_text/#{CACHE_VERSION}/#{attachment.id}")
+  end
+
+  def self.cached_text(attachment, key)
+    return nil if Rails.cache.exist?("#{key}/fallo")
+
+    texto = Rails.cache.fetch(key, expires_in: 30.days, skip_nil: true) { new(attachment).extract }
+    remember_failure(key) if texto.nil?
+    texto
   rescue StandardError => e
     Rails.logger.warn "[AttachmentText] ⚠️ adjunto #{attachment&.id}: #{e.message}"
+    remember_failure(key)
+    nil
+  end
+
+  def self.remember_failure(key)
+    Rails.cache.write("#{key}/fallo", true, expires_in: FAILURE_TTL)
+  rescue StandardError
     nil
   end
 
@@ -143,7 +161,7 @@ class ContactTrackings::AttachmentText
     raise "OpenAI #{respuesta.code}" unless respuesta.success?
 
     texto = respuesta.parsed_response.dig('choices', 0, 'message', 'content').to_s
-    # Sin guardar en caché (skip_nil): el siguiente mensaje lo vuelve a intentar.
+    # Sin guardar el texto (skip_nil): se reintenta pasado FAILURE_TTL.
     texto.match?(REFUSAL_RE) ? nil : texto
   end
 

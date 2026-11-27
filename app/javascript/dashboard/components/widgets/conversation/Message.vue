@@ -13,6 +13,7 @@ import BubbleMailHead from './bubble/MailHead.vue';
 import BubbleReplyTo from './bubble/ReplyTo.vue';
 import BubbleText from './bubble/Text.vue';
 import BubbleVoiceCall from './bubble/VoiceCall.vue'; // diag/llamadas_whatsapp
+import Motor2Feedback from './bubble/Motor2Feedback.vue'; // Motor 2.0: 👎 en respuestas del agente
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
 // feat/chat_interno: dirección de los mensajes según quién mira en «Interno».
 import {
@@ -32,9 +33,11 @@ import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { getDayDifferenceFromNow } from 'shared/helpers/DateHelper';
 import * as Sentry from '@sentry/browser';
+import { translateMetaError } from 'dashboard/helper/metaErrorTranslator'; // diag/waba F4
 
 export default {
   components: {
+    Motor2Feedback,
     BubbleVoiceCall,
     BubbleActions,
     BubbleContact,
@@ -270,8 +273,12 @@ export default {
     contentAttributes() {
       return this.data.content_attributes || {};
     },
+    // diag/waba F4 (D7) — el error de Meta en palabras del usuario (con su código para soporte).
     externalError() {
-      return this.contentAttributes.external_error || '';
+      return translateMetaError(
+        this.contentAttributes.external_error || '',
+        this.$t.bind(this)
+      );
     },
     sender() {
       return this.data.sender || {};
@@ -441,6 +448,13 @@ export default {
     // Agentes IA: el mensaje es del agente (no del usuario con que se guarda).
     isAiAgentMessage() {
       return Boolean(this.contentAttributes.ai_agent);
+    },
+    // Motor 2.0: respuesta de un agente 2.0 que un administrador puede corregir.
+    motor2Correctable() {
+      return (
+        Boolean(this.contentAttributes.motor2_tracking_id) &&
+        this.$store.getters.getCurrentRole === 'administrator'
+      );
     },
     senderNameForAvatar() {
       if (this.isOutgoing || this.isTemplate) {
@@ -690,6 +704,7 @@ export default {
           :inbox-id="data.inbox_id"
           :created-at="createdAt"
         />
+        <Motor2Feedback v-if="motor2Correctable" :message-id="data.id" />
       </div>
       <Spinner v-if="isPending" size="tiny" />
       <div

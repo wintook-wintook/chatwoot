@@ -153,6 +153,9 @@ class Message < ApplicationRecord
   # prospeccion P2b: el vendedor le escribió a un interesado entregado → la IA se calla
   after_create_commit :check_prospect_handoff, if: -> { outgoing? && !private? && sender_type == 'User' }
 
+  # proyecto@diagrama_agente_ia F0: la respuesta del bot queda anotada para recibir su traza
+  after_create :register_in_engine_trace, if: :outgoing?
+
   after_update_commit :dispatch_update_event
 
   # proyecto@automatizacion_campanas: el estado de entrega de WhatsApp llega al envío del seguimiento
@@ -218,7 +221,8 @@ class Message < ApplicationRecord
     data = {
       account: account.webhook_data,
       additional_attributes: additional_attributes,
-      content_attributes: content_attributes,
+      # La traza del motor (proyecto@diagrama_agente_ia) es interna: no sale del sistema.
+      content_attributes: content_attributes.except('traza'),
       content_type: content_type,
       content: content,
       conversation: conversation.webhook_data,
@@ -481,6 +485,13 @@ class Message < ApplicationRecord
   #    AutoAcknowledgmentJob.perform_later(id)
   # end
 
+  # Espera del análisis: la de la automatización que va a crear el seguimiento y la de mensajes
+  # seguidos (opcional por agente, ContactTrackings::MessageBurst: espera y contesta el último).
+  def tracking_analysis_wait
+    automation = will_trigger_tracking_automation? ? 5.seconds : 0.seconds
+    [automation, ContactTrackings::MessageBurst.seconds_for(conversation_id).seconds].max
+  end
+
   # ⭐ SENTIMENT ANALYSIS - proyecto@contact_tracking
   # Analiza respuestas del cliente y ajusta seguimientos activos según sentimiento
   # Para revertir: Eliminar este método completo
@@ -494,24 +505,38 @@ class Message < ApplicationRecord
     # Seguimiento IA: con uno vivo en la conversación, contesta SOLO él (ni el agente de
     # seguimiento de siempre ni BotSeller). Pausado no contesta nadie: lo atiende una persona.
     return AiFollowUps::ReplyJob.set(wait: 15.seconds).perform_later(id) if AiFollowUp.live_for?(conversation_id)
+    # fix/campanas (punto 2): su campaña está pausada a mano → no contesta ninguna IA (ni el
+    # Motor 2.0, ni el de siempre, ni BotSeller); el mensaje queda para una persona.
+    return log_silenced_by_campaign if TrackingCampaign.silences_conversation?(conversation_id)
+    # Motor 2.0: el seguimiento de esta conversación es de un agente 2.0, o la bandeja la atiende
+    # un agente 2.0 (los agentes listos, §11.14) → contesta ese motor (Plan-Motor-Agentes.md
+    # §11.11). El 1.0 sigue igual para los demás.
+    return Motor2::ReplyJob.set(wait: Motor2::WAIT).perform_later(id) if Motor2.takes?(self)
 
-    wait = will_trigger_tracking_automation? ? 5.seconds : 0.seconds
-    ContactTrackingResponseAnalyzerJob.set(wait: wait).perform_later(id)
+    ContactTrackingResponseAnalyzerJob.set(wait: tracking_analysis_wait).perform_later(id)
   rescue StandardError => e
     Rails.logger.error "[Message] Error queueing sentiment analysis: #{e.message}"
+  end
+
+  def log_silenced_by_campaign
+    Rails.logger.info "[Message] ⏸️ Conversación ##{conversation_id}: campaña pausada, la IA no contesta el mensaje ##{id}"
   end
 
   # @query_databases — encola la respuesta IA (Modo B) solo si el inbox tiene un bot
   # cobrador con mode_b_enabled (chequeo barato para no encolar de más).
   def respond_via_erp_bot
-    return if content.blank? || conversation&.inbox_id.blank?
-    return if AiFollowUp.live_for?(conversation_id) # Seguimiento IA: no contestan dos a la vez
+    return if content.blank? || conversation&.inbox_id.blank? || answered_by_ai_agent?
 
     has_bot = ErpCollectionBot.active.where(account_id: conversation.account_id, mode_b_enabled: true)
                               .exists?(inbox_id: [conversation.inbox_id, nil])
     ErpCollection::ChatResponseJob.perform_later(id) if has_bot
   rescue StandardError => e
     Rails.logger.error "[Message] Error encolando respuesta ERP Modo B: #{e.message}"
+  end
+
+  # Seguimiento IA o agente 2.0 que atiende la bandeja (agentes listos): no contestan dos a la vez.
+  def answered_by_ai_agent?
+    AiFollowUp.live_for?(conversation_id) || Motor2::InboxRouter.takes?(self)
   end
 
   # proyecto@contact_tracking: ¿alguna AutomationRule (conversation_created,
@@ -552,6 +577,10 @@ class Message < ApplicationRecord
   end
 
   # Unos segundos después: la marca de bot (sentiment_auto_reply) se guarda tras crear el mensaje.
+  def register_in_engine_trace
+    ContactTrackings::EngineTrace.register(self) if ContactTrackings::EngineTrace.active?
+  end
+
   def check_prospect_handoff
     return unless TrackingCampaigns::HandoffAttention.pending?(conversation_id)
 

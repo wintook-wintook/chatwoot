@@ -22,8 +22,19 @@ export default {
     highlight: { type: Boolean, default: false },
     draggable: { type: Boolean, default: false },
     completingId: { type: [Number, String], default: null },
+    // Día de otra persona: solo abrir e historial (sin planear, posponer,
+    // reportar avance ni concluir).
+    readonly: { type: Boolean, default: false },
   },
-  emits: ['openTask', 'openTicket', 'complete', 'pin', 'unpin', 'postpone'],
+  emits: [
+    'openTask',
+    'openTicket',
+    'complete',
+    'pin',
+    'unpin',
+    'postpone',
+    'history',
+  ],
   computed: {
     reasons() {
       return visibleReasons(this.row.reasons);
@@ -39,20 +50,37 @@ export default {
       const seq = this.row.sequence;
       return seq ? `T${String(seq).padStart(3, '0')}` : '';
     },
+    // Vence: solo el día (la hora es de las tareas agendadas).
     dueLabel() {
       if (!this.row.due_at) return '';
-      return new Date(this.row.due_at).toLocaleString(undefined, {
+      return new Date(this.row.due_at).toLocaleDateString(undefined, {
         day: '2-digit',
         month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
       });
     },
     estimate() {
       return formatMinutes(this.row.estimated_minutes);
     },
+    // Avance: lo hecho sin completarla (la del cliente la avanza él en su portal).
+    canReportProgress() {
+      return (
+        !this.readonly &&
+        !this.frozen &&
+        this.row.status === 'pending' &&
+        this.row.audience !== 'client'
+      );
+    },
   },
   methods: {
+    reportProgress() {
+      this.$emitter.emit('topbar:reportProgress', {
+        id: this.row.id,
+        title: this.row.title,
+        sequence: this.row.sequence,
+        case_ticket_id: this.row.case_ticket?.id || null,
+        case_folio: this.row.case_ticket?.folio || null,
+      });
+    },
     reasonClass(key) {
       return REASON_TONE[reasonTone(key)];
     },
@@ -111,6 +139,12 @@ export default {
       </button>
       <div class="flex flex-wrap items-center gap-1.5 mt-1">
         <span class="font-mono text-xs text-slate-400">{{ taskFolio }}</span>
+        <span
+          v-if="row.recurring"
+          class="px-1.5 text-[11px] rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+        >
+          {{ $t('RECURRING_TASKS.RECURRING_BADGE') }}
+        </span>
         <button
           v-if="row.case_ticket"
           type="button"
@@ -163,7 +197,7 @@ export default {
 
       <div v-if="highlight" class="flex flex-wrap items-center gap-2 mt-4">
         <woot-button
-          v-if="!frozen"
+          v-if="!frozen && !readonly"
           size="small"
           color-scheme="primary"
           icon="checkmark"
@@ -172,6 +206,25 @@ export default {
           @click="$emit('complete', row)"
         >
           {{ $t('CASE_TICKETS.TASKS.COMPLETE') }}
+        </woot-button>
+        <woot-button
+          v-if="canReportProgress"
+          size="small"
+          variant="smooth"
+          color-scheme="secondary"
+          icon="clipboard"
+          @click="reportProgress"
+        >
+          {{ $t('TASK_REPORT.PROGRESS') }}
+        </woot-button>
+        <woot-button
+          size="small"
+          variant="smooth"
+          color-scheme="secondary"
+          icon="document-list-clock"
+          @click="$emit('history', row)"
+        >
+          {{ $t('TASK_HISTORY.MENU') }}
         </woot-button>
         <woot-button
           v-if="row.case_ticket"
@@ -183,7 +236,7 @@ export default {
           {{ $t('CASE_TICKETS.TASKS.INBOX.OPEN_TICKET') }}
         </woot-button>
         <woot-button
-          v-if="!frozen"
+          v-if="!frozen && !readonly"
           size="small"
           variant="smooth"
           color-scheme="secondary"
@@ -223,7 +276,7 @@ export default {
 
     <div class="flex items-center flex-shrink-0 gap-1">
       <woot-button
-        v-if="planned"
+        v-if="planned && !readonly"
         size="tiny"
         variant="clear"
         color-scheme="secondary"
@@ -232,7 +285,7 @@ export default {
         @click="$emit('unpin', row)"
       />
       <woot-button
-        v-else
+        v-else-if="!readonly"
         size="tiny"
         variant="smooth"
         color-scheme="primary"
@@ -240,7 +293,25 @@ export default {
         :title="$t('CASE_TICKETS.TASKS.MY_DAY.PIN')"
         @click="$emit('pin', row)"
       />
-      <template v-if="!highlight && !frozen">
+      <woot-button
+        v-if="!highlight"
+        size="tiny"
+        variant="clear"
+        color-scheme="secondary"
+        icon="document-list-clock"
+        :title="$t('TASK_HISTORY.MENU')"
+        @click="$emit('history', row)"
+      />
+      <template v-if="!highlight && !frozen && !readonly">
+        <woot-button
+          v-if="canReportProgress"
+          size="tiny"
+          variant="clear"
+          color-scheme="secondary"
+          icon="clipboard"
+          :title="$t('TASK_REPORT.PROGRESS')"
+          @click="reportProgress"
+        />
         <woot-button
           size="tiny"
           variant="clear"

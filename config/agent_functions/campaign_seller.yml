@@ -1,0 +1,11 @@
+# Función «Vendedor de campaña» (Plan-Motor-Agentes.md §11.16). Toca la puerta: la campaña manda el
+# primer mensaje (plantilla) y, cuando contesta, despierta el interés, resuelve 2–3 dudas y pasa el
+# relevo (Motor2::Relay). El puesto va en campaign_seller.md; la oferta y los usos (invitar, ofrecer,
+# reactivar, renovar, encuesta), en Motor2::Functions::CampaignSeller.
+key: campaign_seller
+order: 3
+available: true
+title: Vendedor de campaña
+summary: 'Toca la puerta en tus campañas: invita, ofrece, reactiva o encuesta; resuelve las primeras dudas y pasa al interesado a tu agente de prospectos, al de clientes o a tu equipo.'
+objective: Despertar el interés con la oferta de la campaña y pasar al interesado a quien sigue.
+entry: campaign

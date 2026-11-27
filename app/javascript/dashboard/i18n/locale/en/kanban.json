@@ -33,7 +33,7 @@
         "AUTO_MOVE": "Automatic movement",
         "AUTO_MOVE_HELP": "The conversation itself moves its card: when it arrives, is answered, is labeled, an appointment is set or its case is created. It only moves forward; moving by hand always wins.",
         "ENTRY_INBOXES": "Inboxes that enter automatically",
-        "ENTRY_INBOXES_HELP": "New conversations from these inboxes enter the funnel through its entry column.",
+        "ENTRY_INBOXES_HELP": "New contacts (their first conversation) arriving through these inboxes enter the funnel at its entry column. People who wrote before don't enter on their own.",
         "NO_INBOXES_WARNING": "Pick at least one inbox so new conversations enter automatically.",
         "AI_MOVE": "AI moves cards",
         "AI_MOVE_HELP": "When the customer stops typing, the AI reads the conversation, moves it to the column whose criterion is met and leaves a private note explaining why.",
