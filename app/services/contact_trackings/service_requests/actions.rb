@@ -72,7 +72,20 @@ class ContactTrackings::ServiceRequests::Actions
       mark(caso, ok ? 'confirmado' : 'apartado')
       "#{number(caso)} #{label(caso)}#{ok ? '' : ' — un asesor lo confirma'}"
     end
-    "✅ Confirmé:\n#{lineas.join("\n")}"
+    ["✅ Confirmé:\n#{lineas.join("\n")}", unscheduled_text(elegidos)].compact.join("\n\n")
+  end
+
+  # 27/11/2026 (conv. 204): al confirmar «la grúa y el low boy» solo se respondía por el low boy; la
+  # grúa (sin horario: no está en el catálogo) quedaba en silencio. Se dice cuáles siguen sin horario.
+  def unscheduled_text(elegidos)
+    sin_horario = (@casos - elegidos).select { |caso| caso.metadata['meeting_id'].blank? && caso.metadata['estado'] != 'cancelado' }
+    return nil if sin_horario.empty?
+
+    lineas = sin_horario.map do |caso|
+      motivo = caso.metadata['oferta'].present? ? 'falta que elijas su horario' : 'todavía no tiene horario; un asesor lo revisa'
+      "#{number(caso)} #{label(caso)}: #{motivo}."
+    end
+    lineas.join("\n")
   end
 
   def ask_payment(elegidos)
@@ -80,8 +93,8 @@ class ContactTrackings::ServiceRequests::Actions
     numeros = elegidos.map { |caso| number(caso) }.join(', ')
     note("💳 El cliente confirmó #{numeros}; falta el pago. Al recibirlo pon la etiqueta " \
          "«#{ContactTrackings::ServiceConfirmation::PAID_LABEL}» (todos) o mueve el caso a la columna «Pagado» (solo ese).")
-    "¡Gracias por confirmar! Para dejar en firme #{numeros} necesitamos el pago por adelantado. " \
-      'En cuanto lo recibamos, te lo confirmo.'
+    ["¡Gracias por confirmar! Para dejar en firme #{numeros} necesitamos el pago por adelantado. " \
+     'En cuanto lo recibamos, te lo confirmo.', unscheduled_text(elegidos)].compact.join("\n\n")
   end
 
   # ── cancelar ─────────────────────────────────────────────────────────────────

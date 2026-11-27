@@ -147,7 +147,32 @@ class ContactTrackings::ServiceRequests::Choice
   def apply(elegidos, con_oferta)
     libres, chocan = elegidos.partition { |caso, oferta| free?(caso, oferta) }
     apartados = libres.map { |caso, oferta| hold(caso, oferta) }
+    capture_data(apartados.map(&:first))
     reply(apartados, con_oferta.reject { |caso| libres.any? { |e| e.first.id == caso.id } }, chocan)
+  end
+
+  # 27/11/2026 (conv. 204): «Peso 9 t, medidas 8.5 × 3.2, contacto Ing. Torres… Sí para la opción A»
+  # apartaba el horario y los datos se perdían: el caso quedaba sin peso ni contacto. Si el mensaje
+  # trae algo más que la elección, se guarda en los casos apartados (como cuando completa uno
+  # pendiente), antes de preguntar «¿Confirmo?», que solo se pregunta con todo completo.
+  EXTRA_WORDS = 4
+
+  def capture_data(casos)
+    return if casos.empty? || !extra_text?
+
+    registro = ContactTrackings::ServiceRequests::Registry.new(tracking: @tracking, message: @message, escalation: solicitudes_route&.escalation,
+                                                               timezone: @timezone)
+    casos.each { |caso| registro.complete!(caso) }
+  end
+
+  def extra_text?
+    resto = @message.content.to_s.gsub(CODE_RE, ' ').sub(YES_RE, ' ')
+    resto.scan(/[[:alpha:]]{3,}/).size >= EXTRA_WORDS
+  end
+
+  def solicitudes_route
+    rutas = @tracking ? ContactTrackings::RouteMap.parse(@tracking.complementary_prompt.to_s).routes : []
+    rutas.find { |ruta| ContactTrackings::ServiceRequests::Turn.route?(ruta.escalation) }
   end
 
   # Conv. 398: con un «sí» se apartaron dos servicios en la misma unidad a la misma hora. Se revisa

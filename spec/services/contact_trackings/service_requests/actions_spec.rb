@@ -61,4 +61,14 @@ RSpec.describe ContactTrackings::ServiceRequests::Actions do
 
     expect(accion('¿qué medidas tiene la plana?')).to be_nil
   end
+
+  it 'al confirmar dice cuáles servicios siguen sin horario (27/11/2026, conv. 204)' do
+    caso('Low boy', 'low boy')
+    CaseTicket.create!(account: account, conversation: conversation, contact: conversation.contact, case_type: case_type, title: 'Grúa 50 t',
+                       metadata: { 'servicio' => { 'label' => 'Grúa 50 t', 'equipment_type' => 'grúa' } })
+    pago = ContactTrackings::RouteMap::Route.new(name: 'c', escalation: '@confirmar_servicio(requiere=pago)')
+
+    texto = accion('Confirmo los servicios', ruta: pago)
+    expect(texto).to include('necesitamos el pago por adelantado').and include('2️⃣ Grúa 50 t: todavía no tiene horario; un asesor lo revisa.')
+  end
 end

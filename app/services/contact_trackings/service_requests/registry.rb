@@ -14,6 +14,8 @@
 # ================================================================================
 
 class ContactTrackings::ServiceRequests::Registry
+  include ContactTrackings::ServiceRequests::RequestedDate
+
   META_KEY = 'servicio'
   # Del más específico al más general: «camión con grúa tipo hiab» es un hiab (no una grúa ni
   # un camión) y «tracto con plana de 12 mts» es una plana (medido el 26/09 en la conv. 256).
@@ -111,22 +113,17 @@ class ContactTrackings::ServiceRequests::Registry
       (Array(caso.metadata[ContactTrackings::ServiceRequests::Fields::PENDING_KEY]).any? || caso.metadata.dig(META_KEY, 'date').blank?)
   end
 
-  # La fecha o la hora que faltaban, si este mensaje las trae. Lo que ya tenía no se toca.
-  def with_new_date(datos)
-    nueva = ContactTrackings::ServiceRequests::DateResolver.new(timezone: @timezone).call(@text, @text)
-    if datos['date'].blank? && nueva.date
-      datos = datos.merge('date' => nueva.date.iso8601, 'date_text' => @text.truncate(80), 'ambiguous' => nueva.ambiguous)
-    end
-    datos = datos.merge('time' => nueva.time, 'time_text' => nueva.time) if datos['time'].blank? && nueva.time
-    datos
-  end
-
   def serialize(servicio)
-    fecha = ContactTrackings::ServiceRequests::DateResolver.new(timezone: @timezone).call(servicio.date_text, servicio.time_text)
-    servicio.to_h.except(:case_ref).transform_keys(&:to_s).merge(
+    fecha = dates.call(servicio.date_text, servicio.time_text)
+    datos = servicio.to_h.except(:case_ref).transform_keys(&:to_s).merge(
       'date' => fecha.date&.iso8601, 'time' => fecha.time, 'ambiguous' => fecha.ambiguous,
       'stops' => single_site(Array(servicio.stops)), 'source_message_id' => @message.id
     )
+    dated(datos, fecha)
+  end
+
+  def options
+    @options ||= ContactTrackings::ServiceRequests::Options.parse(@escalation)
   end
 
   # «trabajar en el KM10.5» salía «KM10.5 → KM10.5» (conv. 401): dos paradas iguales son un solo
@@ -168,7 +165,7 @@ class ContactTrackings::ServiceRequests::Registry
   # El último dato gana, pero un dato que ahora no vino no borra el que ya estaba.
   def update(ticket, datos)
     anterior = ticket.metadata[META_KEY].to_h
-    combinado = anterior.merge(datos.reject { |_, valor| valor.blank? })
+    combinado = merged_dates(anterior.merge(datos.reject { |_, valor| valor.blank? }), datos)
     ticket.update!(metadata: ticket.metadata.merge(META_KEY => combinado), description: description(combinado),
                    title: title(combinado))
     retitle_meeting(ticket)
@@ -185,21 +182,21 @@ class ContactTrackings::ServiceRequests::Registry
   # Los campos particulares del tipo de caso (observación SSUSA 2), con lo que ya tenía.
   def store_fields(ticket, datos)
     campos = ContactTrackings::ServiceRequests::Fields.new(account: @message.account, case_type_id: ticket.case_type_id,
-                                                           skip: ticket.metadata[ContactTrackings::ServiceRequests::Fields::ASSIGNED_KEY])
+                                                           skip: ticket.metadata[ContactTrackings::ServiceRequests::Fields::ASSIGNED_KEY],
+                                                           unknown_pending: options.unknown_pending?)
     return unless campos.any?
 
     resultado = campos.call(service_text: service_text(datos), message_text: field_message_text,
-                            previous: ticket.custom_attributes.to_h.slice(*field_keys(ticket)))
+                            previous: ticket.custom_attributes.to_h.slice(*field_keys(ticket)),
+                            asked: ticket.metadata[ContactTrackings::ServiceRequests::Fields::PENDING_KEY], customer_text: @text)
     ticket.update!(custom_attributes: ticket.custom_attributes.to_h.merge(resultado.found),
                    metadata: ticket.metadata.merge(ContactTrackings::ServiceRequests::Fields::PENDING_KEY => resultado.missing))
   end
 
   # @solicitudes(asignar=unidad): el campo del tipo de caso que recibe la unidad apartada
-  # (Choice#hold). Lo llena el sistema, no el cliente.
-  ASSIGN_RE = /@solicitudes\s*\(\s*asignar\s*=\s*([^)\s,]+)\s*\)/i
-
+  # (Choice#hold). Lo llena el sistema, no el cliente. Puede venir con otras opciones (Options).
   def assigned_meta
-    clave = @escalation[ASSIGN_RE, 1]
+    clave = options.assign
     clave.present? ? { ContactTrackings::ServiceRequests::Fields::ASSIGNED_KEY => clave } : {}
   end
 
