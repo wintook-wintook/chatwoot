@@ -492,7 +492,8 @@
     "INTERNAL_CHAT": "Chat interno",
     "COLLECTIONS": "Cobranza",
     "SHOW_MENU": "Mostrar el menú",
-    "HIDE_MENU": "Ocultar el menú"
+    "HIDE_MENU": "Ocultar el menú",
+    "DEMO_KITS": "Demostraciones"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Facturación",
@@ -568,6 +569,61 @@
       "SAVE": "Guardar",
       "CANCEL": "Cancelar",
       "ERROR": "No se pudo guardar."
+    }
+  },
+  "DEMO_KITS": {
+    "HEADER": "Demostraciones",
+    "INTRO": "Arma una demo en minutos: importa una demo lista (agentes, catálogo y bandeja) o la que exportaste de otra cuenta; al terminar, limpia lo que salió en la demo o quítala.",
+    "LOADING": "Cargando…",
+    "LOAD_ERROR": "No se pudo cargar.",
+    "CANCEL": "Cancelar",
+    "KINDS": {
+      "customers": "Atención a clientes",
+      "prospects": "Atención a prospectos",
+      "campaign_seller": "Vendedor de campaña",
+      "collections": "Cobranza"
+    },
+    "IMPORT": {
+      "TITLE": "Importar una demo",
+      "HINT": "Elige una demo que trae Kontrolya o sube el archivo .json que exportaste.",
+      "SUMMARY": "{agents} agente(s) · {items} producto(s) · {inboxes} bandeja(s)",
+      "FROM_FILE": "Subir un archivo .json",
+      "BAD_FILE": "El archivo no es un kit de demo de Kontrolya.",
+      "AGENT": "Agente «{name}»",
+      "CATALOG": "{items} producto(s) en {categories} categoría(s)",
+      "PEOPLE": "¿Quién de tu cuenta va en cada lugar?",
+      "PEOPLE_HINT": "Quien atiende las citas o a quien el agente le pasa la plática. Para agendar, elige a alguien con Google conectado.",
+      "NOBODY": "— Nadie —",
+      "INBOXES": "Bandeja",
+      "NEW_WEB_INBOX": "Crear un chat de página nuevo",
+      "CHOOSE_INBOX": "Elige una bandeja",
+      "UPDATE_HINT": "Si ya existe un producto con la misma clave o un agente con el mismo nombre, se actualiza (no se duplica).",
+      "BUTTON": "Crear la demo",
+      "DONE": "Demo lista: ábrela en «Demos importadas».",
+      "ERROR": "No se pudo importar."
+    },
+    "IMPORTS": {
+      "TITLE": "Demos importadas",
+      "LINE": "{date} · {user} · {agents} agente(s) · {items} producto(s) nuevos",
+      "OPEN_CHAT": "Abrir el chat de la página",
+      "CLEAN": "Limpiar lo de la demo",
+      "CLEAN_CONFIRM": "¿Borrar las pláticas, cotizaciones, oportunidades y citas (también en Google) que salieron en «{name}»? Los agentes y el catálogo se quedan.",
+      "CLEANED": "Listo: {conversations} plática(s), {quotes} cotización(es) y {meetings} cita(s) borradas.",
+      "REMOVE": "Quitar la demo",
+      "REMOVE_CONFIRM": "¿Quitar «{name}»? Se borra lo de la demo y lo que creó la importación (agentes, bandeja, productos nuevos).",
+      "REMOVED": "Demo quitada.",
+      "ERROR": "No se pudo; intenta de nuevo."
+    },
+    "EXPORT": {
+      "TITLE": "Exportar una demo",
+      "HINT": "Elige los agentes y las categorías del catálogo: se arma un .json para importarlo en otra cuenta o servidor.",
+      "NAME": "Nombre de la demo",
+      "NAME_PLACEHOLDER": "Ej. Estética Bella Luz",
+      "AGENTS": "Agentes",
+      "CATEGORIES": "Categorías del catálogo",
+      "SAFE_HINT": "No lleva conversaciones, contactos, contraseñas, tokens de Google ni respuestas predefinidas; las personas van como lugares que se eligen al importar.",
+      "BUTTON": "Descargar .json",
+      "ERROR": "No se pudo exportar."
     }
   }
 }

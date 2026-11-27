@@ -824,6 +824,7 @@ const ajustes = accountId => {
         name => !MOVED_CASE_SETTINGS.includes(name)
       ),
       QUOTE_FORMATS,
+      'demo_kits',
     ],
     menuItems: [
       ...base.menuItems.filter(
@@ -839,6 +840,14 @@ const ajustes = accountId => {
         featureFlag: FEATURE_FLAGS.CASE_MANAGEMENT,
         toState: frontendURL(`accounts/${accountId}/tickets/quotes/formats`),
         toStateName: QUOTE_FORMATS,
+      },
+      // Demostraciones: exportar e importar kits de demo (agentes, catálogo, bandejas).
+      {
+        icon: 'cloud-backup',
+        label: 'DEMO_KITS',
+        toState: frontendURL(`accounts/${accountId}/settings/demo-kits`),
+        toStateName: 'demo_kits',
+        meta: { permissions: ['administrator'] },
       },
       ...(caseGroup
         ? [

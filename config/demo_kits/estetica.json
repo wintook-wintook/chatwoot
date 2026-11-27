@@ -1,0 +1,457 @@
+{
+  "kit": "kontrolya-demo",
+  "version": 1,
+  "name": "Estética Bella Luz",
+  "description": "Salón de belleza: Atención a clientes que da precios del catálogo, arma la cuenta, cotiza y agenda citas de servicio con la duración de cada servicio.",
+  "exported_at": "2026-11-27T14:49:50Z",
+  "people": [
+    {
+      "ref": "p1",
+      "name": "Estilista 1 (también recibe lo que el agente pasa)"
+    },
+    {
+      "ref": "p2",
+      "name": "Estilista 2"
+    }
+  ],
+  "inboxes": [
+    {
+      "ref": "i1",
+      "name": "Estética Bella Luz · chat",
+      "channel": "web_widget",
+      "website_url": "https://esteticabellaluz.mx",
+      "widget_color": "#C2185B",
+      "welcome_title": "Estética Bella Luz",
+      "welcome_tagline": "Citas, precios y cotizaciones al momento",
+      "timezone": "America/Mexico_City",
+      "working_hours_enabled": true,
+      "working_hours": [
+        {
+          "day_of_week": 0,
+          "closed_all_day": true,
+          "open_all_day": false,
+          "open_hour": null,
+          "open_minutes": null,
+          "close_hour": null,
+          "close_minutes": null
+        },
+        {
+          "day_of_week": 1,
+          "closed_all_day": false,
+          "open_all_day": false,
+          "open_hour": 10,
+          "open_minutes": 0,
+          "close_hour": 20,
+          "close_minutes": 0
+        },
+        {
+          "day_of_week": 2,
+          "closed_all_day": false,
+          "open_all_day": false,
+          "open_hour": 10,
+          "open_minutes": 0,
+          "close_hour": 20,
+          "close_minutes": 0
+        },
+        {
+          "day_of_week": 3,
+          "closed_all_day": false,
+          "open_all_day": false,
+          "open_hour": 10,
+          "open_minutes": 0,
+          "close_hour": 20,
+          "close_minutes": 0
+        },
+        {
+          "day_of_week": 4,
+          "closed_all_day": false,
+          "open_all_day": false,
+          "open_hour": 10,
+          "open_minutes": 0,
+          "close_hour": 20,
+          "close_minutes": 0
+        },
+        {
+          "day_of_week": 5,
+          "closed_all_day": false,
+          "open_all_day": false,
+          "open_hour": 10,
+          "open_minutes": 0,
+          "close_hour": 20,
+          "close_minutes": 0
+        },
+        {
+          "day_of_week": 6,
+          "closed_all_day": false,
+          "open_all_day": false,
+          "open_hour": 10,
+          "open_minutes": 0,
+          "close_hour": 20,
+          "close_minutes": 0
+        }
+      ]
+    }
+  ],
+  "catalog": {
+    "categories": [
+      {
+        "name": "Estética",
+        "parent": null
+      }
+    ],
+    "items": [
+      {
+        "sku": "EST-02",
+        "name": "Corte de caballero",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 200.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 30,
+        "description": "Corte con máquina o tijera, incluye lavado.",
+        "active": true
+      },
+      {
+        "sku": "EST-01",
+        "name": "Corte de dama",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 350.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 45,
+        "description": "Incluye lavado y secado sencillo.",
+        "active": true
+      },
+      {
+        "sku": "EST-15",
+        "name": "Depilación con cera (piernas)",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 450.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 45,
+        "description": "Piernas completas con cera tibia.",
+        "active": true
+      },
+      {
+        "sku": "EST-11",
+        "name": "Diseño de cejas",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 200.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 30,
+        "description": "Depilación con hilo o cera y diseño según tu rostro.",
+        "active": true
+      },
+      {
+        "sku": "EST-13",
+        "name": "Facial hidratante",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 700.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 60,
+        "description": "Limpieza, mascarilla e hidratación profunda.",
+        "active": true
+      },
+      {
+        "sku": "EST-12",
+        "name": "Lifting de pestañas",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 650.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 60,
+        "description": "Incluye tinte de pestañas; dura de 6 a 8 semanas.",
+        "active": true
+      },
+      {
+        "sku": "EST-14",
+        "name": "Limpieza facial profunda",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 850.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 75,
+        "description": "Extracción de puntos negros, exfoliación y mascarilla.",
+        "active": true
+      },
+      {
+        "sku": "EST-08",
+        "name": "Manicure gelish",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 350.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 60,
+        "description": "Limado, cutícula y esmalte gelish de color sólido.",
+        "active": true
+      },
+      {
+        "sku": "EST-06",
+        "name": "Mechas / balayage",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 2200.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 180,
+        "description": "Incluye matizado y tratamiento de protección. Cabello largo +$400.",
+        "active": true
+      },
+      {
+        "sku": "EST-16",
+        "name": "Paquete novia",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "paq",
+        "price": 3500.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 180,
+        "description": "Peinado y maquillaje el día del evento más una prueba previa.",
+        "active": true
+      },
+      {
+        "sku": "EST-09",
+        "name": "Pedicure spa",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 450.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 60,
+        "description": "Exfoliación, hidratación, masaje y esmalte.",
+        "active": true
+      },
+      {
+        "sku": "EST-03",
+        "name": "Peinado / ondas",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 400.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 45,
+        "description": "Peinado para evento, ondas o alaciado con plancha.",
+        "active": true
+      },
+      {
+        "sku": "EST-05",
+        "name": "Tinte completo",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 1100.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 120,
+        "description": "Color en todo el cabello (cabello medio; largo +$200).",
+        "active": true
+      },
+      {
+        "sku": "EST-04",
+        "name": "Tinte raíz",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 750.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 90,
+        "description": "Retoque de raíz hasta 3 cm, color de línea profesional.",
+        "active": true
+      },
+      {
+        "sku": "EST-07",
+        "name": "Tratamiento de keratina",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 1800.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 150,
+        "description": "Alisado y control de frizz, dura de 3 a 4 meses.",
+        "active": true
+      },
+      {
+        "sku": "EST-10",
+        "name": "Uñas acrílicas",
+        "kind": "service",
+        "category": "Estética",
+        "unit": "serv",
+        "price": 550.0,
+        "currency": "MXN",
+        "price_includes_tax": true,
+        "tax_percent": 16.0,
+        "duration_minutes": 90,
+        "description": "Juego completo con diseño sencillo; diseño elaborado +$100.",
+        "active": true
+      }
+    ]
+  },
+  "agents": [
+    {
+      "kind": "customers",
+      "name": "Recepción Estética Bella Luz",
+      "display_name": "Luz",
+      "enabled": true,
+      "inboxes": [
+        "i1"
+      ],
+      "settings": {
+        "goal": "appointment",
+        "tone": "cercano",
+        "areas": {
+          "admin": {
+            "on": true,
+            "case": false,
+            "examples_no": [
+              "¿Cuánto cuesta el tinte?",
+              "Quiero una cita",
+              "¿Aceptan tarjeta?",
+              "¿Tienen meses sin intereses?"
+            ],
+            "examples_yes": [
+              "Necesito factura de mi servicio",
+              "Quiero mandar mi comprobante de pago",
+              "Me cobraron doble"
+            ]
+          },
+          "other": {
+            "on": false,
+            "name": "",
+            "description": "",
+            "examples_no": [],
+            "examples_yes": []
+          },
+          "sales": {
+            "on": true,
+            "demo": "handoff",
+            "quote": "opportunity",
+            "visit": "handoff",
+            "booking": "appointment",
+            "examples_no": [
+              "Quiero mi factura",
+              "Les pagué por transferencia, ¿les mando el comprobante?"
+            ],
+            "examples_yes": [
+              "¿Cuánto cuesta el balayage?",
+              "¿Qué precio tiene el manicure gelish?",
+              "Quiero agendar un corte para mañana",
+              "¿Tienen lugar el sábado para uñas?",
+              "Quiero cambiar mi cita",
+              "Cancela mi cita por favor",
+              "Cotízame el paquete de novia",
+              "¿Qué me recomiendas para el frizz?",
+              "¿Hacen lifting de pestañas?",
+              "Quiero una cotización para 3 damas de honor",
+              "¿Qué horario tienen?",
+              "¿Dónde están?",
+              "¿Aceptan tarjeta?",
+              "¿Tienen meses sin intereses?",
+              "¿Hay estacionamiento?"
+            ],
+            "appointment_minutes": 30,
+            "appointment_user_ids": [
+              "p1",
+              "p2"
+            ]
+          },
+          "support": {
+            "on": false,
+            "action": "case",
+            "details": true,
+            "examples_no": [
+              "Quiero una cotización",
+              "Mi factura tiene mal el RFC"
+            ],
+            "examples_yes": [
+              "No puedo enviar una cotización a pedido",
+              "La cotización no se genera",
+              "El módulo de facturación no carga",
+              "No puedo generar mi factura porque marca error"
+            ],
+            "appointment_minutes": 60,
+            "appointment_user_ids": []
+          }
+        },
+        "human": "understand_first",
+        "quote": {
+          "cart": true,
+          "mode": "send",
+          "follow": true,
+          "follow_days": 2
+        },
+        "user_id": "p1",
+        "identify": "ask",
+        "follow_up": {
+          "nudges": 0,
+          "templates": [],
+          "template_days": 2
+        },
+        "goal_mode": "soft",
+        "not_client": "serve",
+        "attend_hours": 0,
+        "business_who": "Mujeres y hombres que quieren verse y sentirse bien; novias y grupos para eventos.",
+        "business_why": "Estilistas certificadas, productos profesionales (L'Oréal Professionnel y OPI), puntualidad y ambiente relajado. Garantía de 7 días en color y uñas: si algo no quedó, lo arreglamos sin costo.",
+        "price_source": "catalog",
+        "business_mode": "own",
+        "business_what": "Salón de belleza y estética: cortes, color (tinte, mechas, balayage), keratina, peinados, uñas (gelish, acrílicas, pedicure spa), cejas y pestañas, faciales, depilación y paquetes para novias y eventos.",
+        "business_coverage": "Av. Chapultepec 480, local 3, col. Americana, Guadalajara, Jal. Estacionamiento gratis frente al local.",
+        "appointment_notice": {
+          "on": true
+        },
+        "business_practical": "Horario: lunes a sábado de 10:00 a 20:00; domingo cerrado. Pagos: efectivo, tarjeta de débito y crédito (3 meses sin intereses en compras desde $1,500) y transferencia. Los precios ya incluyen IVA. Para citas de color o keratina se pide anticipo de $200 al confirmar. Cancelaciones o cambios con 24 h de anticipación; si llegas más de 15 minutos tarde podemos reagendarte. Facturamos al momento.",
+        "welcome": "¡Hola! Soy Luz, de Estética Bella Luz 💇‍♀️ Te puedo dar precios, agendar tu cita o cotizarte un paquete. ¿Qué se te antoja hoy?",
+        "instructions": "Eres la recepción virtual de Estética Bella Luz (preséntate siempre así, nunca con otro nombre de empresa).\n- Precios: solo los del Catálogo; si el servicio depende del largo del cabello, dilo.\n- Recomienda con lo que pida (frizz → keratina; evento → peinado; novia → paquete novia).\n- Para agendar: en cuanto sepas el servicio, busca horarios (sin pedir confirmación) y ofrécele 3; al agendar, confirma servicio, día, hora y con quién.\n- Si pide varios servicios, agéndalos en la misma cita.\n- Cotiza cuando pida una cotización formal o sea para un grupo (novia, damas, evento). Si pide cotizar sin decir qué, pregúntale qué servicios y para cuántas personas (no digas que no encontraste nada).\n- Si pregunta qué servicios tienen, dale las categorías con 2 o 3 ejemplos y su precio (no la lista completa).\n- Si dice el servicio con otras palabras o con un error («pedi», «édicure»), usa el del Catálogo que más se parezca sin preguntarle. Si ya quiere cita y sabes el servicio, busca horarios de una vez.\n- Si dice que no necesita nada más o se despide, despídete con calidez (recuérdale su cita si tiene una); nunca lo dejes sin respuesta.\n- Mensajes cortos, cálidos, con un emoji como máximo.",
+        "voice": {
+          "who": "Estética Bella Luz, salón de belleza en Guadalajara",
+          "tone": "cercano",
+          "after_hours": "Fuera de horario igual puedes agendar aquí; te confirmamos al abrir."
+        },
+        "voice_mode": "own"
+      },
+      "sources": [
+        "catalog",
+        "-canned_response"
+      ]
+    }
+  ]
+}

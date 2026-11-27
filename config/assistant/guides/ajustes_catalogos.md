@@ -2,10 +2,10 @@
 key: ajustes_catalogos
 title: Ajustes y catálogos
 areas: [settings]
-keywords: [ajustes, configuracion, configuracion de cuenta, nombre de la cuenta, idioma, idioma del sitio, id de la cuenta, logo, marca, color de la empresa, nombre del asistente, modelo de openai, modelos de ia, que modelo usa, resolver automaticamente, facturacion, plan, licencias, catalogo, catalogos, etiquetas, crear etiqueta, atributos personalizados, campo extra, respuestas predefinidas, plantillas de whatsapp, productos y servicios, motivos de cierre, ganada, perdida, pospuesta, cancelada, resultados de tareas, tiempo dedicado, motivos de cancelacion, embudos de contactos, tipos de caso, clasificaciones, politicas sla, tipos de contrato, datos propios, puntaje de tareas, pesos, restaurar de fabrica, casos y etapas, folio]
-pages: [settings, catalog, account_settings, users, roles, teams, inboxes, integrations, billing, case_types, close_reasons, task_outcomes, labels, custom_attributes, canned_responses, whatsapp_templates, contact_funnels, contract_types, sla_policies, classifications, case_rules, task_scoring]
+keywords: [ajustes, demostraciones, demo, armar una demo, kit de demo, importar demo, exportar demo, limpiar demo, configuracion, configuracion de cuenta, nombre de la cuenta, idioma, idioma del sitio, id de la cuenta, logo, marca, color de la empresa, nombre del asistente, modelo de openai, modelos de ia, que modelo usa, resolver automaticamente, facturacion, plan, licencias, catalogo, catalogos, etiquetas, crear etiqueta, atributos personalizados, campo extra, respuestas predefinidas, plantillas de whatsapp, productos y servicios, motivos de cierre, ganada, perdida, pospuesta, cancelada, resultados de tareas, tiempo dedicado, motivos de cancelacion, embudos de contactos, tipos de caso, clasificaciones, politicas sla, tipos de contrato, datos propios, puntaje de tareas, pesos, restaurar de fabrica, casos y etapas, folio]
+pages: [settings, demo_kits, catalog, account_settings, users, roles, teams, inboxes, integrations, billing, case_types, close_reasons, task_outcomes, labels, custom_attributes, canned_responses, whatsapp_templates, contact_funnels, contract_types, sla_policies, classifications, case_rules, task_scoring]
 sources: [app/javascript/dashboard/components/layout/config/sidebarItems/v2/index.js, app/javascript/dashboard/routes/dashboard/settings/account/*.vue, app/javascript/dashboard/routes/dashboard/settings/billing/**/*.vue, app/javascript/dashboard/routes/dashboard/settings/labels/*.vue, app/javascript/dashboard/routes/dashboard/settings/attributes/*.vue, app/javascript/dashboard/views/gestorTickets/OutcomeReasonsConfig.vue, app/javascript/dashboard/views/gestorTickets/commercial/OutcomeReasons.vue, app/javascript/dashboard/views/gestorTickets/TaskOutcomesConfig.vue, app/javascript/dashboard/views/gestorTickets/TaskPriorityConfig.vue, app/javascript/dashboard/views/contracts/ContractTypes.vue, app/javascript/dashboard/i18n/locale/es/generalSettings.json, app/javascript/dashboard/i18n/locale/es/labelsMgmt.json, app/javascript/dashboard/i18n/locale/es/attributesMgmt.json]
-reviewed: 2026-11-25
+reviewed: 2026-11-27
 ---
 ## Para qué sirve
 - Ajustes: la configuración de la cuenta y quién entra y cómo trabaja. Es del Administrador.
@@ -19,6 +19,7 @@ reviewed: 2026-11-25
 - «Facturación»: tu plan y licencias (solo en la versión en la nube).
 - «Puntaje de tareas»: cómo se ordena «Mi día».
 - «Formatos de cotización»: cómo se ven la cotización que abre el cliente y su PDF (bloques, logo, datos de tu empresa, datos bancarios); puedes tener varios y elegir uno por omisión. Detalle en la guía [[cotizaciones]].
+- «Demostraciones» (solo administradores): armar una demo en minutos (ver abajo).
 - «Casos y etapas» (se despliega): Reglas de automatización, Inteligencia Artificial, Parámetros de ventas, Resumen del negocio: acceso, Ajustes del módulo y Configuración de folio. Las reglas se explican en la guía reglas_automatizacion_casos.
 
 ### Catálogos
@@ -90,6 +91,13 @@ Si un resultado tiene motivos activos, al marcar la oportunidad hay que elegir u
 3. Los ejemplos A y B de arriba muestran cuál quedaría primero con tus pesos.
 4. Pulsa «Guardar». «Restaurar de fábrica» regresa los valores de fábrica (luego guarda). Valores permitidos: de -100 a 200.
 5. «Avisar «Nueva urgente» desde este puntaje» decide desde cuántos puntos se avisa una tarea urgente nueva.
+
+### Armar una demostración (Ajustes › Demostraciones)
+1. En «Importar una demo» elige una demo que trae Kontrolya (por ejemplo «Estética Bella Luz»: agente de Atención a clientes, 16 servicios con precio y duración, chat de la página) o «Subir un archivo .json» que exportaste de otra cuenta.
+2. Revisa qué va a crear y elige quién de tu cuenta va en cada lugar (quien atiende las citas o a quien el agente le pasa la plática; para agendar, alguien con Google conectado) y la bandeja (un chat de página nuevo o una que ya tengas).
+3. «Crear la demo». Si ya existe un producto con la misma clave o un agente con el mismo nombre, se actualiza (no se duplica).
+4. En «Demos importadas»: «Abrir el chat de la página» para probarla como cliente; al terminar, «Limpiar lo de la demo» borra las pláticas, cotizaciones, oportunidades y citas (también el evento de Google) que salieron en la demo y deja la configuración; «Quitar la demo» además borra lo que creó la importación (agentes, bandeja, productos nuevos).
+5. Para llevarte una demo a otra cuenta o servidor: en «Exportar una demo» ponle nombre, marca los agentes y las categorías del catálogo y «Descargar .json». No lleva conversaciones, contactos, contraseñas, tokens de Google ni respuestas predefinidas; las personas van como lugares que se eligen al importar.
 
 ### Ver la facturación
 Ajustes › Facturación muestra tu «Plan Actual» y licencias. «Ir al portal de facturación» abre tus facturas, datos de pago o la cancelación; «Chatea con nosotros» pide ayuda.

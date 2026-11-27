@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_30_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_12_01_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1745,6 +1745,18 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_30_100000) do
     t.index ["account_id"], name: "index_data_imports_on_account_id"
   end
 
+  create_table "demo_imports", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.string "name", null: false
+    t.string "source"
+    t.jsonb "created_ids", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_demo_imports_on_account_id"
+    t.index ["user_id"], name: "index_demo_imports_on_user_id"
+  end
+
   create_table "email_suppressions", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "email", null: false
@@ -3334,6 +3346,8 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_30_100000) do
   add_foreign_key "customer_assets", "accounts"
   add_foreign_key "customer_assets", "contacts", on_delete: :cascade
   add_foreign_key "customer_assets", "organizations", on_delete: :nullify
+  add_foreign_key "demo_imports", "accounts", on_delete: :cascade
+  add_foreign_key "demo_imports", "users", on_delete: :nullify
   add_foreign_key "event_attendees", "accounts"
   add_foreign_key "event_attendees", "contacts", on_delete: :cascade
   add_foreign_key "event_attendees", "events", on_delete: :cascade

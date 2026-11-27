@@ -492,7 +492,8 @@
     "INTERNAL_CHAT": "Internal chat",
     "COLLECTIONS": "Collections",
     "SHOW_MENU": "Show the menu",
-    "HIDE_MENU": "Hide the menu"
+    "HIDE_MENU": "Hide the menu",
+    "DEMO_KITS": "Demos"
   },
   "BILLING_SETTINGS": {
     "TITLE": "Billing",
@@ -568,6 +569,61 @@
       "SAVE": "Save",
       "CANCEL": "Cancel",
       "ERROR": "Could not save."
+    }
+  },
+  "DEMO_KITS": {
+    "HEADER": "Demos",
+    "INTRO": "Set up a demo in minutes: import a ready demo (agents, catalog and inbox) or one you exported from another account; afterwards, clean what came out of the demo or remove it.",
+    "LOADING": "Loading…",
+    "LOAD_ERROR": "Could not load.",
+    "CANCEL": "Cancel",
+    "KINDS": {
+      "customers": "Customer service",
+      "prospects": "Prospects",
+      "campaign_seller": "Campaign seller",
+      "collections": "Collections"
+    },
+    "IMPORT": {
+      "TITLE": "Import a demo",
+      "HINT": "Pick a demo that comes with Kontrolya or upload the .json you exported.",
+      "SUMMARY": "{agents} agent(s) · {items} product(s) · {inboxes} inbox(es)",
+      "FROM_FILE": "Upload a .json file",
+      "BAD_FILE": "The file is not a Kontrolya demo kit.",
+      "AGENT": "Agent «{name}»",
+      "CATALOG": "{items} product(s) in {categories} category(ies)",
+      "PEOPLE": "Who from your account fills each place?",
+      "PEOPLE_HINT": "Who takes the appointments or who the agent hands over to. To book, pick someone with Google connected.",
+      "NOBODY": "— Nobody —",
+      "INBOXES": "Inbox",
+      "NEW_WEB_INBOX": "Create a new website chat",
+      "CHOOSE_INBOX": "Pick an inbox",
+      "UPDATE_HINT": "If a product with the same code or an agent with the same name exists, it is updated (not duplicated).",
+      "BUTTON": "Create the demo",
+      "DONE": "Demo ready: open it in «Imported demos».",
+      "ERROR": "Could not import."
+    },
+    "IMPORTS": {
+      "TITLE": "Imported demos",
+      "LINE": "{date} · {user} · {agents} agent(s) · {items} new product(s)",
+      "OPEN_CHAT": "Open the website chat",
+      "CLEAN": "Clean the demo",
+      "CLEAN_CONFIRM": "Delete the conversations, quotes, opportunities and appointments (also in Google) from «{name}»? Agents and catalog stay.",
+      "CLEANED": "Done: {conversations} conversation(s), {quotes} quote(s) and {meetings} appointment(s) deleted.",
+      "REMOVE": "Remove the demo",
+      "REMOVE_CONFIRM": "Remove «{name}»? The demo data and what the import created (agents, inbox, new products) are deleted.",
+      "REMOVED": "Demo removed.",
+      "ERROR": "Could not do it; try again."
+    },
+    "EXPORT": {
+      "TITLE": "Export a demo",
+      "HINT": "Pick the agents and catalog categories: a .json is built to import it in another account or server.",
+      "NAME": "Demo name",
+      "NAME_PLACEHOLDER": "E.g. Bella Luz Salon",
+      "AGENTS": "Agents",
+      "CATEGORIES": "Catalog categories",
+      "SAFE_HINT": "It carries no conversations, contacts, passwords, Google tokens or canned responses; people travel as places you fill when importing.",
+      "BUTTON": "Download .json",
+      "ERROR": "Could not export."
     }
   }
 }
