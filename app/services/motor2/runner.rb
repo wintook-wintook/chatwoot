@@ -20,18 +20,20 @@ class Motor2::Runner < Cases::Ai::BaseService
   include Motor2::QuestionGuard
   include Motor2::ReplyChecks
   include Motor2::AreaChecks
+  include Motor2::QuoteCheck
   include Motor2::SupportChecks
   include Motor2::TurnFiles
   MAX_ROUNDS = 6
   MAX_TOKENS = 700
   NO_MESSAGE = '[SIN_MENSAJE]'
+  SAID_BEFORE = 6 # sus últimos mensajes ya revisados: lo que confirmó ahí sigue confirmado (Motor2::AreaChecks)
   MONEY = /(?:\$\s?\d[\d,.]*|\d[\d,.]*\s?(?:pesos|mxn|usd|dólares|%))/i
 
   Result = Struct.new(:reply, :decision, :trace, :error, :attachments, :after, :labels, keyword_init: true)
   MAX_FILES = 5
 
   attr_reader :config, :state, :trace, :conversation, :tracking, :canned_used, :seen, :noted_contact, :evidence, :last_customer,
-              :attachments, :decision
+              :attachments, :decision, :mode
 
   # opts: conversation:, tracking:, history: (chat de prueba), mode: :reply | :attempt, attempt: [n, total],
   #       welcome: (bienvenida combinada: va tal cual al inicio del mensaje; el modelo no vuelve a saludar)
@@ -80,6 +82,7 @@ class Motor2::Runner < Cases::Ai::BaseService
     return Result.new(error: ['El modelo no respondió.', @error].compact.join(' — '), trace: @trace.to_h) if content.nil?
 
     reply = @silent ? '' : with_welcome(polish(finish(review(messages, clean(content)))))
+    reply = farewell if reply.blank? && !@silent && farewell?
     Result.new(reply: reply, decision: @decision, trace: @trace.to_h, attachments: @attachments, after: @after, labels: labels)
   end
 
@@ -102,6 +105,7 @@ class Motor2::Runner < Cases::Ai::BaseService
     history = test? ? @test_history.map { |m| m.to_h.symbolize_keys.slice(:role, :content) } : Motor2::Prompt.history(@conversation)
     @skills.each { |skill| skill.prepare(history) }
     @last_customer = history.reverse.find { |m| m[:role].to_s == 'user' }&.dig(:content).to_s
+    @said_before = history.select { |m| m[:role].to_s == 'assistant' }.last(SAID_BEFORE).pluck(:content)
     history
   end
 

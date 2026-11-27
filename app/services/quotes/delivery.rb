@@ -4,9 +4,12 @@
 class Quotes::Delivery
   Error = Class.new(StandardError)
 
-  def initialize(quote, user)
+  # ai_agent: { name: } cuando la manda un agente de IA (Motor2::Skills::Quote): el mensaje sale como suyo y no
+  # cuenta como que una persona entró a la plática (si no, el agente se pausaba: Motor2::Reply#human_stepped_in?).
+  def initialize(quote, user, ai_agent: nil)
     @quote = quote
     @user = user
+    @ai_agent = ai_agent
   end
 
   def deliver!
@@ -14,6 +17,7 @@ class Quotes::Delivery
     raise Error, I18n.t('quotes.errors.no_conversation') unless conversation
 
     params = { content: content, message_type: 'outgoing' }
+    params[:ai_agent] = @ai_agent if @ai_agent.is_a?(Hash)
     pdf = pdf_blob
     params[:attachments] = [pdf.signed_id] if pdf
     message = Messages::MessageBuilder.new(@user, conversation, params).perform
@@ -40,8 +44,11 @@ class Quotes::Delivery
       conversations.order(last_activity_at: :desc).first
   end
 
+  # En el idioma de la cuenta: desde un agente (Sidekiq) no hay idioma de la pantalla y salía en inglés.
   def content
-    I18n.t('quotes.delivery_message', name: @quote.contact.name.to_s.split.first || '', folio: @quote.folio,
-                                      url: Quotes::Serializer.public_url(@quote))
+    I18n.with_locale(@quote.account.locale.presence || I18n.locale) do
+      I18n.t('quotes.delivery_message', name: @quote.contact.name.to_s.split.first || '', folio: @quote.folio,
+                                        url: Quotes::Serializer.public_url(@quote))
+    end
   end
 end

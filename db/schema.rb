@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2026_11_29_100000) do
+ActiveRecord::Schema[7.0].define(version: 2026_11_30_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1134,6 +1134,7 @@ ActiveRecord::Schema[7.0].define(version: 2026_11_29_100000) do
     t.boolean "price_includes_tax", default: false, null: false
     t.string "sat_code"
     t.bigint "withholding_rate_ids", default: [], null: false, array: true
+    t.integer "duration_minutes"
     t.index ["account_id", "active", "kind"], name: "index_catalog_items_on_account_id_and_active_and_kind"
     t.index ["account_id", "sku"], name: "index_catalog_items_on_account_id_and_sku", unique: true, where: "(sku IS NOT NULL)"
     t.index ["account_id"], name: "index_catalog_items_on_account_id"

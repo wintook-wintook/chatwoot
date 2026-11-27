@@ -15,7 +15,7 @@ sources:
   - app/models/quote_format.rb
   - app/views/quotes/_document.html.erb
   - app/controllers/api/v1/accounts/quote_formats_controller.rb
-reviewed: 2026-11-25
+reviewed: 2026-11-27
 ---
 ## Para qué sirve
 Una cotización es la propuesta con precios que le mandas al cliente. Puede ir sola o ligada a una oportunidad; el cliente la ve por un enlace, la acepta o la rechaza, y su resultado se refleja en la oportunidad.
@@ -82,7 +82,7 @@ También puedes preguntarle «¿qué cotizaciones tiene abiertas Mario?». Lo de
 - ¿Qué es «Vencida»? Una enviada cuya vigencia ya pasó.
 - ¿Qué cuenta «Monto en juego»? El total de los borradores y las enviadas, por moneda. «Aceptación (90 días)» y «Respuesta del cliente» se calculan con las ganadas y perdidas de los últimos 90 días.
 - Si la cotización salió de una orden de trabajo, al ganarse sus partidas pasan a la orden; si salió de un proyecto, se crea una orden dentro del proyecto.
-- ¿De dónde sale el Imp. %? Una partida del catálogo trae el impuesto de su producto; si el producto no tiene uno propio, o la partida no es del catálogo, usa el impuesto por omisión. Los impuestos y cuál es el de por omisión se cambian en Catálogos › Productos y servicios › pestaña «Parámetros». Si el producto tiene marcado «El precio ya incluye el impuesto», la partida llega con el precio sin impuesto, para que el total sea el precio publicado.
+- ¿De dónde sale el Imp. %? Una partida del catálogo trae el impuesto de su producto; si el producto no tiene uno propio, o la partida no es del catálogo, usa el impuesto por omisión. Los impuestos y cuál es el de por omisión se cambian en Catálogos › Productos y servicios › pestaña «Parámetros». Si el producto tiene marcado «El precio ya incluye el impuesto», la partida llega con el precio sin impuesto y el total de la partida queda exacto en el precio publicado (2 × $350 = $700, sin centavos de redondeo).
 - ¿Y las retenciones? Arriba de las partidas está «Aplicar retenciones»: se marca sola si el cliente es persona moral (el RFC de su organización tiene 12 caracteres) y se puede cambiar. Marcada, cada partida muestra sus retenciones (las de su producto) con una ✕ para quitarlas y «+ Agregar retención»; el total resta las retenciones y la liga del cliente las muestra una por una. Las retenciones se dan de alta en Catálogos › Productos y servicios › «Parámetros».
 - Si toda cotización debe tener oportunidad se configura en Ajustes › Casos y etapas › Parámetros de ventas (administrador).
 - Los productos salen de Catálogos › Productos y servicios. Ver la guía Catálogo de productos y servicios.

@@ -12,7 +12,8 @@
 #            details (pide qué pasa / desde cuándo / a cuántos),
 #            default_service_id (el sistema que atiende si el cliente no dice otro: Servicios afectados del catálogo)
 #   sales:   quote 'opportunity' | 'handoff', demo 'appointment' | 'handoff', visit 'appointment' | 'handoff',
-#            appointment_user_ids [], appointment_minutes, case_type_id
+#            booking 'appointment' | 'handoff' (citas de servicio: estética, consultorio, taller… con la duración de cada
+#            servicio del Catálogo), appointment_user_ids [], appointment_minutes, case_type_id
 #   admin:   case (bool), case_type_id
 #   other:   name, description
 module Motor2::Functions::CustomerAreas
@@ -37,7 +38,7 @@ module Motor2::Functions::CustomerAreas
                          'Quiero cotización para 10 usuarios', 'Quiero hablar con un vendedor', 'Quiero una demo',
                          'Quiero que un vendedor venga a verme', 'Quiero contratar'],
       'examples_no' => ['No puedo enviar una cotización a pedido', 'La cotización no se genera'],
-      'on' => true, 'quote' => 'opportunity', 'demo' => 'handoff', 'visit' => 'handoff'
+      'on' => true, 'quote' => 'opportunity', 'demo' => 'handoff', 'visit' => 'handoff', 'booking' => 'handoff'
     },
     'admin' => {
       'title' => 'Administrativo',
@@ -52,7 +53,8 @@ module Motor2::Functions::CustomerAreas
   }.freeze
 
   ACTIONS = { 'action' => %w[case handoff visit], 'quote' => %w[opportunity handoff], 'demo' => %w[appointment handoff],
-              'visit' => %w[appointment handoff] }.freeze
+              'visit' => %w[appointment handoff], 'booking' => %w[appointment handoff] }.freeze
+  BOOKING_WHEN = ', o agendar, cambiar o cancelar una cita para un servicio'
 
   module_function
 
@@ -86,10 +88,10 @@ module Motor2::Functions::CustomerAreas
   end
 
   def sales(raw)
-    %w[quote demo visit].index_with { |field| choice(raw, field, 'sales') }
-                        .merge('appointment_user_ids' => Array(raw['appointment_user_ids']).map(&:to_i).select(&:positive?).uniq,
-                               'appointment_minutes' => raw['appointment_minutes'].to_s.presence&.to_i,
-                               'case_type_id' => id(raw['case_type_id']))
+    %w[quote demo visit booking].index_with { |field| choice(raw, field, 'sales') }
+                                .merge('appointment_user_ids' => Array(raw['appointment_user_ids']).map(&:to_i).select(&:positive?).uniq,
+                                       'appointment_minutes' => raw['appointment_minutes'].to_s.presence&.to_i,
+                                       'case_type_id' => id(raw['case_type_id']))
   end
 
   # Soporte que va a domicilio (aire acondicionado, instalaciones…): con quién y cuánto dura la visita técnica.
@@ -114,14 +116,20 @@ module Motor2::Functions::CustomerAreas
   def id(value) = value.to_s.presence&.to_i
 
   # Las áreas prendidas, con su título y cuándo aplica (lo de «Otra» lo pone la empresa).
+  # Cuándo aplica: lo de «Otra» lo escribe la empresa; Comercial con citas de servicio también agenda.
+  def when_for(key, saved)
+    return saved['description'].to_s if key == 'other'
+
+    key == 'sales' && saved['booking'] == 'appointment' ? DEFAULTS[key]['when'] + BOOKING_WHEN : DEFAULTS[key]['when']
+  end
+
   def active(areas)
     KEYS.filter_map do |key|
       saved = areas.to_h[key].to_h
       next unless saved.fetch('on', DEFAULTS[key]['on'])
 
       title = key == 'other' ? saved['name'].presence || 'Otra' : DEFAULTS[key]['title']
-      when_text = key == 'other' ? saved['description'].to_s : DEFAULTS[key]['when']
-      DEFAULTS[key].merge(saved).merge('key' => key, 'title' => title, 'when' => when_text)
+      DEFAULTS[key].merge(saved).merge('key' => key, 'title' => title, 'when' => when_for(key, saved))
     end
   end
 end

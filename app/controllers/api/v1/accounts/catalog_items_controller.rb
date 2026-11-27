@@ -14,7 +14,7 @@ class Api::V1::Accounts::CatalogItemsController < Api::V1::Accounts::BaseControl
 
   PER_PAGE = 50
   CSV_COLUMNS = %w[clave nombre tipo categoria unidad precio moneda costo descripcion activo impuesto precio_con_impuesto clave_sat
-                   retenciones].freeze
+                   retenciones duracion_min].freeze
 
   before_action :check_read_access
   before_action :check_write_access, only: %i[create update import image remove_image]
@@ -104,6 +104,7 @@ class Api::V1::Accounts::CatalogItemsController < Api::V1::Accounts::BaseControl
   def item_params
     permitted = params.require(:catalog_item).permit(:name, :sku, :kind, :category, :unit, :price, :currency, :description, :active,
                                                      :catalog_category_id, :catalog_unit_id, :tax_rate_id, :price_includes_tax, :sat_code,
+                                                     :duration_minutes,
                                                      withholding_rate_ids: [])
     permitted[:cost] = params[:catalog_item][:cost] if access_grant.can?(:see_amounts) && params[:catalog_item].key?(:cost)
     permitted
@@ -125,6 +126,7 @@ class Api::V1::Accounts::CatalogItemsController < Api::V1::Accounts::BaseControl
     {
       id: item.id, name: item.name, sku: item.sku, kind: item.kind, category: item.category, unit: item.unit,
       price: item.price.to_f, currency: item.currency, description: item.description, active: item.active,
+      duration_minutes: item.duration_minutes,
       cost: (item.cost&.to_f if access_grant.can?(:see_amounts)),
       image_url: (url_for(item.image) if item.image.attached?)
     }.merge(parameters_json(item))
@@ -142,7 +144,7 @@ class Api::V1::Accounts::CatalogItemsController < Api::V1::Accounts::BaseControl
     cost = access_grant.can?(:see_amounts) ? item.cost&.to_f : nil
     [item.sku, item.name, item.kind, item.category, item.unit, item.price.to_f, item.currency, cost,
      item.description, item.active ? 'si' : 'no', item.tax_rate&.name, item.price_includes_tax ? 'si' : 'no', item.sat_code,
-     item.withholding_rates.map(&:name).join('; ')]
+     item.withholding_rates.map(&:name).join('; '), item.duration_minutes]
   end
 
   # Cada fila crea o actualiza (por clave; sin clave, por nombre). Devuelve el conteo
@@ -171,7 +173,13 @@ class Api::V1::Accounts::CatalogItemsController < Api::V1::Accounts::BaseControl
     attrs[:kind] = CatalogItem.kind_from(value.call('tipo')) || 'product'
     attrs[:price] = money(value.call('precio')) || 0
     attrs[:cost] = money(value.call('costo')) if access_grant.can?(:see_amounts)
-    attrs.merge(tax_attributes(value))
+    attrs.merge(tax_attributes(value)).merge(duration_attribute(value))
+  end
+
+  # duracion_min (servicios: minutos de la cita), si viene en el archivo.
+  def duration_attribute(value)
+    raw = value.call('duracion_min')
+    raw.nil? ? {} : { duration_minutes: raw.to_s.strip.presence&.to_i }
   end
 
   # impuesto (nombre o porcentaje; vacío = el de por omisión), precio_con_impuesto (si/no), clave_sat.

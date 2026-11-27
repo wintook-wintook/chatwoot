@@ -26,8 +26,23 @@ class Motor2::Skills::Data < Motor2::Skills::Base
                { dato: { type: 'string', enum: fields.pluck('key') }, valor: STR }, %w[dato valor])
   end
 
+  NAME_SAID = /\b(soy|me\s+llamo|mi\s+nombre\s+es|habla)\s+([[:alpha:]]+)/i
+  NOT_NAMES = %w[cliente clienta nuevo nueva nuevos del los las una uno muy estudiante esposo esposa mama papa hijo hija
+                 doctor doctora licenciado licenciada ingeniero ingeniera parte quien yo].freeze
+  NAME_NOTE = '- Si el cliente dice su nombre, correo o empresa («soy Mario»), guárdalo con actualizar_contacto en ese ' \
+              'mismo mensaje, aunque no se lo hayas preguntado.'
+
+  # Se presentó («hola, soy Mario»): que lo guarde ya (en real la cita y la cotización salen a su nombre).
+  def turn_note
+    name = @turn.last_customer.to_s[NAME_SAID, 2]
+    return '' if name.blank? || name.length < 3 || NOT_NAMES.include?(name.downcase) ||
+                 @turn.conversation&.contact&.name.to_s.downcase.include?(name.downcase)
+
+    "Se presentó como «#{name}»: guárdalo con actualizar_contacto (nombre) en este mensaje."
+  end
+
   def instructions
-    return '' if fields.empty?
+    return NAME_NOTE if fields.empty?
 
     lines = fields.map do |f|
       allowed = Array(f['values']).presence
@@ -36,6 +51,7 @@ class Motor2::Skills::Data < Motor2::Skills::Base
     <<~TEXT.strip
       - DATOS DEL CLIENTE que debes conseguir y guardar con guardar_dato:
       #{lines.join("\n")}
+      #{NAME_NOTE}
         En cuanto el cliente diga uno (aunque no se lo hayas preguntado, p. ej. «informes de Derecho»), guárdalo con
         guardar_dato en ese mismo turno y no se lo vuelvas a preguntar. Los marcados «PREGÚNTALO» que falten, pregúntalos
         uno a la vez y en ese orden, sin interrogarlo: entre tus respuestas.

@@ -270,12 +270,19 @@ RSpec.describe Motor2::Functions::Prospects do
 
       reply_to(incoming('El jueves a las 11 me queda'))
 
-      meeting = CaseMeeting.find(tracking.motor2_state.dig('appointment', 'meeting_id'))
+      meeting = CaseMeeting.find(tracking.motor2_state['appointments'].first['meeting_id'])
       expect(meeting).to have_attributes(organizer_id: seller.id, starts_at: start)
       expect(tracking).to have_attributes(status: 'active', outcome: include('Cita'))
       expect(conversation.reload.assignee_id).to eq(seller.id)
       expect(conversation.label_list).to include('interesado')
       expect(note).to include('Cita agendada')
+    end
+
+    it 'con «Citas de servicio»: agenda en cuanto quiere un servicio, con la duración del Catálogo' do
+      expect(Motor2::Config.new(agent.reload).function.skills['appointments']).to include('services' => false, 'when' => 'ya califica')
+      save_agent(settings.merge('appointment_user_ids' => [seller.id.to_s], 'appointment_services' => true), template: agent)
+      expect(Motor2::Config.new(agent.reload).function.skills['appointments'])
+        .to include('services' => true, 'when' => 'quiere agendar un servicio o ya califica')
     end
 
     it 'sin acceso al calendario: lo pasa a una persona con nota de a quién reconectar' do

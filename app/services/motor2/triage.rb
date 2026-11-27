@@ -20,7 +20,11 @@
 #       'pendientes' => [{ 'area', 'intencion' }] }
 class Motor2::Triage < Cases::Ai::BaseService
   HISTORY = 8
-  GESTIONES = %w[info cotizacion demo visita vendedor contratar otra].freeze
+  GESTIONES = %w[info cotizacion demo visita cita vendedor contratar otra].freeze
+  BOOKING = 'CITAS DE SERVICIO: esta empresa agenda citas para sus servicios. En comercial, «gestion» es cita si quiere ' \
+            'agendar, cambiar o cancelar una cita, o pregunta si hay lugar u horario para un servicio (no es visita ni demo).'
+  CART = 'SU CUENTA: el agente va armando en el chat la cuenta del cliente. «Agrégame…», «quita…», «¿cuánto llevo?» o ' \
+         '«mándame la cotización» son gestion cotizacion (no contratar ni vendedor).'
 
   SYSTEM = <<~TEXT
     Clasificas los mensajes de un cliente de una empresa para saber qué área lo atiende. Decide por la
@@ -60,6 +64,7 @@ class Motor2::Triage < Cases::Ai::BaseService
   def call(areas:, history:, pending: nil, queue: [], about: {})
     @business = about[:business]
     @catalog = about[:catalog].to_h
+    @cart = about[:cart] == true
     result = chat(system: SYSTEM, user: context(areas, history, pending, queue), json: true, temperature: 0, max_tokens: 400)
     clean(result, areas)&.tap { |out| out['atender'].merge!(classification(result['atender'])) }
   rescue StandardError => e
@@ -73,7 +78,7 @@ class Motor2::Triage < Cases::Ai::BaseService
 
   def context(areas, history, pending, queue)
     lines = ["EL NEGOCIO: #{@business.presence || 'sin descripción'}", 'ÁREAS:', *areas.flat_map { |a| area_lines(a) }]
-    lines.concat(catalog_lines)
+    lines.concat(booking_lines(areas)).concat(catalog_lines)
     lines.concat(pending_lines(pending, queue))
     lines << 'PLÁTICA (la última línea es el mensaje a clasificar):'
     Array(history).last(HISTORY).each { |m| lines << "#{m[:role].to_s == 'user' ? 'CLIENTE' : 'AGENTE'}: #{m[:content].to_s.first(400)}" }
@@ -85,6 +90,12 @@ class Motor2::Triage < Cases::Ai::BaseService
     lines << "ACLARACIÓN PENDIENTE: #{pending['area']} — «#{pending['intencion']}»; se le preguntó: «#{pending['aclaracion']}»" if pending
     lines << "PENDIENTES DE ANTES: #{queue.map { |q| "#{q['area']}: #{q['intencion']}" }.join(' | ')}" if queue.present?
     lines
+  end
+
+  # Citas de servicio (Comercial › «Si quiere una cita para un servicio»): la gestión «cita».
+  def booking_lines(areas)
+    lines = areas.any? { |a| a['key'] == 'sales' && a['booking'] == 'appointment' } ? [BOOKING] : []
+    @cart ? lines << CART : lines
   end
 
   def catalog_lines

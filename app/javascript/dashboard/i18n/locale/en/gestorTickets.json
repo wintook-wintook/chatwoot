@@ -3348,6 +3348,8 @@
       "CURRENCY": "Currency",
       "COST": "Cost",
       "COST_HINT": "Optional. To see the margin; only visible with «See amounts».",
+      "DURATION": "Duration (minutes)",
+      "DURATION_HINT": "Optional. When «Customer service» books service appointments, the appointment takes this long in the calendar.",
       "IMAGE": "Photo (optional)",
       "IMAGE_REMOVE": "Remove photo",
       "IMAGE_HINT": "PNG, JPG or WEBP up to 5 MB. The Prospects agent sends it when it recommends this product.",

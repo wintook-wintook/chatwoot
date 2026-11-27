@@ -8,6 +8,7 @@
 #  cost                 :decimal(14, 2)
 #  currency             :string(3)        default("MXN"), not null
 #  description          :text
+#  duration_minutes     :integer
 #  kind                 :integer          default("product"), not null
 #  name                 :string           not null
 #  price                :decimal(14, 2)   default(0.0), not null
@@ -66,6 +67,8 @@ class CatalogItem < ApplicationRecord
   validates :currency, format: { with: /\A[A-Z]{3}\z/ }
   validates :price, numericality: { greater_than_or_equal_to: 0 }
   validates :cost, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  # Cuánto dura el servicio (minutos): las citas de servicio de «Atención a clientes» ocupan esa duración en la agenda.
+  validates :duration_minutes, numericality: { only_integer: true, greater_than_or_equal_to: 5, less_than_or_equal_to: 720 }, allow_nil: true
   validate :image_ok, if: -> { image.attached? }
 
   scope :active, -> { where(active: true) }

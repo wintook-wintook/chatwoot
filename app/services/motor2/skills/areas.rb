@@ -17,7 +17,7 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
   include Motor2::Skills::SupportFlow
   include Motor2::Skills::AreaRules
 
-  GESTION = { type: 'string', enum: %w[cotizacion demo visita vendedor contratar otra] }.freeze
+  GESTION = { type: 'string', enum: %w[cotizacion demo visita cita vendedor contratar otra] }.freeze
 
   def self.key = 'areas'
 
@@ -159,17 +159,24 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
   def agent_question(history)
     list = Array(history)
     last_agent = list[0...-1].reverse.find { |m| m[:role].to_s == 'assistant' }&.dig(:content).to_s
-    asked = last_agent[/¿[^¿?]*\?/]
+    asked = clarifying_question(last_agent)
     return nil unless asked && list.last && list.last[:role].to_s == 'user'
 
     { 'area' => now['area'], 'intencion' => now['intencion'].presence || 'lo que pidió antes', 'aclaracion' => asked }
   end
 
-  def triage(history)
-    Motor2::Triage.new(account: config.account).call(areas: function.areas, history: history, pending: state['pendiente'],
-                                                     queue: queue,
-                                                     about: { business: business_text, catalog: case_catalog })
+  # La pregunta con que terminó el agente; la de la bienvenida («¿En qué te ayudo?») no es una aclaración.
+  def clarifying_question(text)
+    asked = text[/¿[^¿?]*\?/]
+    asked unless asked && config.welcome.to_s.include?(asked)
   end
+
+  def triage(history)
+    Motor2::Triage.new(account: config.account).call(areas: function.areas, history: history, pending: state['pendiente'], queue: queue,
+                                                     about: { business: business_text, catalog: case_catalog, cart: cart? })
+  end
+
+  def cart? = @turn.find_skill('quote')&.cart? == true
 
   def business_text = [function.business_info(:business_what), function.business_info(:business_who)].compact_blank.join(' — ')
 
@@ -195,7 +202,7 @@ class Motor2::Skills::Areas < Motor2::Skills::Base
   ENOUGH_ASKS = { 'admin' => 1, 'support' => 1, 'sales' => 1, 'other' => 0 }.freeze
 
   def must_act?
-    return false if area_key == 'sales' && %w[info demo visita].include?(now['gestion'].to_s.presence || 'info')
+    return false if area_key == 'sales' && %w[info demo visita cita].include?(now['gestion'].to_s.presence || 'info')
 
     ENOUGH_ASKS.key?(area_key) && state['area_turns'].to_i >= ENOUGH_ASKS[area_key]
   end

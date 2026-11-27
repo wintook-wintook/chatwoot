@@ -118,6 +118,7 @@ export default {
         price: '',
         currency: this.defaultCurrency,
         cost: '',
+        duration_minutes: '',
         description: '',
         active: true,
       };
@@ -249,6 +250,19 @@ export default {
             }}</span>
           </label>
         </div>
+        <label v-if="form.kind === 'service'" class="block sm:w-1/3">
+          {{ $t('CATALOG.FORM.DURATION') }}
+          <input
+            v-model="form.duration_minutes"
+            type="number"
+            min="5"
+            max="720"
+            step="5"
+          />
+          <span class="text-xs text-slate-500 dark:text-slate-400">{{
+            $t('CATALOG.FORM.DURATION_HINT')
+          }}</span>
+        </label>
         <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-3">
           <label>
             {{ $t('CATALOG.FORM_EXTRA.TAX') }}

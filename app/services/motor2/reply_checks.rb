@@ -21,6 +21,13 @@ module Motor2::ReplyChecks
 
   private
 
+  # «No, gracias», «es todo», «gracias»: no se le deja sin respuesta (el modelo a veces contesta [SIN_MENSAJE]).
+  FAREWELL = /\A\s*(no,?\s+)?(muchas\s+)?(gracias|es\s+todo|nada\s+m[aá]s|eso\s+es\s+todo|no\s+gracias|ser[ií]a\s+todo)\b/i
+
+  def farewell? = @mode == :reply && @decision.nil? && @last_customer.to_s.match?(FAREWELL)
+
+  def farewell = '¡Con gusto! Aquí estoy si necesitas algo más. 😊'
+
   # La frase (o el «, pero …» de una frase) que promete que un asesor lo confirma.
   ADVISOR = /(,?\s*\b(pero|y|aunque)\s+)?[^.!?¡¿\n,]*\b(asesor|asesora|ejecutivo|ejecutiva|alguien\s+del\s+equipo|nuestro\s+equipo|
              el\s+equipo)\b[^.!?\n]*\b(confirm|resuelv|resolv|ayud|dir[aá]|inform|contact|escrib|comunic|atend|revis)\w*[^.!?\n]*/xi

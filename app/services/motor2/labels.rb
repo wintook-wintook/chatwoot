@@ -3,7 +3,7 @@
 # Motor 2.0 — las etiquetas con las que la IA catalogó la plática («Atención a clientes»:
 # Motor2::Skills::SupportFlow#labels) van a la conversación, para que el equipo vea qué pidió el cliente y
 # qué se hizo (soporte-falla, respondida, canalizada…). Si la etiqueta no existe en la cuenta, se crea.
-# No borra las que ya tenía: se van sumando.
+# No borra las que ya tenía: se van sumando (salvo «objetivo-pendiente» cuando ya está «objetivo-logrado»).
 #
 #   Motor2::Labels.apply(conversation, %w[soporte-duda respondida])
 module Motor2::Labels
@@ -19,9 +19,16 @@ module Motor2::Labels
     return if conversation.nil? || list.empty?
 
     list.each { |title| ensure_label(conversation.account, title) }
-    conversation.update!(label_list: (conversation.label_list + list).uniq)
+    conversation.update!(label_list: merged(conversation.label_list, list))
   rescue StandardError => e
     Rails.logger.warn("[Motor2::Labels] conversación #{conversation&.id}: #{e.class}: #{e.message}")
+  end
+
+  # Ya lo logró (Motor2::Skills::Goal): «objetivo-logrado» quita «objetivo-pendiente» y ya no se vuelve a poner.
+  def merged(current, list)
+    current -= ['objetivo-pendiente'] if list.include?('objetivo-logrado')
+    list -= ['objetivo-pendiente'] if current.include?('objetivo-logrado')
+    (current + list).uniq
   end
 
   def ensure_label(account, title)

@@ -9,7 +9,7 @@
 class Motor2::AgentMetrics
   DAYS = 30
   CUSTOMER_RESULTS = %w[respondida resuelto resuelto-sin-confirmar info-relacionada sin-respuesta caso-levantado canalizada
-                        gestion-registrada cotizacion cita].freeze
+                        gestion-registrada cotizacion cita cita-agendada objetivo-logrado objetivo-pendiente].freeze
   CUSTOMER_GROUPS = %w[soporte-duda soporte-falla soporte-critico informacion cotizacion demo visita vendedor contratar
                        administrativo otra-area humano].freeze
 
@@ -38,8 +38,20 @@ class Motor2::AgentMetrics
   def customers
     labels = trackings.map { |t| Array(t.conversation&.label_list) }
     total = labels.size
+    return customers_goal(labels) if goal?
+
     solved = labels.count { |l| l.intersect?(%w[respondida resuelto]) && !l.intersect?(%w[canalizada caso-levantado]) }
     { kind: 'customers', days: DAYS, total: total, rate: percent(solved, total),
+      results: tally(labels, CUSTOMER_RESULTS), groups: tally(labels, CUSTOMER_GROUPS), drop_off: [], ads: [] }
+  end
+
+  # Con «¿Qué quieres que logre?» (Motor2::Skills::Goal): % que lo logró (agendó o cotizó).
+  def goal? = @template.motor2.to_h.dig('answers', 'goal').to_s.presence_in(%w[appointment quote]).present?
+
+  def customers_goal(labels)
+    goal = @template.motor2.to_h.dig('answers', 'goal')
+    done = labels.count { |l| l.include?('objetivo-logrado') }
+    { kind: "customers_#{goal}", days: DAYS, total: labels.size, rate: percent(done, labels.size),
       results: tally(labels, CUSTOMER_RESULTS), groups: tally(labels, CUSTOMER_GROUPS), drop_off: [], ads: [] }
   end
 

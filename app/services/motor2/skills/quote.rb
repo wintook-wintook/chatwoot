@@ -9,38 +9,75 @@
 # Nunca descuentos ni precios fuera del Catálogo, salvo el precio de promoción de la campaña de Ofrecer mientras dure
 # (CampaignSeller#promo_price_for). En el chat de prueba no crea nada (enseña cómo quedaría).
 #
+# Con «Ir armando la cuenta en el chat» (Motor2::Skills::QuoteCart) la cotización sale de su cuenta y, si ya tenía una,
+# se actualiza la misma (no se crea otra).
+#
 #   memoria: state['quote'] = { 'id', 'folio' }
 class Motor2::Skills::Quote < Motor2::Skills::Base
+  include Motor2::Skills::QuoteCart
+
   ITEM = { type: 'object', properties: { producto: STR, cantidad: { type: 'number' } }, required: %w[producto] }.freeze
   MAX_ITEMS = 15
 
   def self.key = 'quote'
 
   def tools
-    [fn('cotizar', 'Arma su cotización formal con productos del Catálogo, cuando ya sabes qué quiere y cuántos. Solo cuando la pide.',
-        { partidas: { type: 'array', items: ITEM }, notas: STR }, %w[partidas])]
+    [fn('cotizar', 'Arma su cotización formal con productos del Catálogo, cuando ya sabes qué quiere y cuántos. Solo cuando la pide.' \
+                   "#{' Sin partidas, con lo de su cuenta.' if cart?}",
+        { partidas: { type: 'array', items: ITEM }, notas: STR }, cart? ? [] : %w[partidas]), *cart_tools]
   end
+
+  def memory = cart_memory
+
+  def prepare(history) = cart_prepare(history)
 
   def instructions
     <<~TEXT.strip
       - COTIZAR: si pide una cotización formal y ya sabes qué productos y cuántos, llama cotizar (si falta, pregúntalo antes,
-        en una pregunta). Nunca des descuentos ni precios que no regrese la herramienta.
+        en una pregunta). Nunca des descuentos ni precios que no regrese la herramienta.#{cart_instructions}
     TEXT
   end
 
-  def call(_name, args)
+  def call(name, args)
+    return cart_call(name, args) unless name == 'cotizar'
+
+    quote_call(args)
+  end
+
+  private
+
+  def quote_call(args)
     data = missing_contact
     return { error: "Antes de cotizar pídele su #{data.join(' y ')} (en una pregunta) y guárdalo con actualizar_contacto." } if data.any?
 
-    items, missing = items_for(Array(args['partidas']).first(MAX_ITEMS))
+    items, missing = quote_items(Array(args['partidas']).first(MAX_ITEMS))
     return { error: "No están en el Catálogo: #{missing.join(', ')}. Pregúntale qué producto es o pásalo al vendedor." } if missing.any?
     return { error: 'Falta qué productos quiere.' } if items.empty?
     return preview(items) if test? || @turn.conversation.nil?
 
-    created(build(items, args['notas']))
+    created(existing_quote ? rebuild(existing_quote, items) : build(items, args['notas']))
   end
 
-  private
+  # Las partidas que dijo o, sin partidas, las de su cuenta.
+  def quote_items(rows) = rows.empty? && cart? ? [cart_items, []] : items_for(rows)
+
+  # La que ya se le armó en esta plática y sigue abierta: con la cuenta, se actualiza esa (no se crea otra).
+  def existing_quote
+    return nil unless cart?
+
+    quote = config.account.quotes.find_by(id: state.dig('quote', 'id'))
+    quote if quote&.draft? || quote&.sent?
+  end
+
+  def rebuild(quote, items)
+    Quote.transaction do
+      quote.items.destroy_all
+      items.each_with_index { |(item, qty), i| quote.items.create!(item_attrs(item, qty, i)) }
+      quote.recalculate!
+      trace.event(:cotizacion, "#{quote.folio} actualizada")
+      quote
+    end
+  end
 
   def created(quote)
     state['quote'] = { 'id' => quote.id, 'folio' => quote.folio }
@@ -49,10 +86,19 @@ class Motor2::Skills::Quote < Motor2::Skills::Base
     # En el vendedor de campaña, cotizar ya es interés: las imágenes «cuando muestre interés» van con este mensaje (una vez).
     Motor2::Skills::Files.attach_unsent(@turn, config, state, 'interest') if function.key == 'campaign_seller'
     qualify!(quote.folio)
+    sourced_total(quote)
     { ok: true, folio: quote.folio, total: quote.total.to_f, nota: note_for_agent }
   end
 
+  # El total es un monto que salió de la herramienta: se puede decir (Motor2::Runner#unsourced?, AreaChecks).
+  def sourced_total(quote)
+    @turn.seen << "total #{quote.total.to_f} #{quote.items.map { |i| i.try(:total).to_f }.join(' ')}"
+    @turn.evidence << "Cotización #{quote.folio}: total #{quote.total.to_f}; #{delivery_text}"
+  end
+
   def prospects? = function.key == 'prospects'
+
+  def delivery_text = mode == 'send' ? 'se le manda por este chat con su liga' : 'queda en borrador para el vendedor'
 
   # Atención a prospectos: pedir la cotización lo califica, caliente.
   def qualify!(folio)
@@ -83,15 +129,20 @@ class Motor2::Skills::Quote < Motor2::Skills::Base
   end
 
   def catalog_item(name)
-    best = Array(Motor2::CatalogSearch.new(config.account).call(name)[:results]).first
-    best && config.account.catalog_items.active.find_by(name: best[:nombre])
+    Motor2::CatalogSearch.new(config.account).item(name)
   end
 
   def preview(items)
-    lines = items.map { |(item, qty)| { producto: item.name, cantidad: qty, precio: (promo(item) || item.price).to_f } }
-    @turn.seen << lines.to_json
+    lines = items.map do |(item, qty)|
+      price = (promo(item) || item.price).to_f
+      { producto: item.name, cantidad: qty, precio: price, importe: price * qty }
+    end
+    total = lines.sum { |l| l[:precio] * l[:cantidad] }
+    # El total también es un monto que salió de la herramienta (Motor2::Runner#unsourced?).
+    @turn.seen << lines.to_json << "total #{total}"
+    @turn.evidence << "Cotización armada: #{lines.to_json}, total #{total}; #{delivery_text}"
     qualify!('PRUEBA-COT')
-    { ok: true, prueba: true, partidas: lines, total: lines.sum { |l| l[:precio] * l[:cantidad] }, nota: note_for_agent }
+    { ok: true, prueba: true, partidas: lines, total: total, nota: note_for_agent }
   end
 
   def build(items, notes)
@@ -121,14 +172,17 @@ class Motor2::Skills::Quote < Motor2::Skills::Base
     done = prospects? ? ' Con esto queda listo: despídete (ya no hagas las preguntas que faltaban).' : ''
     return "Ya quedó: dile que se la manda su asesor en un momento (no le des el total: lo revisa el asesor).#{done}" if mode == 'draft'
 
-    "Ya se la mandamos por aquí con su liga: dile el folio y que cualquier duda te la resuelves.#{done}"
+    "Ya se la mandamos por este chat con su liga (no por correo): dile el folio y que cualquier duda te la resuelves.#{done}"
   end
 
   # Después de mandar el mensaje: la manda (si toca) y avisa al vendedor. El seguimiento lo programa
   # Motor2::QuoteFollowUpJob.schedule al quedar enviada (aquí o, en borrador, cuando la manda el vendedor).
   def after(quote)
     tracking = @turn.tracking
-    Quotes::Delivery.new(quote, Motor2::Delivery.sender(config.account)).deliver! if mode == 'send'
+    if mode == 'send'
+      Quotes::Delivery.new(quote, Motor2::Delivery.sender(config.account),
+                           ai_agent: ContactTrackings::AgentIdentity.for(config.template)).deliver!
+    end
     notify(tracking, quote)
   end
 

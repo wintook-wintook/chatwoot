@@ -28,8 +28,8 @@ module Motor2::QuestionGuard
   # Las revisiones de la plática, en orden: buscó si le preguntaron, no prometió sin decidir, termina
   # con la pregunta pendiente.
   def guard_turn(messages, text)
-    checks = %i[ensure_handoff ensure_searched ensure_no_advisor ensure_defer ensure_decision ensure_area_action ensure_file_claim
-                ensure_no_guessing ensure_evidence ensure_question ensure_bridge]
+    checks = %i[ensure_handoff ensure_searched ensure_no_advisor ensure_defer ensure_decision ensure_area_action ensure_quote
+                ensure_file_claim ensure_no_guessing ensure_evidence ensure_question ensure_bridge]
     text = checks.reduce(text) do |current, check|
       current.present? ? send(check, messages, current) : current
     end
@@ -138,7 +138,19 @@ module Motor2::QuestionGuard
     rest = text.to_s.gsub(welcome_pattern, '').strip.sub(/\A[\s.,;:!?]+/, '')
     # Si la bienvenida ya pregunta y el cliente solo saludó, no lleva otra pregunta.
     rest = without_questions(rest) if welcome_asks?
+    rest = '' if greeting_only?(rest) # «¡Hola!» o «¡Hola, Mario!» después de la bienvenida sobra
     [@welcome, rest].compact_blank.join("\n\n")
+  end
+
+  # Solo un saludo, aunque traiga su nombre («¡Hola Mario!», «¡Qué gusto, Mario!»): hasta 4 palabras sin pregunta que
+  # empiezan con un saludo.
+  def greeting_only?(text)
+    return true if ContactTrackings::WelcomeMessage.only_greeting?(text)
+
+    words = I18n.transliterate(text.to_s.downcase).scan(/[a-z]+/)
+    return false if words.empty? || words.size > 4 || text.match?(/[?\d]/)
+
+    words.size <= 2 || %w[hola buenas buenos buen que mucho bienvenido bienvenida].include?(words.first)
   end
 
   # Los archivos marcados «con la bienvenida» van con ella (también en «Probar»); Motor2::Reply los anota

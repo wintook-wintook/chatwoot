@@ -539,7 +539,9 @@
       "NO_TEMPLATE_OPTION": "Sin plantilla",
       "TEMPLATE_WARN": "Sin plantilla, si ya pasaron 24 h desde su último mensaje no se le podrá preguntar (WhatsApp no deja): se le avisa al vendedor para que le escriba.",
       "TEMPLATE_NONE": "Tu bandeja de WhatsApp no tiene plantillas aprobadas: créala en Ajustes › Bandejas › Plantillas (o con «Crear con Dali»). Sin ella, pasadas 24 h no se le podrá preguntar.",
-      "TEMPLATE_HINT": "Dentro de las 24 h le escribe con su voz; pasadas, con esta plantilla. Es aparte de las de Seguimiento."
+      "TEMPLATE_HINT": "Dentro de las 24 h le escribe con su voz; pasadas, con esta plantilla. Es aparte de las de Seguimiento.",
+      "CART": "Ir armando la cuenta en el chat",
+      "CART_HINT": "Mientras pregunta precios le ofrece «¿Te lo agrego a tu cuenta?» y le enseña la lista con el total (las cuentas las hace el sistema, con el IVA de cada producto). Con «mándamela», la cotización sale de su cuenta; si ya tenía una, se actualiza la misma."
     },
     "SOURCE_ORDER": {
       "TITLE": "Orden de consulta",
@@ -560,7 +562,9 @@
       "SUMMARY": {
         "prospects": "Atendió a {total} en los últimos {days} días: {conversion}% calificó o agendó cita.",
         "customers": "Atendió {total} conversaciones en los últimos {days} días: {conversion}% las resolvió sin pasarlas.",
-        "campaign_seller": "Contestaron {total} en los últimos {days} días: a {conversion}% le interesó."
+        "campaign_seller": "Contestaron {total} en los últimos {days} días: a {conversion}% le interesó.",
+        "customers_appointment": "Atendió {total} conversaciones en los últimos {days} días: {conversion}% agendó su cita.",
+        "customers_quote": "Atendió {total} conversaciones en los últimos {days} días: {conversion}% salió con su cotización."
       },
       "RESULTS": {
         "qualified": "Calificados",
@@ -635,7 +639,9 @@
       "REQUIRED_CONTACT": "Datos que debe juntar antes de pasarlo",
       "DISPLAY_NAME": "Nombre que ve el cliente (opcional)",
       "DISPLAY_NAME_PLACEHOLDER": "Ej. Ana",
-      "APPOINTMENT_NOTICE_NO_TEMPLATE": "Sin plantilla, si ya pasaron 24 h desde su último mensaje el recordatorio no le llega (WhatsApp no deja): se le avisa a quien atiende la cita para que le escriba."
+      "APPOINTMENT_NOTICE_NO_TEMPLATE": "Sin plantilla, si ya pasaron 24 h desde su último mensaje el recordatorio no le llega (WhatsApp no deja): se le avisa a quien atiende la cita para que le escriba.",
+      "APPOINTMENT_SERVICES": "Citas de servicio (estética, consultorio, taller…)",
+      "APPOINTMENT_SERVICES_HINT": "Pregunta qué servicio quiere y la cita dura lo que diga «Duración (minutos)» de cada servicio en Productos y servicios (varios se suman). Puede pedir con quién. Agenda en cuanto quiera un servicio, sin esperar a que califique."
     },
     "TONES": {
       "cercano": "Cercano (de tú)",
@@ -983,6 +989,12 @@
           "handoff": "El vendedor la acuerda",
           "appointment": "La agenda"
         },
+        "booking": {
+          "LABEL": "Si quiere una cita para un servicio (estética, consultorio, taller…)",
+          "handoff": "Se registra y alguien le confirma",
+          "appointment": "La agenda con la duración de cada servicio",
+          "HINT": "Pregunta qué servicio quiere, busca horario en la agenda de quien elijas abajo (o de quien pida) y la cita dura lo que diga «Duración» de cada servicio en el Catálogo (sin duración: 30 minutos)."
+        },
         "EVIDENCE": "Solo afirma lo que confirman tus fuentes; lo demás dice que no lo puede confirmar. Nunca ofrece una demo en lugar de una visita."
       },
       "ADMIN": {
@@ -1053,7 +1065,19 @@
       "AREA_ON": "Atender esta área",
       "AREA_OFF": "(apagada)",
       "QUOTE_NEEDS_SALES": "Cotiza solo cuando el área Comercial está prendida (en «Qué atiende»).",
-      "QUOTE_HINT": "Cuando el cliente pide una cotización en Comercial y ya se sabe qué productos y cuántos, la arma con los precios del Catálogo."
+      "QUOTE_HINT": "Cuando el cliente pide una cotización en Comercial y ya se sabe qué productos y cuántos, la arma con los precios del Catálogo.",
+      "GOAL": {
+        "LABEL": "¿Qué quieres que logre?",
+        "none": "Solo atender (resolver y canalizar)",
+        "appointment": "Que agende una cita",
+        "quote": "Que salga con su cotización",
+        "MODE": "Qué tanto invita",
+        "soft": "Suave (al dar precios o informes)",
+        "active": "Activo (también al saludar)",
+        "HINT_none": "Contesta, resuelve y canaliza; no empuja a nada.",
+        "HINT_appointment": "Después de dar información invita una vez a agendar («¿Te busco un horario?»). Si dice que no, ya no insiste; si ya agendó, solo mueve o cancela. Nunca en soporte, administrativo, quejas o si pide una persona. Necesita citas prendidas en Comercial.",
+        "HINT_quote": "Después de dar información invita una vez a cotizar («¿Te preparo la cotización?»). Si dice que no, ya no insiste. Necesita «Cotizaciones» prendido."
+      }
     },
     "CAMPAIGN": {
       "SUBTITLE": "Toca la puerta en tus campañas: la campaña manda el primer mensaje y él sigue cuando contestan. Despierta el interés, resuelve las primeras dudas y pasa al interesado a quien sigue.",

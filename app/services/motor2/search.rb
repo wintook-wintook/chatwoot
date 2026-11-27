@@ -19,6 +19,9 @@
 #   → [{ fuente: 'Precios', resultados: [...] }]
 class Motor2::Search < Cases::Ai::BaseService
   CANNED = 'canned_response'
+  # En las fuentes de la ficha, «sin predefinidas»: un agente que no debe ver las de la cuenta (p. ej. una demo de otro
+  # giro en la misma cuenta). Se pone a mano (no sale en la pantalla) y se conserva al guardar el agente.
+  NO_CANNED = '-canned_response'
   LIMIT = 4
   THRESHOLD = 0.2
   MAX_CHARS = 1500
@@ -50,6 +53,7 @@ class Motor2::Search < Cases::Ai::BaseService
   # Con las predefinidas en la lista, la empresa ya las ordenó; si no, por PRIORITY (las de antes).
   def ordered_keys
     keys = Array(@keys).map(&:to_s)
+    return (keys - [NO_CANNED, CANNED]).uniq if keys.include?(NO_CANNED)
     return keys.uniq if keys.include?(CANNED)
 
     ([CANNED] + keys).uniq.each_with_index.sort_by { |key, i| [PRIORITY.fetch(key.split(':').first, 5), i] }.map(&:first)
@@ -126,8 +130,14 @@ class Motor2::Search < Cases::Ai::BaseService
     Source.new(key: key, name: Motor2::SourceMap::CATALOG_NAME, kind: 'catalog')
   end
 
+  # «¿Qué venden?», «¿qué servicios tienen?», «lista de precios»: sin un producto en la pregunta, lo que hay en el Catálogo.
+  OVERVIEW = /\bqu[eé]\s+(vend|ofrec|tien|hac|manej)|\bservicios\b|\bproductos\b|cat[aá]logo|lista\s+de\s+precios|\bmen[uú]\b|\bprecios\b/i
+
   def catalog_results(question)
-    Array(Motor2::CatalogSearch.new(@account).call(question)[:results]).map do |row|
+    search = Motor2::CatalogSearch.new(@account)
+    rows = Array(search.call(question)[:results])
+    rows = search.overview if rows.empty? && question.to_s.match?(OVERVIEW)
+    rows.map do |row|
       price = row[:precio] ? "Precio: $#{money(row[:precio])}" : 'Sin precio'
       { titulo: row[:nombre], informacion: [price, row[:unidad] && "por #{row[:unidad]}", row[:descripcion]].compact_blank.join('. ') }
     end

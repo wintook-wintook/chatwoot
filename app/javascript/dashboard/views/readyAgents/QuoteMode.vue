@@ -2,7 +2,7 @@
   Cotizar (los tres agentes listos; Motor2::Skills::Quote): no cotiza, arma un borrador para el vendedor o se la
   manda con precios del Catálogo, y a los N días le pregunta si pudo revisarla (en borrador, desde que el vendedor la
   manda), con su PROPIA plantilla si ya pasaron 24 h (no la del Seguimiento).
-  v-model: { mode, follow, follow_days, template }.
+  v-model: { mode, follow, follow_days, template, cart }. cart: ir armando «su cuenta» en el chat (Motor2::Skills::QuoteCart).
 -->
 <script>
 export default {
@@ -56,6 +56,18 @@ export default {
       </span>
     </label>
     <template v-if="value.mode !== 'off'">
+      <label class="flex items-start gap-2 mt-2 text-sm">
+        <input
+          type="checkbox"
+          class="!m-0 mt-1"
+          :checked="value.cart === true"
+          @change="set('cart', $event.target.checked)"
+        />
+        <span>
+          {{ t('CART') }}
+          <span class="block text-xs text-slate-500">{{ t('CART_HINT') }}</span>
+        </span>
+      </label>
       <label class="flex flex-wrap items-center gap-2 mt-2 text-sm">
         <input
           type="checkbox"
