@@ -162,4 +162,25 @@ RSpec.describe ContactTrackings::ServiceRequests::Choice do
       expect(elegir_con_agente('sí')).to be_nil
     end
   end
+
+  describe 'datos que vienen junto con la elección (27/11/2026, conv. 204)' do
+    let(:registro) { instance_double(ContactTrackings::ServiceRequests::Registry, complete!: nil) }
+
+    before { allow(ContactTrackings::ServiceRequests::Registry).to receive(:new).and_return(registro) }
+
+    it 'se guardan en el caso apartado' do
+      plana = caso('Plana 40 t', %w[1A 1B])
+
+      elegir('Sí, la opción A. Peso: 9 toneladas, medidas 8.5 m de largo, contacto Ing. Torres 9381002020')
+      expect(registro).to have_received(:complete!).with(plana)
+    end
+
+    it 'un «sí» o un código solos no llaman a nadie más' do
+      caso('Plana 40 t', %w[1A 1B])
+
+      elegir('sí')
+      elegir('1B')
+      expect(registro).not_to have_received(:complete!)
+    end
+  end
 end

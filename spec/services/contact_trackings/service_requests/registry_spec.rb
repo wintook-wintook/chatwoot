@@ -134,4 +134,41 @@ RSpec.describe ContactTrackings::ServiceRequests::Registry do
       expect(caso.metadata['faltan_campos']).to eq([])
     end
   end
+
+  describe 'fechas que ya pasaron (27/11/2026, pruebas con la guía de SSUSA)' do
+    let(:ahora) { Time.find_zone('America/Mexico_City').local(2026, 11, 26, 17, 30) }
+
+    before { travel_to(ahora) }
+
+    it 'una fecha u hora que ya pasó no queda como fecha del servicio: se guarda aparte' do
+      caso = registrar(grua(date_text: 'hoy', time_text: '14:00')).first.ticket
+
+      datos = caso.metadata['servicio']
+      expect(datos.values_at('date', 'time', 'past_date', 'past_time')).to eq([nil, nil, '2026-11-26', '14:00'])
+    end
+
+    it '«para hoy» sin hora sí es hoy (no ya pasó)' do
+      caso = registrar(grua(date_text: 'para hoy', time_text: nil)).first.ticket
+
+      expect(caso.metadata['servicio'].values_at('date', 'past_date')).to eq(['2026-11-26', nil])
+    end
+
+    it 'después de una hora pasada, «a las 20:00» completa ese mismo día; otra hora pasada no' do
+      caso = registrar(grua(date_text: 'hoy', time_text: '14:00')).first.ticket
+      registro = ->(texto) { described_class.new(tracking: nil, message: mensaje, escalation: '', timezone: 'America/Mexico_City', text: texto) }
+
+      registro.call('mejor a las 16:00').complete!(caso)
+      expect(caso.reload.metadata['servicio']['date']).to be_nil
+
+      registro.call('entonces a las 20:00').complete!(caso)
+      expect(caso.reload.metadata['servicio'].values_at('date', 'time', 'past_date')).to eq(['2026-11-26', '20:00', nil])
+    end
+
+    it 'con @solicitudes(fecha=mes/dia), 12/03/2026 es 3 de diciembre' do
+      caso = described_class.new(tracking: nil, message: mensaje, timezone: 'America/Mexico_City',
+                                 escalation: '@solicitudes(fecha=mes/dia) -> @crear_ticket(tipo=Solicitud de transporte)')
+                            .register!([grua(date_text: 'FECHA 12/03/2026', time_text: '09:00 AM')]).first.ticket
+      expect(caso.metadata['servicio']['date']).to eq('2026-12-03')
+    end
+  end
 end

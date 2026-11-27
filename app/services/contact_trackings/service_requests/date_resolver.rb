@@ -7,7 +7,10 @@
 #   «29 de mayo 2026» · «03 DE AGOSTO» · «01-JUN-26» · «30/06/2026» · «el lunes 01 de junio»
 #   «mañana» · «hoy» · «pasado mañana» · «el día lunes» (ambiguo: día sin número)
 #   hora: «08:00 am» · «03:00 hrs» · «11:00 AM» · «6:00 pm» · «10:30»
-# Sin año: el de hoy; si esa fecha ya pasó, la del año siguiente (se agenda a futuro).
+# Sin año: el de hoy; si esa fecha ya pasó hace más de medio año, la del año siguiente («15 de enero»
+# dicho en diciembre). Una fecha de hace pocos días NO salta de año en silencio (27/11/2026: «7 nov»
+# dicho el 26 de noviembre se agendaba en 2027): se queda en este año y Registry la trata como pasada.
+# month_first (opción @solicitudes(fecha=mes/dia)): «11/04/2026» = 4 de noviembre.
 # ================================================================================
 
 class ContactTrackings::ServiceRequests::DateResolver
@@ -27,11 +30,24 @@ class ContactTrackings::ServiceRequests::DateResolver
       hora, minuto = (time || '00:00').split(':').map(&:to_i)
       Time.find_zone(timezone).local(date.year, date.month, date.day, hora, minuto)
     end
+
+    # Ya pasó: con hora, ese momento; sin hora, el día completo (27/11/2026: «para hoy» sin hora se
+    # tomaba como las 00:00 y salía «esa fecha ya pasó»).
+    def past?(timezone, now: Time.current)
+      return false if date.nil?
+      return at(timezone) < now if time.present?
+
+      date < now.in_time_zone(timezone).to_date
+    end
   end
 
-  def initialize(timezone:, today: nil)
+  # Más atrás que esto, una fecha sin año es la del año siguiente.
+  ROLL_AFTER_DAYS = 183
+
+  def initialize(timezone:, today: nil, month_first: false)
     @timezone = timezone
     @today = today || Time.current.in_time_zone(timezone).to_date
+    @month_first = month_first
   end
 
   def call(date_text, time_text = nil)
@@ -55,7 +71,8 @@ class ContactTrackings::ServiceRequests::DateResolver
     if (m = texto.match(WORDS_RE))
       [build(m[1].to_i, MONTHS[m[2].downcase], m[3]), false]
     elsif (m = texto.match(NUMERIC_RE))
-      [build(m[1].to_i, m[2].to_i, m[3]), false]
+      dia, mes = @month_first ? [m[2].to_i, m[1].to_i] : [m[1].to_i, m[2].to_i]
+      [build(dia, mes, m[3]), false]
     end
   end
 
@@ -73,7 +90,7 @@ class ContactTrackings::ServiceRequests::DateResolver
 
     anio = year.present? ? normalize_year(year.to_i) : @today.year
     fecha = Date.new(anio, month, day)
-    year.blank? && fecha < @today ? fecha.next_year : fecha
+    year.blank? && fecha < @today - ROLL_AFTER_DAYS ? fecha.next_year : fecha
   rescue Date::Error
     nil
   end

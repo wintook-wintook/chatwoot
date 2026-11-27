@@ -121,8 +121,19 @@ class ContactTrackings::ServiceRequests::Turn
     # ofrecer al reiterarlo: su línea dice en qué estado está.
     # D3 (SSUSA 22/10): la hora pedida libre ya no se aparta directo (observación 5); va como A
     # junto a las 2 siguientes y el cliente elige.
-    entries.reject { |entry| entry.ticket.metadata['meeting_id'].present? }
+    entries.reject { |entry| entry.ticket.metadata['meeting_id'].present? || waiting_for_data?(entry.ticket) }
            .to_h { |entry| [entry.ticket.id, agenda.plan(entry.ticket, position(entry.ticket))] }
+  end
+
+  # @solicitudes(datos=primero) (27/11/2026, conv. 194 y 206): con un dato obligatorio pendiente no
+  # se ofrecen horarios; se ofrecían junto con «Falta: …», el cliente decía «sí» y quedaba apartado
+  # y esperando pago sin peso, medidas ni contacto. Sin la opción, como siempre.
+  def waiting_for_data?(caso)
+    options.data_first? && (ContactTrackings::ServiceRequests::Fields.missing_labels(caso) + basic_missing(caso)).any?
+  end
+
+  def options
+    @options ||= ContactTrackings::ServiceRequests::Options.parse(@branch&.escalation)
   end
 
   def position(ticket)
@@ -132,7 +143,7 @@ class ContactTrackings::ServiceRequests::Turn
   # Observaciones SSUSA 22/10 (F3): un bloque por servicio (Block) y el cierre una sola vez.
   def reply(entries, planes)
     bloque = ContactTrackings::ServiceRequests::Block.new(conversation: @message.conversation, timezone: @timezone)
-    faltan = entries.to_h { |entry| [entry.ticket.id, missing(entry, planes[entry.ticket.id])] }
+    faltan = entries.to_h { |entry| [entry.ticket.id, limited(missing(entry, planes[entry.ticket.id]))] }
     servicios = entries.map do |entry|
       bloque.service(entry.ticket, plan: planes[entry.ticket.id], missing: faltan[entry.ticket.id])
     end
@@ -199,17 +210,40 @@ class ContactTrackings::ServiceRequests::Turn
   #   · sin campos → dónde es (como antes)
   #   · con fecha y sin hora → la hora (observación SSUSA 5: no se lista la agenda entera)
   def missing(entry, plan = nil)
-    faltan = ContactTrackings::ServiceRequests::Fields.missing_labels(entry.ticket) + basic_missing(entry.ticket)
+    basicos = basic_missing(entry.ticket)
+    campos = ContactTrackings::ServiceRequests::Fields.missing_labels(entry.ticket)
+    campos -= date_labels(entry.ticket) if basicos.include?(PAST_DATE_TEXT)
+    faltan = campos + basicos
     faltan << 'a qué hora lo necesitas' if plan&.need_time
 
     faltan
   end
 
+  # @solicitudes(faltan=N): como máximo N datos por mensaje (los primeros, en el orden del tipo de caso).
+  def limited(faltan)
+    options.max_missing ? faltan.first(options.max_missing) : faltan
+  end
+
+  # La fecha que dio ya pasó (Registry la deja en past_date): se pide otra, diciendo por qué
+  # (27/11/2026, conv. 196 y 199: antes «esa fecha ya pasó / un asesor revisa» en cada mensaje).
+  PAST_DATE_TEXT = 'otra fecha u hora (la que me diste ya pasó)'
+
+  # Las etiquetas de los campos de fecha del tipo de caso («Fecha»): con la fecha pasada ya se pide otra.
+  def date_labels(caso)
+    Array(caso.case_type&.case_type_fields).select { |campo| campo.field_type.to_s == 'date' }.map(&:label)
+  end
+
   def basic_missing(caso)
     datos = caso.metadata[ContactTrackings::ServiceRequests::Registry::META_KEY]
-    faltan = []
-    faltan << 'la fecha' if datos['date'].blank? && !ContactTrackings::ServiceRequests::Fields.date_field_missing?(caso)
+    faltan = [date_missing(caso, datos)].compact
     faltan << 'dónde es' if Array(datos['stops']).empty? && caso.case_type&.case_type_fields.blank?
     faltan
+  end
+
+  def date_missing(caso, datos)
+    return nil if datos['date'].present?
+    return PAST_DATE_TEXT if datos['past_date'].present?
+
+    'la fecha' unless ContactTrackings::ServiceRequests::Fields.date_field_missing?(caso)
   end
 end

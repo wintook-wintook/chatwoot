@@ -67,4 +67,24 @@ RSpec.describe ContactTrackings::ServiceRequests::Extractor do
 
     expect(extraer('1 grúa')).to be_nil
   end
+
+  describe '[GLOSARIO] del agente (27/11/2026)' do
+    let(:inbox) { create(:inbox, account: account) }
+
+    def tracking_con(prompt)
+      template = create(:tracking_template, account: account, inbox: inbox, complementary_prompt: prompt)
+      instance_double(ContactTracking, complementary_prompt: template.complementary_prompt, tracking_template: template, inbox: inbox)
+    end
+
+    it 'si el agente lo tiene, se le pasa al capturista; si no, el pedido queda igual' do
+      responde([])
+      prompt = "[ROL]\nx\n\n[GLOSARIO]\n- «TP» sola es tubería de perforación.\n\n[ESTILO]\ny"
+
+      described_class.new(account: account, text: 'DESCARGA DE TP - KM14', tracking: tracking_con(prompt)).call
+      expect(a_request(:post, chat_url).with { |req| req.body.include?('TP» sola es tubería') && req.body.exclude?('[ESTILO]') }).to have_been_made
+
+      described_class.new(account: account, text: 'DESCARGA DE TP - KM14', tracking: tracking_con("[ROL]\nx")).call
+      expect(a_request(:post, chat_url).with { |req| req.body.include?('Glosario') }).to have_been_made.once
+    end
+  end
 end

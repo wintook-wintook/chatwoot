@@ -100,4 +100,28 @@ RSpec.describe ContactTrackings::ServiceRequests::Scheduler do
     descripcion = described_class.new(tracking: tracking, route: con_columnas, timezone: tz).send(:describe_unit, fila)
     expect(descripcion).to eq('Cama baja · 40 t · 16.15 m · Marca: Fruehauf')
   end
+
+  describe '27/11/2026 (pruebas con la guía de SSUSA)' do
+    it '«para hoy» sin hora no sale como fecha pasada: pide la hora' do
+      travel_to(Time.find_zone(tz).local(2027, 10, 5, 17)) do
+        plan = planear('date' => '2027-10-05')
+        expect([plan.note, plan.need_time]).to eq([nil, true])
+      end
+    end
+
+    it 'lo más parecido se busca con el peso de la carga, no con la capacidad del equipo que no está' do
+      agenda = described_class.new(tracking: tracking, route: ruta, timezone: tz)
+
+      expect(agenda.send(:related_text, { 'weight_t' => 9.0, 'capacity_t' => 50.0 }, 'grúa 50.0 t 9.0 t')).to eq('9.0 t')
+      expect(agenda.send(:related_text, { 'capacity_t' => 50.0 }, 'grúa 50.0 t')).to eq('grúa 50.0 t')
+    end
+
+    it 'si lo más parecido tampoco tiene horario, dice que no tiene ese equipo' do
+      agenda = described_class.new(tracking: tracking, route: ruta, timezone: tz)
+      plan = described_class::Plan.new(offers: [], note: 'a las 11:00 no hay, ni más tarde ese día')
+
+      agenda.send(:mark_related, plan, { 'equipment_type' => 'grúa' })
+      expect(plan.note).to eq('no tengo grúa; y lo más parecido: a las 11:00 no hay, ni más tarde ese día')
+    end
+  end
 end

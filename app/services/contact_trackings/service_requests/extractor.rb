@@ -139,7 +139,18 @@ class ContactTrackings::ServiceRequests::Extractor
   def user_prompt
     contexto = @context.present? ? "Mensajes anteriores de la conversación:\n#{@context.truncate(2000)}\n\n" : ''
     casos = @open_cases.any? ? "Casos ya registrados en esta conversación:\n#{@open_cases.join("\n")}\n\n" : ''
-    "#{contexto}#{casos}Mensaje actual del cliente:\n\"\"\"\n#{@text.truncate(MAX_TEXT)}\n\"\"\""
+    "#{glossary_text}#{contexto}#{casos}Mensaje actual del cliente:\n\"\"\"\n#{@text.truncate(MAX_TEXT)}\n\"\"\""
+  end
+
+  # 27/11/2026 (conv. 209: «DESCARGA DE TP - KM14» salió con destino «TP - KM14»): el agente puede
+  # declarar en su prompt una sección [GLOSARIO] con cómo escriben sus clientes (lugares, folios,
+  # «TP sola = tubería»). Si la tiene, se le pasa al capturista; sin ella, nada cambia.
+  GLOSSARY_RE = /^[ \t]*\[[ \t]*GLOSARIO[ \t]*\][ \t]*\n(.*?)(?=^[ \t]*\[[^\]\n]+\]|\z)/mi
+  MAX_GLOSSARY = 3000
+
+  def glossary_text
+    glosario = @tracking&.complementary_prompt.to_s[GLOSSARY_RE, 1].to_s.strip
+    glosario.present? ? "Glosario de cómo escriben los clientes de esta empresa:\n#{glosario.truncate(MAX_GLOSSARY)}\n\n" : ''
   end
 
   RULES = <<~RULES
